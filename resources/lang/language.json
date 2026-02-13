@@ -1,0 +1,20 @@
+[
+    {
+        "code": "en",
+        "name": "English",
+        "countryCode": "GB",
+        "enabled": true
+    },
+    {
+        "code": "ru",
+        "name": "Русский",
+        "countryCode": "RU",
+        "enabled": true
+    },
+    {
+        "code": "ka",
+        "name": "Georgian",
+        "countryCode": "GE",
+        "enabled": true
+    }
+]
