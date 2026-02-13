@@ -13,7 +13,7 @@ class Task extends Model
 {
     use LogsActivity;
     protected $fillable = [
-        'project_id', 'task_stage_id', 'milestone_id', 'title', 'description',
+        'project_id', 'task_stage_id', 'milestone_id', 'asset_id', 'title', 'description',
         'priority', 'start_date', 'end_date', 'due_date', 'assigned_to', 'created_by', 'progress',
         'estimated_hours', 'google_calendar_event_id', 'is_googlecalendar_sync', 'google_sheet_sync_key'
     ];
@@ -40,6 +40,11 @@ class Task extends Model
     public function milestone(): BelongsTo
     {
         return $this->belongsTo(ProjectMilestone::class, 'milestone_id');
+    }
+
+    public function asset(): BelongsTo
+    {
+        return $this->belongsTo(Asset::class);
     }
 
     public function assignedTo(): BelongsTo

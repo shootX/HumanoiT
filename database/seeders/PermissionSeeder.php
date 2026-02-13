@@ -397,6 +397,13 @@ class PermissionSeeder extends Seeder
             ['name' => 'task_calendar_view_meetings', 'module' => 'task_calendar', 'label' => 'View Meetings in Calendar', 'description' => 'View meeting events in calendar'],
             ['name' => 'task_calendar_manage_events', 'module' => 'task_calendar', 'label' => 'Manage Calendar Events', 'description' => 'Create and manage calendar events'],
 
+            // Asset Module
+            ['name' => 'asset_view_any', 'module' => 'assets', 'label' => 'View All Assets', 'description' => 'View all assets in workspace'],
+            ['name' => 'asset_view', 'module' => 'assets', 'label' => 'View Asset', 'description' => 'View individual asset'],
+            ['name' => 'asset_create', 'module' => 'assets', 'label' => 'Create Asset', 'description' => 'Create new asset'],
+            ['name' => 'asset_update', 'module' => 'assets', 'label' => 'Update Asset', 'description' => 'Modify asset information'],
+            ['name' => 'asset_delete', 'module' => 'assets', 'label' => 'Delete Asset', 'description' => 'Remove asset'],
+
             // Contract Types Module
             ['name' => 'contract_type_view_any', 'module' => 'contract_types', 'label' => 'View All Contract Types', 'description' => 'View all contract types in workspace'],
             ['name' => 'contract_type_view', 'module' => 'contract_types', 'label' => 'View Contract Type', 'description' => 'View individual contract type'],

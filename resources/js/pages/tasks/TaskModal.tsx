@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { router } from '@inertiajs/react';
+import { router, Link } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SimpleMultiSelect } from '@/components/simple-multi-select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, User, MessageSquare, CheckSquare, Paperclip, Edit, Save, X, FileText } from 'lucide-react';
+import { Calendar, User, MessageSquare, CheckSquare, Paperclip, Edit, Save, X, FileText, Package } from 'lucide-react';
 import { Task, User as UserType, TaskStage, ProjectMilestone } from '@/types';
 import TaskComments from '@/components/tasks/TaskComments';
 import TaskChecklist from '@/components/tasks/TaskChecklist';
@@ -295,6 +295,21 @@ export default function TaskModal({ task, isOpen, onClose, members, stages, mile
                                 </div>
                             )}
                         </div>
+
+                        {/* Asset */}
+                        {currentTask.asset && (
+                            <div>
+                                <h3 className="text-sm font-medium text-gray-900 mb-2">{t('Asset')}</h3>
+                                <Link
+                                    href={route('assets.show', currentTask.asset.id)}
+                                    className="flex items-center gap-2 text-sm text-primary hover:underline"
+                                >
+                                    <Package className="h-4 w-4" />
+                                    {currentTask.asset.name}
+                                    {currentTask.asset.asset_code && ` (${currentTask.asset.asset_code})`}
+                                </Link>
+                            </div>
+                        )}
 
                         {/* Assignees */}
                             <div>

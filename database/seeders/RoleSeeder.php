@@ -84,6 +84,7 @@ class RoleSeeder extends Seeder
                 'task_calendar',
                 'project_report',
                 'project_permissions',
+                'assets',
 
             ])->get();
 
@@ -166,6 +167,7 @@ class RoleSeeder extends Seeder
                 'settings_google_meet',
                 'google_meeting',
                 'project_permissions',
+                'assets',
 
             ])->get();
         }
@@ -303,6 +305,8 @@ class RoleSeeder extends Seeder
             'project_view',
             'task_view_any',
             'task_view',
+            'asset_view_any',
+            'asset_view',
             'bug_view_any',
             'bug_view',
             'timesheet_view_any',

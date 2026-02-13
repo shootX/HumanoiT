@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Models\Project;
+use App\Models\Asset;
 use App\Models\TaskStage;
 use App\Models\ProjectMilestone;
 use App\Models\User;
@@ -31,7 +32,7 @@ class TaskController extends Controller
         $workspace = $user->currentWorkspace;
         $userWorkspaceRole = $workspace->getMemberRole($user);
 
-        $query = Task::with(['project', 'taskStage', 'assignedTo', 'creator', 'milestone', 'members'])
+        $query = Task::with(['project', 'taskStage', 'assignedTo', 'creator', 'milestone', 'members', 'asset'])
             ->whereHas('project', function ($q) use ($user, $userWorkspaceRole) {
                 $q->forWorkspace($user->current_workspace_id);
 
@@ -115,6 +116,8 @@ class TaskController extends Controller
             $q->where('workspace_id', $workspace->id)->where('status', 'active');
         })->where('type', '!=', 'superadmin')->get();
 
+        $assets = Asset::forWorkspace($workspace->id)->orderBy('name')->get(['id', 'name', 'asset_code', 'type', 'project_id']);
+
         // Get Google Calendar sync settings from company owner
         $companyOwner = $workspace->owner; // Get the company owner
         $googleCalendarEnabled = getSetting('is_googlecalendar_sync', '0', $companyOwner->id, $workspace->id) === '1';
@@ -124,6 +127,7 @@ class TaskController extends Controller
             'projects' => $projects,
             'stages' => $stages,
             'members' => $members,
+            'assets' => $assets,
             'filters' => array_merge(
                 $request->only(['project_id', 'stage_id', 'priority', 'assigned_to', 'search', 'per_page']),
                 ['view' => $view]
@@ -158,6 +162,7 @@ class TaskController extends Controller
             'assignedTo',
             'creator',
             'milestone',
+            'asset',
             'members',
             'comments.user',
             'checklists.assignedTo',
@@ -201,10 +206,12 @@ class TaskController extends Controller
 
         $stages = TaskStage::forWorkspace($currentUser->current_workspace_id)->ordered()->get();
         $milestones = $task->project->milestones ?? [];
+        $assets = Asset::forWorkspace($workspace->id)->orderBy('name')->get(['id', 'name', 'asset_code', 'type', 'project_id']);
 
         return response()->json([
             'task' => $task,
             'members' => $allMembers,
+            'assets' => $assets,
             'stages' => $stages,
             'milestones' => $milestones,
             'permissions' => [
@@ -235,6 +242,7 @@ class TaskController extends Controller
         $validated = $request->validate([
             'project_id' => 'required|exists:projects,id',
             'milestone_id' => 'nullable|exists:project_milestones,id',
+            'asset_id' => 'nullable|exists:assets,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'required|in:low,medium,high,critical',
@@ -321,6 +329,7 @@ class TaskController extends Controller
             'assigned_user_ids' => 'nullable|array',
             'assigned_user_ids.*' => 'exists:users,id',
             'milestone_id' => 'nullable|exists:project_milestones,id',
+            'asset_id' => 'nullable|exists:assets,id',
             'is_googlecalendar_sync' => 'nullable|boolean'
         ]);
 

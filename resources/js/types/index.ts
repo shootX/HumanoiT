@@ -59,11 +59,29 @@ export interface TaskInvoice {
     status: string;
 }
 
+export interface Asset {
+    id: number;
+    workspace_id: number;
+    project_id?: number;
+    name: string;
+    asset_code?: string;
+    type: string;
+    location?: string;
+    purchase_date?: string;
+    warranty_until?: string;
+    status: string;
+    notes?: string;
+    project?: Project;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface Task {
     id: number;
     project_id: number;
     task_stage_id: number;
     milestone_id?: number;
+    asset_id?: number;
     title: string;
     description?: string;
     priority: 'low' | 'medium' | 'high' | 'critical';
@@ -77,6 +95,7 @@ export interface Task {
     updated_at: string;
     members?: User[];
     project?: Project & { members?: { user: User; role?: string }[]; milestones?: ProjectMilestone[] };
+    asset?: Asset;
     invoices?: TaskInvoice[];
 }
 

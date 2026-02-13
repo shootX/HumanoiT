@@ -776,6 +776,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('tasks/{task}/stage', [\App\Http\Controllers\TaskController::class, 'changeStage'])->middleware('permission:task_change_status')->name('tasks.change-stage');
         Route::get('api/tasks/calendar', [\App\Http\Controllers\TaskController::class, 'getCalendarTasks'])->middleware('permission:task_view_any')->name('api.tasks.calendar');
 
+        // Assets
+        Route::get('assets', [\App\Http\Controllers\AssetController::class, 'index'])->middleware('permission:asset_view_any')->name('assets.index');
+        Route::post('assets', [\App\Http\Controllers\AssetController::class, 'store'])->middleware('permission:asset_create')->name('assets.store');
+        Route::get('assets/{asset}', [\App\Http\Controllers\AssetController::class, 'show'])->middleware('permission:asset_view')->name('assets.show');
+        Route::put('assets/{asset}', [\App\Http\Controllers\AssetController::class, 'update'])->middleware('permission:asset_update')->name('assets.update');
+        Route::delete('assets/{asset}', [\App\Http\Controllers\AssetController::class, 'destroy'])->middleware('permission:asset_delete')->name('assets.destroy');
+
         // Task stages
         Route::get('task-stages', [\App\Http\Controllers\TaskStageController::class, 'index'])->middleware('permission:task_manage_stages')->name('task-stages.index');
         Route::post('task-stages', [\App\Http\Controllers\TaskStageController::class, 'store'])->middleware('permission:task_manage_stages')->name('task-stages.store');

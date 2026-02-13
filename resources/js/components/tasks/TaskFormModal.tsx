@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SimpleMultiSelect } from '@/components/simple-multi-select';
 import { Save } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { Task, Project, ProjectMilestone, User } from '@/types';
+import { Task, Project, ProjectMilestone, User, Asset } from '@/types';
 import { toast } from '@/components/custom-toast';
 import { useTranslation } from 'react-i18next';
 
@@ -18,11 +18,12 @@ interface Props {
     task?: Task;
     projects: Project[];
     members: User[];
+    assets?: Asset[];
     milestones?: ProjectMilestone[];
     googleCalendarEnabled?: boolean;
 }
 
-export default function TaskFormModal({ isOpen, onClose, task, projects, members, milestones = [], googleCalendarEnabled = false }: Props) {
+export default function TaskFormModal({ isOpen, onClose, task, projects, members, assets = [], milestones = [], googleCalendarEnabled = false }: Props) {
     const { t } = useTranslation();
     const isEditing = !!task;
     const getInitialAssignees = (t?: Task) => {
@@ -34,6 +35,7 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
     const [formData, setFormData] = useState({
         project_id: task?.project_id?.toString() || '',
         milestone_id: task?.milestone_id?.toString() || 'none',
+        asset_id: task?.asset_id?.toString() || 'none',
         title: task?.title || '',
         description: task?.description || '',
         priority: task?.priority || 'medium',
@@ -59,6 +61,7 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                 ...prev,
                 project_id: task.project_id?.toString() || '',
                 milestone_id: task.milestone_id?.toString() || 'none',
+                asset_id: task.asset_id?.toString() || 'none',
                 title: task.title,
                 description: task.description || '',
                 priority: task.priority,
@@ -72,6 +75,7 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
             setFormData({
                 project_id: '',
                 milestone_id: 'none',
+                asset_id: 'none',
                 title: '',
                 description: '',
                 priority: 'medium',
@@ -113,6 +117,7 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
         const submitData = {
             ...formData,
             milestone_id: formData.milestone_id === 'none' ? '' : formData.milestone_id,
+            asset_id: formData.asset_id === 'none' ? '' : formData.asset_id,
             assigned_user_ids: formData.assigned_user_ids
         };
         
@@ -184,6 +189,27 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                                     {currentMilestones.map((milestone) => (
                                         <SelectItem key={milestone.id} value={milestone.id.toString()}>
                                             {milestone.title}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
+
+                    {assets.length > 0 && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                {t('Asset')}
+                            </label>
+                            <Select value={formData.asset_id} onValueChange={(value) => setFormData({...formData, asset_id: value})}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('Select asset (optional)')} />
+                                </SelectTrigger>
+                                <SelectContent className="z-[9999]">
+                                    <SelectItem value="none">{t('No asset')}</SelectItem>
+                                    {assets.map((asset) => (
+                                        <SelectItem key={asset.id} value={asset.id.toString()}>
+                                            {asset.name}{asset.asset_code ? ` (${asset.asset_code})` : ''}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

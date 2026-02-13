@@ -1,0 +1,167 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Asset;
+use App\Models\Project;
+use App\Traits\HasPermissionChecks;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+
+class AssetController extends Controller
+{
+    use HasPermissionChecks;
+
+    public function index(Request $request)
+    {
+        $this->authorizePermission('asset_view_any');
+
+        $user = auth()->user();
+        $workspaceId = $user->current_workspace_id;
+
+        $query = Asset::forWorkspace($workspaceId)->with(['project']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('asset_code', 'like', "%{$search}%")
+                    ->orWhere('location', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('type') && $request->type !== 'all') {
+            $query->byType($request->type);
+        }
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->byStatus($request->status);
+        }
+
+        if ($request->filled('project_id') && $request->project_id !== 'all') {
+            $query->forProject($request->project_id);
+        }
+
+        $perPage = $request->get('per_page', 15);
+        $assets = $query->latest()->paginate($perPage)->withQueryString();
+
+        $projects = Project::forWorkspace($workspaceId)->orderBy('title')->get(['id', 'title']);
+
+        return Inertia::render('assets/Index', [
+            'assets' => $assets,
+            'projects' => $projects,
+            'filters' => $request->only(['search', 'type', 'status', 'project_id', 'per_page']),
+        ]);
+    }
+
+    public function show(Asset $asset)
+    {
+        $this->authorizePermission('asset_view');
+
+        if ($asset->workspace_id !== auth()->user()->current_workspace_id) {
+            abort(403);
+        }
+
+        $asset->load(['project', 'tasks' => fn ($q) => $q->with('project')->limit(20)]);
+
+        return Inertia::render('assets/Show', [
+            'asset' => $asset,
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $this->authorizePermission('asset_create');
+
+        $workspaceId = auth()->user()->current_workspace_id;
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'asset_code' => 'nullable|string|max:255',
+            'type' => 'required|in:hvac,elevator,electrical,plumbing,generator,other',
+            'location' => 'nullable|string|max:255',
+            'project_id' => 'nullable|exists:projects,id',
+            'purchase_date' => 'nullable|date',
+            'warranty_until' => 'nullable|date',
+            'status' => 'required|in:active,maintenance,retired',
+            'notes' => 'nullable|string',
+        ]);
+
+        if (!empty($validated['asset_code'])) {
+            $exists = Asset::forWorkspace($workspaceId)
+                ->where('asset_code', $validated['asset_code'])
+                ->exists();
+            if ($exists) {
+                return back()->withErrors(['asset_code' => __('Asset code already exists in this workspace.')])->withInput();
+            }
+        }
+
+        if (!empty($validated['project_id'])) {
+            $project = Project::find($validated['project_id']);
+            if (!$project || $project->workspace_id !== $workspaceId) {
+                return back()->withErrors(['project_id' => __('Invalid project.')])->withInput();
+            }
+        }
+
+        $validated['workspace_id'] = $workspaceId;
+        Asset::create($validated);
+
+        return redirect()->route('assets.index')->with('success', __('Asset created successfully.'));
+    }
+
+    public function update(Request $request, Asset $asset)
+    {
+        $this->authorizePermission('asset_update');
+
+        if ($asset->workspace_id !== auth()->user()->current_workspace_id) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'asset_code' => 'nullable|string|max:255',
+            'type' => 'required|in:hvac,elevator,electrical,plumbing,generator,other',
+            'location' => 'nullable|string|max:255',
+            'project_id' => 'nullable|exists:projects,id',
+            'purchase_date' => 'nullable|date',
+            'warranty_until' => 'nullable|date',
+            'status' => 'required|in:active,maintenance,retired',
+            'notes' => 'nullable|string',
+        ]);
+
+        if (!empty($validated['asset_code'])) {
+            $exists = Asset::forWorkspace($asset->workspace_id)
+                ->where('asset_code', $validated['asset_code'])
+                ->where('id', '!=', $asset->id)
+                ->exists();
+            if ($exists) {
+                return back()->withErrors(['asset_code' => __('Asset code already exists in this workspace.')])->withInput();
+            }
+        }
+
+        if (!empty($validated['project_id'])) {
+            $project = Project::find($validated['project_id']);
+            if (!$project || $project->workspace_id !== $asset->workspace_id) {
+                return back()->withErrors(['project_id' => __('Invalid project.')])->withInput();
+            }
+        }
+
+        $asset->update($validated);
+
+        return redirect()->back()->with('success', __('Asset updated successfully.'));
+    }
+
+    public function destroy(Asset $asset)
+    {
+        $this->authorizePermission('asset_delete');
+
+        if ($asset->workspace_id !== auth()->user()->current_workspace_id) {
+            abort(403);
+        }
+
+        $asset->tasks()->update(['asset_id' => null]);
+        $asset->delete();
+
+        return redirect()->route('assets.index')->with('success', __('Asset deleted successfully.'));
+    }
+}

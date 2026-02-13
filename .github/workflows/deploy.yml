@@ -17,8 +17,7 @@ jobs:
           script: |
             cd /www/wwwroot/crm.inexia.cc
             git fetch origin
-            BRANCH=$(git rev-parse --abbrev-ref HEAD)
-            git reset --hard origin/$BRANCH
+            git reset --hard origin/${{ github.ref_name }}
             composer install --no-dev --optimize-autoloader
             npm ci
             npm run build

@@ -32,6 +32,7 @@ interface Props {
     projects: Project[];
     stages: TaskStage[];
     members: User[];
+    assets?: import('@/types').Asset[];
     filters: {
         project_id?: string;
         stage_id?: string;
@@ -46,7 +47,7 @@ interface Props {
     googleCalendarEnabled?: boolean;
 }
 
-export default function TasksIndex({ tasks, projects, stages, members, filters, project_name, userWorkspaceRole, permissions, googleCalendarEnabled }: Props) {
+export default function TasksIndex({ tasks, projects, stages, members, assets = [], filters, project_name, userWorkspaceRole, permissions, googleCalendarEnabled }: Props) {
     const { t } = useTranslation();
     const { flash, permissions: pagePermissions } = usePage().props as any;
     const taskPermissions = permissions || pagePermissions;
@@ -1132,6 +1133,7 @@ export default function TasksIndex({ tasks, projects, stages, members, filters, 
                 task={editingTask || undefined}
                 projects={projects}
                 members={members}
+                assets={assets}
                 milestones={editingTask?.project?.milestones || []}
                 googleCalendarEnabled={googleCalendarEnabled}
             />

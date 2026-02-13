@@ -128,14 +128,14 @@ export default function CustomerReport({ projects, members }: Props) {
                         <div className="space-y-2">
                             <Label>Team Member</Label>
                             <Select 
-                                value={filters.member_id} 
-                                onValueChange={(value) => setFilters(prev => ({ ...prev, member_id: value }))}
+                                value={filters.member_id || '__all__'} 
+                                onValueChange={(value) => setFilters(prev => ({ ...prev, member_id: value === '__all__' ? '' : value }))}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="All members" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">All Members</SelectItem>
+                                    <SelectItem value="__all__">All Members</SelectItem>
                                     {members.map(member => (
                                         <SelectItem key={member.id} value={member.id.toString()}>
                                             {member.name}

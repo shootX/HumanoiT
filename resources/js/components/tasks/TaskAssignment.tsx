@@ -13,15 +13,15 @@ interface Props {
 
 export default function TaskAssignment({ task, members }: Props) {
     const [isOpen, setIsOpen] = useState(false);
-    const [selectedMember, setSelectedMember] = useState('');
+    const [selectedMember, setSelectedMember] = useState('__none__');
 
     const handleAssign = () => {
         router.put(route('tasks.update', task.id), {
-            assigned_to: selectedMember
+            assigned_to: selectedMember === '__none__' ? null : selectedMember
         }, {
             onSuccess: () => {
                 setIsOpen(false);
-                setSelectedMember('');
+                setSelectedMember('__none__');
             }
         });
     };
@@ -60,7 +60,7 @@ export default function TaskAssignment({ task, members }: Props) {
                                 <SelectValue placeholder="Select a member" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">Unassigned</SelectItem>
+                                <SelectItem value="__none__">Unassigned</SelectItem>
                                 {members.map((member) => (
                                     <SelectItem key={member.id} value={member.id.toString()}>
                                         <div className="flex items-center space-x-2">

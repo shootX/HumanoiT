@@ -4,7 +4,33 @@
 
 ---
 
-## 2025-02-12 – Asset ფუნქციონალის სრული მოხსნა
+## v1.2.0 – 2025-02-13
+
+### დამატებული
+- **Asset/Equipment Register** – აქტივების სრული CRUD, Task-თან დაკავშირება, permissions, i18n
+
+### ცვლილებები
+- **Select/Dropdown z-index** – Select, DropdownMenu, Popover: z-50 → z-[10050] (მოდალების ზემოთ ჩვენება)
+- **SelectItem empty value** – Radix Select-ის შეცდომის გასწორება: `value=""` → `value="__none__"` / `value="__all__"` (TaskAssignment, CustomerReport)
+
+---
+
+## v1.1.0 – 2025-02-13
+
+### დამატებული
+- **Task-ის მრავალი შემსრულებელი** – `assigned_to` + `task_members`, SimpleMultiSelect, `assigned_user_ids`
+- **Assignees სია** – ყველა workspace მომხმარებელი (მენეჯერი, წევრი, კლიენტი), superadmin-ის გარდა
+- **GitHub + Auto-Deploy** – `.github/workflows/deploy.yml`, `scripts/deploy.sh`, `DEPLOY.md`
+
+### ცვლილებები
+- `TaskController`: members `where('type', '!=', 'superadmin')`; `Task::with(['members'])`; `assigned_user_ids` store/update
+- `TaskFormModal`, `TaskModal`: SimpleMultiSelect assignees-ისთვის
+- `Index.tsx`: Kanban/Card/Table – assignees = `task.members || [task.assigned_to]`
+- Notifications (Slack, Telegram): assignees = `members` ან `assignedTo`
+
+---
+
+## v1.0.0 – 2025-02-12 – Asset ფუნქციონალის სრული მოხსნა
 
 ### წაშლილი ფაილები
 - `app/Http/Controllers/AssetController.php`
