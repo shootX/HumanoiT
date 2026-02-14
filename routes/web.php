@@ -778,10 +778,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Assets
         Route::get('assets', [\App\Http\Controllers\AssetController::class, 'index'])->middleware('permission:asset_view_any')->name('assets.index');
+        Route::get('assets/export', [\App\Http\Controllers\ExportImportController::class, 'export'])->middleware('permission:asset_view_any')->name('assets.export');
+        Route::post('assets/import', [\App\Http\Controllers\ExportImportController::class, 'import'])->middleware('permission:asset_create')->name('assets.import');
+        Route::get('assets/template', [\App\Http\Controllers\ExportImportController::class, 'getTemplate'])->middleware('permission:asset_view_any')->name('assets.template');
+        Route::post('assets/import/data', [\App\Http\Controllers\ExportImportController::class, 'importData'])->middleware('permission:asset_create')->name('assets.import.data');
         Route::post('assets', [\App\Http\Controllers\AssetController::class, 'store'])->middleware('permission:asset_create')->name('assets.store');
         Route::get('assets/{asset}', [\App\Http\Controllers\AssetController::class, 'show'])->middleware('permission:asset_view')->name('assets.show');
         Route::put('assets/{asset}', [\App\Http\Controllers\AssetController::class, 'update'])->middleware('permission:asset_update')->name('assets.update');
         Route::delete('assets/{asset}', [\App\Http\Controllers\AssetController::class, 'destroy'])->middleware('permission:asset_delete')->name('assets.destroy');
+
+        // Asset categories
+        Route::get('asset-categories', [\App\Http\Controllers\AssetCategoryController::class, 'index'])->middleware('permission:asset_manage_categories')->name('asset-categories.index');
+        Route::post('asset-categories', [\App\Http\Controllers\AssetCategoryController::class, 'store'])->middleware('permission:asset_manage_categories')->name('asset-categories.store');
+        Route::put('asset-categories/{assetCategory}', [\App\Http\Controllers\AssetCategoryController::class, 'update'])->middleware('permission:asset_manage_categories')->name('asset-categories.update');
+        Route::patch('asset-categories/{assetCategory}', [\App\Http\Controllers\AssetCategoryController::class, 'update'])->middleware('permission:asset_manage_categories');
+        Route::delete('asset-categories/{assetCategory}', [\App\Http\Controllers\AssetCategoryController::class, 'destroy'])->middleware('permission:asset_manage_categories')->name('asset-categories.destroy');
+        Route::post('asset-categories/reorder', [\App\Http\Controllers\AssetCategoryController::class, 'reorder'])->middleware('permission:asset_manage_categories')->name('asset-categories.reorder');
 
         // Task stages
         Route::get('task-stages', [\App\Http\Controllers\TaskStageController::class, 'index'])->middleware('permission:task_manage_stages')->name('task-stages.index');

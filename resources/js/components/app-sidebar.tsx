@@ -112,10 +112,20 @@ export function AppSidebar() {
 
         // Assets
         if (hasPermission(permissions, 'asset_view_any')) {
+            const assetChildren = [
+                { title: t('All Assets'), href: route('assets.index') }
+            ];
+            if (hasPermission(permissions, 'asset_manage_categories')) {
+                assetChildren.push({
+                    title: t('Asset Categories'),
+                    href: route('asset-categories.index')
+                });
+            }
             items.push({
                 title: t('Assets'),
-                href: route('assets.index'),
                 icon: Package,
+                children: assetChildren.length > 1 ? assetChildren : undefined,
+                href: assetChildren.length === 1 ? route('assets.index') : undefined
             });
         }
 

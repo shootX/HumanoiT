@@ -14,6 +14,7 @@ class ExportImportController extends Controller
         'companies' => \App\Exports\CompanyExport::class,
         'projects' => \App\Exports\ProjectExport::class,
         'invoices' => \App\Exports\InvoiceExport::class,
+        'assets' => \App\Exports\AssetExport::class,
     ];
 
     protected $importClasses = [
@@ -30,8 +31,10 @@ class ExportImportController extends Controller
                 $type = 'companies';
             } elseif (str_contains($path, 'projects/export')) {
                 $type = 'projects';
-            } elseif (str_contains($path, 'invoices/export')) {
+            } else            if (str_contains($path, 'invoices/export')) {
                 $type = 'invoices';
+            } elseif (str_contains($path, 'assets/export')) {
+                $type = 'assets';
             } else {
                 $type = $request->route()->parameter('type');
             }
@@ -56,8 +59,10 @@ class ExportImportController extends Controller
             $path = $request->path();
             if (str_contains($path, 'companies/import')) {
                 $type = 'companies';
-            } elseif (str_contains($path, 'projects/import')) {
+            } else            if (str_contains($path, 'projects/import')) {
                 $type = 'projects';
+            } elseif (str_contains($path, 'assets/import')) {
+                $type = 'assets';
             } else {
                 $type = $request->route()->parameter('type');
             }
@@ -73,11 +78,7 @@ class ExportImportController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        if (!isset($this->importClasses[$type])) {
-            return response()->json(['error' => 'Import type not supported'], 400);
-        }
-
-        // Handle import from session data (from previous file upload)
+        // Handle import from session data (assets use fileImport flow) (from previous file upload)
         $csvData = session('file_data');
         $headers = session('file_header');
         $mappingData = $request->input('data');
@@ -159,6 +160,8 @@ class ExportImportController extends Controller
                 $type = 'companies';
             } elseif (str_contains($path, 'projects/template')) {
                 $type = 'projects';
+            } elseif (str_contains($path, 'assets/template')) {
+                $type = 'assets';
             } else {
                 $type = request()->route()->parameter('type');
             }
@@ -166,6 +169,12 @@ class ExportImportController extends Controller
       
         try {
             $this->checkPermissions($type, 'view');
+            
+            // Assets: generate template with Georgian headers via Excel
+            if ($type === 'assets') {
+                $filename = 'აქტივების_ნიმუში_' . date('Y-m-d') . '.xlsx';
+                return Excel::download(new \App\Exports\AssetTemplateExport(), $filename);
+            }
             
             // Download template file from storage
             $templatePath = $this->getTemplateFilePath($type);
@@ -200,6 +209,10 @@ class ExportImportController extends Controller
             'invoices' => [
                 'view' => 'invoice_view_any',
                 'create' => 'invoice_create'
+            ],
+            'assets' => [
+                'view' => 'asset_view_any',
+                'create' => 'asset_create'
             ]
         ];
 
@@ -373,6 +386,9 @@ class ExportImportController extends Controller
             case 'projects':
                 $tableFields = ['title', 'description', 'status', 'priority', 'start_date', 'deadline', 'estimated_hours', 'is_public', 'created_at', 'updated_at'];
                 break;
+            case 'assets':
+                $tableFields = ['name', 'asset_code', 'category', 'location', 'project', 'purchase_date', 'warranty_until', 'status', 'notes'];
+                break;
             default:
                 $error = 'Something went wrong!';
                 $tableFields = [];
@@ -395,6 +411,9 @@ class ExportImportController extends Controller
                 $currentUser = auth()->user();
                 $workspace = $currentUser->currentWorkspace;
                 return strtolower(trim($data['title'] ?? '')) . '_' . ($workspace ? $workspace->id : 'no_workspace');
+            case 'assets':
+                $workspaceId = auth()->user()->current_workspace_id ?? 0;
+                return strtolower(trim($data['name'] ?? '')) . '_' . strtolower(trim($data['asset_code'] ?? '')) . '_' . $workspaceId;
             default:
                 return '';
         }
@@ -416,6 +435,14 @@ class ExportImportController extends Controller
                 return \App\Models\Project::where('title', $data['title'])
                     ->where('workspace_id', $workspace->id)
                     ->exists();
+            case 'assets':
+                $workspaceId = auth()->user()->current_workspace_id;
+                if (!$workspaceId || empty($data['name'])) return false;
+                $q = \App\Models\Asset::where('workspace_id', $workspaceId)->where('name', $data['name']);
+                if (!empty($data['asset_code'])) {
+                    $q->where('asset_code', $data['asset_code']);
+                }
+                return $q->exists();
             default:
                 return false;
         }
@@ -516,6 +543,50 @@ class ExportImportController extends Controller
                 
                 // Log activity
                 $project->logActivity('project_imported', "Project '{$project->title}' imported from Excel");
+                break;
+            case 'assets':
+                $workspaceId = auth()->user()->current_workspace_id;
+                if (!$workspaceId) {
+                    throw new \Exception('No active workspace found');
+                }
+                $asset = new \App\Models\Asset();
+                $asset->workspace_id = $workspaceId;
+                $asset->name = $data['name'] ?? '';
+                $asset->asset_code = !empty($data['asset_code']) ? trim($data['asset_code']) : null;
+                $asset->location = !empty($data['location']) ? trim($data['location']) : null;
+                $asset->status = in_array($data['status'] ?? '', ['active', 'maintenance', 'retired']) ? $data['status'] : 'active';
+                $asset->notes = !empty($data['notes']) ? trim($data['notes']) : null;
+                if (!empty($data['purchase_date'])) {
+                    try {
+                        $asset->purchase_date = \Carbon\Carbon::parse($data['purchase_date'])->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $asset->purchase_date = null;
+                    }
+                }
+                if (!empty($data['warranty_until'])) {
+                    try {
+                        $asset->warranty_until = \Carbon\Carbon::parse($data['warranty_until'])->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $asset->warranty_until = null;
+                    }
+                }
+                if (!empty($data['category'])) {
+                    $category = \App\Models\AssetCategory::forWorkspace($workspaceId)
+                        ->where('name', 'like', trim($data['category']))
+                        ->first();
+                    if ($category) {
+                        $asset->asset_category_id = $category->id;
+                    }
+                }
+                if (!empty($data['project'])) {
+                    $project = \App\Models\Project::forWorkspace($workspaceId)
+                        ->where('title', 'like', trim($data['project']))
+                        ->first();
+                    if ($project) {
+                        $asset->project_id = $project->id;
+                    }
+                }
+                $asset->save();
                 break;
             default:
                 throw new \Exception('Unsupported table type');

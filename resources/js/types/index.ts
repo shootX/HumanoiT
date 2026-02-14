@@ -59,19 +59,27 @@ export interface TaskInvoice {
     status: string;
 }
 
+export interface AssetCategory {
+    id: number;
+    name: string;
+    color?: string;
+}
+
 export interface Asset {
     id: number;
     workspace_id: number;
     project_id?: number;
+    asset_category_id?: number;
     name: string;
     asset_code?: string;
-    type: string;
+    type?: string;
     location?: string;
     purchase_date?: string;
     warranty_until?: string;
     status: string;
     notes?: string;
     project?: Project;
+    asset_category?: AssetCategory;
     created_at: string;
     updated_at: string;
 }

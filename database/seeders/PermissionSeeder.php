@@ -403,6 +403,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'asset_create', 'module' => 'assets', 'label' => 'Create Asset', 'description' => 'Create new asset'],
             ['name' => 'asset_update', 'module' => 'assets', 'label' => 'Update Asset', 'description' => 'Modify asset information'],
             ['name' => 'asset_delete', 'module' => 'assets', 'label' => 'Delete Asset', 'description' => 'Remove asset'],
+            ['name' => 'asset_manage_categories', 'module' => 'assets', 'label' => 'Manage Asset Categories', 'description' => 'Create/edit/delete asset categories'],
 
             // Contract Types Module
             ['name' => 'contract_type_view_any', 'module' => 'contract_types', 'label' => 'View All Contract Types', 'description' => 'View all contract types in workspace'],

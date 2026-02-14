@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 class Asset extends Model
 {
     protected $fillable = [
-        'workspace_id', 'project_id', 'name', 'asset_code', 'type',
+        'workspace_id', 'project_id', 'asset_category_id', 'name', 'asset_code', 'type',
         'location', 'purchase_date', 'warranty_until', 'status', 'notes'
     ];
 
@@ -27,6 +27,11 @@ class Asset extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function assetCategory(): BelongsTo
+    {
+        return $this->belongsTo(AssetCategory::class);
     }
 
     public function tasks(): HasMany
@@ -52,6 +57,11 @@ class Asset extends Model
     public function scopeByType(Builder $query, $type): Builder
     {
         return $query->where('type', $type);
+    }
+
+    public function scopeByCategory(Builder $query, $categoryId): Builder
+    {
+        return $query->where('asset_category_id', $categoryId);
     }
 
     public function isUnderWarranty(): bool

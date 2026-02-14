@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Asset;
+use App\Models\AssetCategory;
 use App\Models\Project;
 use App\Traits\HasPermissionChecks;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class AssetController extends Controller
         $user = auth()->user();
         $workspaceId = $user->current_workspace_id;
 
-        $query = Asset::forWorkspace($workspaceId)->with(['project']);
+        $query = Asset::forWorkspace($workspaceId)->with(['project', 'assetCategory']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -42,15 +43,21 @@ class AssetController extends Controller
             $query->forProject($request->project_id);
         }
 
-        $perPage = $request->get('per_page', 15);
+        if ($request->filled('asset_category_id') && $request->asset_category_id !== 'all') {
+            $query->byCategory($request->asset_category_id);
+        }
+
+        $perPage = $request->get('per_page', 30);
         $assets = $query->latest()->paginate($perPage)->withQueryString();
 
         $projects = Project::forWorkspace($workspaceId)->orderBy('title')->get(['id', 'title']);
+        $assetCategories = AssetCategory::forWorkspace($workspaceId)->ordered()->get(['id', 'name', 'color']);
 
         return Inertia::render('assets/Index', [
             'assets' => $assets,
             'projects' => $projects,
-            'filters' => $request->only(['search', 'type', 'status', 'project_id', 'per_page']),
+            'assetCategories' => $assetCategories,
+            'filters' => $request->only(['search', 'type', 'status', 'project_id', 'asset_category_id', 'per_page']),
         ]);
     }
 
@@ -62,7 +69,7 @@ class AssetController extends Controller
             abort(403);
         }
 
-        $asset->load(['project', 'tasks' => fn ($q) => $q->with('project')->limit(20)]);
+        $asset->load(['project', 'assetCategory', 'tasks' => fn ($q) => $q->with('project')->limit(20)]);
 
         return Inertia::render('assets/Show', [
             'asset' => $asset,
@@ -78,7 +85,8 @@ class AssetController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'asset_code' => 'nullable|string|max:255',
-            'type' => 'required|in:hvac,elevator,electrical,plumbing,generator,other',
+            'asset_category_id' => 'nullable|exists:asset_categories,id',
+            'type' => 'nullable|string|max:255',
             'location' => 'nullable|string|max:255',
             'project_id' => 'nullable|exists:projects,id',
             'purchase_date' => 'nullable|date',
@@ -86,6 +94,13 @@ class AssetController extends Controller
             'status' => 'required|in:active,maintenance,retired',
             'notes' => 'nullable|string',
         ]);
+
+        if (!empty($validated['asset_category_id'])) {
+            $category = AssetCategory::find($validated['asset_category_id']);
+            if (!$category || $category->workspace_id !== $workspaceId) {
+                return back()->withErrors(['asset_category_id' => __('Invalid category.')])->withInput();
+            }
+        }
 
         if (!empty($validated['asset_code'])) {
             $exists = Asset::forWorkspace($workspaceId)
@@ -120,7 +135,8 @@ class AssetController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'asset_code' => 'nullable|string|max:255',
-            'type' => 'required|in:hvac,elevator,electrical,plumbing,generator,other',
+            'asset_category_id' => 'nullable|exists:asset_categories,id',
+            'type' => 'nullable|string|max:255',
             'location' => 'nullable|string|max:255',
             'project_id' => 'nullable|exists:projects,id',
             'purchase_date' => 'nullable|date',
@@ -128,6 +144,13 @@ class AssetController extends Controller
             'status' => 'required|in:active,maintenance,retired',
             'notes' => 'nullable|string',
         ]);
+
+        if (!empty($validated['asset_category_id'])) {
+            $category = AssetCategory::find($validated['asset_category_id']);
+            if (!$category || $category->workspace_id !== $asset->workspace_id) {
+                return back()->withErrors(['asset_category_id' => __('Invalid category.')])->withInput();
+            }
+        }
 
         if (!empty($validated['asset_code'])) {
             $exists = Asset::forWorkspace($asset->workspace_id)

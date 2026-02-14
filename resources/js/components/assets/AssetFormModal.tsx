@@ -8,23 +8,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useTranslation } from 'react-i18next';
 import { Asset, Project } from '@/types';
 
-const ASSET_TYPES = ['hvac', 'elevator', 'electrical', 'plumbing', 'generator', 'other'] as const;
 const ASSET_STATUSES = ['active', 'maintenance', 'retired'] as const;
+
+interface AssetCategory {
+    id: number;
+    name: string;
+    color?: string;
+}
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     asset?: Asset;
     projects: Project[];
+    assetCategories?: AssetCategory[];
     onSubmit: (data: Record<string, unknown>) => void;
 }
 
-export default function AssetFormModal({ isOpen, onClose, asset, projects, onSubmit }: Props) {
+export default function AssetFormModal({ isOpen, onClose, asset, projects, assetCategories = [], onSubmit }: Props) {
     const { t } = useTranslation();
     const [formData, setFormData] = useState({
         name: '',
         asset_code: '',
-        type: 'other' as string,
+        asset_category_id: '' as string,
         location: '',
         project_id: '' as string,
         purchase_date: '',
@@ -38,7 +44,7 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, onSub
             setFormData({
                 name: asset.name,
                 asset_code: asset.asset_code || '',
-                type: asset.type,
+                asset_category_id: asset.asset_category_id?.toString() || 'none',
                 location: asset.location || '',
                 project_id: asset.project_id?.toString() || 'none',
                 purchase_date: asset.purchase_date ? String(asset.purchase_date).split('T')[0] : '',
@@ -50,7 +56,7 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, onSub
             setFormData({
                 name: '',
                 asset_code: '',
-                type: 'other',
+                asset_category_id: 'none',
                 location: '',
                 project_id: 'none',
                 purchase_date: '',
@@ -66,7 +72,7 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, onSub
         const data: Record<string, unknown> = {
             name: formData.name,
             asset_code: formData.asset_code || null,
-            type: formData.type,
+            asset_category_id: formData.asset_category_id && formData.asset_category_id !== 'none' ? formData.asset_category_id : null,
             location: formData.location || null,
             project_id: formData.project_id && formData.project_id !== 'none' ? formData.project_id : null,
             purchase_date: formData.purchase_date || null,
@@ -104,14 +110,15 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, onSub
                         />
                     </div>
                     <div>
-                        <Label htmlFor="type">{t('Type')} *</Label>
-                        <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v })}>
+                        <Label htmlFor="asset_category_id">{t('Category')}</Label>
+                        <Select value={formData.asset_category_id || 'none'} onValueChange={(v) => setFormData({ ...formData, asset_category_id: v })}>
                             <SelectTrigger className="mt-1">
-                                <SelectValue />
+                                <SelectValue placeholder={t('Select category')} />
                             </SelectTrigger>
                             <SelectContent>
-                                {ASSET_TYPES.map((type) => (
-                                    <SelectItem key={type} value={type}>{t(`asset_type_${type}`)}</SelectItem>
+                                <SelectItem value="none">{t('None')}</SelectItem>
+                                {assetCategories.map((c) => (
+                                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
