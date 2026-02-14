@@ -15,6 +15,9 @@ class InvoiceItem extends Model
         'task_id',
         'expense_id',
         'timesheet_entry_id',
+        'asset_category_id',
+        'asset_name',
+        'tax_id',
         'type',
         'description',
         'quantity',
@@ -48,6 +51,16 @@ class InvoiceItem extends Model
     public function timesheetEntry(): BelongsTo
     {
         return $this->belongsTo(TimesheetEntry::class);
+    }
+
+    public function assetCategory(): BelongsTo
+    {
+        return $this->belongsTo(AssetCategory::class);
+    }
+
+    public function tax(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Tax::class);
     }
 
     protected static function booted()

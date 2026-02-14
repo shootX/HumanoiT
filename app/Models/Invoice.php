@@ -15,6 +15,7 @@ class Invoice extends Model
     protected $fillable = [
         'invoice_number',
         'project_id',
+        'task_id',
         'workspace_id',
         'client_id',
         'created_by',
@@ -30,6 +31,8 @@ class Invoice extends Model
         'status',
         'paid_amount',
         'sent_at',
+        'approved_at',
+        'approved_by',
         'viewed_at',
         'paid_at',
         'payment_method',
@@ -49,6 +52,7 @@ class Invoice extends Model
         'invoice_date' => 'date',
         'due_date' => 'date',
         'sent_at' => 'datetime',
+        'approved_at' => 'datetime',
         'viewed_at' => 'datetime',
         'paid_at' => 'datetime',
         'payment_details' => 'array',
@@ -70,6 +74,11 @@ class Invoice extends Model
         return $this->belongsTo(Project::class);
     }
 
+    public function task(): BelongsTo
+    {
+        return $this->belongsTo(Task::class);
+    }
+
     public function budgetCategory(): BelongsTo
     {
         return $this->belongsTo(\App\Models\BudgetCategory::class);
@@ -88,6 +97,16 @@ class Invoice extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function canBeApproved(): bool
+    {
+        return in_array($this->status, ['draft', 'sent', 'viewed']) && !$this->approved_at;
     }
 
     public function items(): HasMany
@@ -213,36 +232,40 @@ class Invoice extends Model
 
     public function calculateTotals()
     {
-        // Calculate subtotal from items
-        $subtotal = $this->items()->sum('amount');
-        
-        // Calculate tax amount
-        $taxAmount = 0;
-        $exclusiveTaxAmount = 0;
-        if (is_array($this->tax_rate)) {
-            foreach ($this->tax_rate as $tax) {
-                $rate = $tax['rate'] ?? 0;
-                $isInclusive = $tax['is_inclusive'] ?? false;
+        $subtotal = 0;
+        $perItemTaxAmount = 0;
+        $taxData = [];
+
+        foreach ($this->items()->with('tax')->get() as $item) {
+            $itemAmount = $item->rate * ($item->quantity ?: 1);
+            $subtotal += $itemAmount;
+
+            if ($item->tax_id && $item->tax) {
+                $rate = $item->tax->rate ?? 0;
+                $isInclusive = $item->tax->is_inclusive ?? false;
                 if ($isInclusive) {
-                    $amount = $subtotal - ($subtotal / (1 + ($rate / 100)));
+                    $taxAmt = $itemAmount - ($itemAmount / (1 + ($rate / 100)));
                 } else {
-                    $amount = ($subtotal * $rate) / 100;
-                    $exclusiveTaxAmount += $amount;
+                    $taxAmt = ($itemAmount * $rate) / 100;
                 }
-                $taxAmount += $amount;
+                $perItemTaxAmount += $taxAmt;
+                $taxKey = $item->tax->id;
+                if (!isset($taxData[$taxKey])) {
+                    $taxData[$taxKey] = ['id' => $item->tax->id, 'name' => $item->tax->name, 'rate' => $item->tax->rate, 'is_inclusive' => (bool) $item->tax->is_inclusive, 'amount' => 0];
+                }
+                $taxData[$taxKey]['amount'] += $taxAmt;
             }
         }
-        
-        // Calculate total
-        $totalAmount = $subtotal + $exclusiveTaxAmount;
-        
-        // Update the invoice
+
+        $totalAmount = $subtotal + $perItemTaxAmount;
+
         $this->update([
             'subtotal' => $subtotal,
-            'tax_amount' => $exclusiveTaxAmount,
+            'tax_rate' => array_values($taxData),
+            'tax_amount' => $perItemTaxAmount,
             'total_amount' => $totalAmount
         ]);
-        
+
         return $this;
     }
     
@@ -290,6 +313,7 @@ class Invoice extends Model
             'payment_details' => $paymentDetails
         ]);
         $this->createProjectExpenseIfPaid();
+        $this->createAssetsFromPaidInvoice();
     }
 
     public function createPaymentRecord($amount, $paymentMethod, $transactionId)
@@ -323,6 +347,7 @@ class Invoice extends Model
         if ($totalPaid >= $this->total_amount) {
             $this->update(['status' => 'paid', 'paid_amount' => $totalPaid, 'paid_at' => now()]);
             $this->createProjectExpenseIfPaid();
+            $this->createAssetsFromPaidInvoice();
         } elseif ($totalPaid > 0) {
             $this->update(['status' => 'partial_paid', 'paid_amount' => $totalPaid]);
         } else {
@@ -387,7 +412,52 @@ class Invoice extends Model
         ]);
     }
 
-
+    /**
+     * When invoice is paid and approved, create Assets from items with type='asset'.
+     */
+    public function createAssetsFromPaidInvoice(): array
+    {
+        if ($this->status !== 'paid' || !$this->approved_at) {
+            return [];
+        }
+        if (!$this->workspace_id) {
+            return [];
+        }
+        $assetItems = $this->items()->where('type', 'asset')->get();
+        if ($assetItems->isEmpty()) {
+            return [];
+        }
+        $existingCount = Asset::where('invoice_id', $this->id)->count();
+        if ($existingCount >= $assetItems->count()) {
+            return [];
+        }
+        $created = [];
+        foreach ($assetItems as $item) {
+            $name = $item->asset_name ?: $item->description;
+            if (empty(trim($name))) {
+                continue;
+            }
+            $location = null;
+            if ($this->project_id) {
+                $project = $this->project;
+                $location = $project?->address;
+            }
+            $asset = Asset::create([
+                'workspace_id' => $this->workspace_id,
+                'project_id' => $this->project_id,
+                'invoice_id' => $this->id,
+                'asset_category_id' => $item->asset_category_id,
+                'name' => $name,
+                'value' => $item->amount,
+                'location' => $location,
+                'purchase_date' => $this->invoice_date,
+                'status' => 'active',
+                'notes' => __('From invoice :number', ['number' => $this->invoice_number]),
+            ]);
+            $created[] = $asset;
+        }
+        return $created;
+    }
 
     protected static function booted()
     {

@@ -142,6 +142,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'invoice_generate_reports', 'module' => 'invoice', 'label' => 'Generate Invoice Reports', 'description' => 'Create invoice analytics'],
             ['name' => 'invoice_manage_templates', 'module' => 'invoice', 'label' => 'Manage Invoice Templates', 'description' => 'Create/edit invoice layouts'],
             ['name' => 'invoice_manage_items', 'module' => 'invoice', 'label' => 'Manage Invoice Items', 'description' => 'Add/edit invoice line items'],
+            ['name' => 'invoice_approve', 'module' => 'invoice', 'label' => 'Approve Invoice', 'description' => 'Approve invoice before payment (required for asset creation)'],
 
             // Media/File Management Module
             ['name' => 'media_view_any', 'module' => 'media', 'label' => 'View All Media', 'description' => 'Access file library'],

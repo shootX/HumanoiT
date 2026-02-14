@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Edit, DollarSign, Download, ArrowLeft, Calendar, User, Building, FileText, Clock, CreditCard, Send , Link, Printer} from 'lucide-react';
+import { Edit, DollarSign, Download, ArrowLeft, Calendar, User, Building, FileText, Clock, CreditCard, Send, Link, Printer, CheckCircle } from 'lucide-react';
 import { PageTemplate } from '@/components/page-template';
 import { formatCurrency } from '@/utils/currency';
 import { InvoicePaymentModal } from '@/components/invoices/invoice-payment-modal';
@@ -42,6 +42,8 @@ interface InvoiceItem {
 interface Invoice {
     id: number;
     invoice_number: string;
+    approved_at?: string | null;
+    approver?: { id: number; name: string } | null;
     project: {
         id: number;
         title: string;
@@ -85,7 +87,7 @@ interface Invoice {
 
 export default function InvoiceShow() {
     const { t } = useTranslation();
-    const { invoice, userWorkspaceRole, flash, emailNotificationsEnabled, invoiceSettings } = usePage().props as { invoice: Invoice; userWorkspaceRole: string; flash?: any; emailNotificationsEnabled?: boolean; invoiceSettings?: any };
+    const { invoice, userWorkspaceRole, flash, emailNotificationsEnabled, invoiceSettings, canApprove } = usePage().props as { invoice: Invoice; userWorkspaceRole: string; flash?: any; emailNotificationsEnabled?: boolean; invoiceSettings?: any; canApprove?: boolean };
     const [showPaymentModal, setShowPaymentModal] = React.useState(false);
     const [showMarkPaidModal, setShowMarkPaidModal] = React.useState(false);
     const [markPaidPaymentMethod, setMarkPaidPaymentMethod] = React.useState(PAYMENT_METHOD_OPTIONS[0].key);
@@ -142,6 +144,20 @@ export default function InvoiceShow() {
 
     const handleAction = (action: string) => {
         switch (action) {
+            case 'approve':
+                toast.loading(t('Approving...'));
+                router.post(route('invoices.approve', invoice.id), {}, {
+                    onSuccess: () => {
+                        toast.dismiss();
+                        toast.success(t('Invoice approved'));
+                    },
+                    onError: () => {
+                        toast.dismiss();
+                        toast.error(t('Failed to approve invoice'));
+                    }
+                });
+                break;
+
             case 'edit':
                 router.get(route('invoices.edit', invoice.id));
                 break;
@@ -232,6 +248,17 @@ export default function InvoiceShow() {
                 }
             );
         }
+    }
+
+    if (canApprove) {
+        pageActions.push(
+            {
+                label: t('Approve'),
+                icon: <CheckCircle className="h-4 w-4 mr-2" />,
+                variant: 'default',
+                onClick: () => handleAction('approve')
+            }
+        );
     }
 
     if (invoice.status !== 'paid' && invoice.status !== 'cancelled') {
@@ -346,6 +373,11 @@ export default function InvoiceShow() {
                                     <Badge className={getStatusColor(invoice.status)}>
                                         {invoice.status?.replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                                     </Badge>
+                                    {invoice.approved_at && (
+                                        <Badge className="ml-2 bg-green-100 text-green-800">
+                                            {t('Approved')} {invoice.approver?.name && `(${invoice.approver.name})`}
+                                        </Badge>
+                                    )}
                                 </div>
                                 <div>
                                     <span className="text-sm text-gray-500">{t('Invoice Date')}:</span>
@@ -461,10 +493,9 @@ export default function InvoiceShow() {
                                     
                                     {invoice.tax_rate && Array.isArray(invoice.tax_rate) && invoice.tax_rate.length > 0 && (
                                         invoice.tax_rate.map((tax: any, index: number) => {
-                                            const rate = tax.rate || 0;
-                                            const taxAmount = tax.is_inclusive
-                                                ? invoice.subtotal - (invoice.subtotal / (1 + rate / 100))
-                                                : (invoice.subtotal * rate) / 100;
+                                            const taxAmount = tax.amount ?? (tax.is_inclusive
+                                                ? invoice.subtotal - (invoice.subtotal / (1 + (tax.rate || 0) / 100))
+                                                : (invoice.subtotal * (tax.rate || 0)) / 100);
                                             const labelSuffix = tax.is_inclusive ? ' (included)' : '';
                                             return (
                                                 <div key={index} className="flex justify-between">

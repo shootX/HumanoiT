@@ -130,7 +130,7 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice)
     {
-        $invoice->load(['project', 'budgetCategory', 'client', 'creator', 'items.task', 'items.expense', 'items.timesheetEntry', 'payments']);
+        $invoice->load(['project', 'budgetCategory', 'client', 'creator', 'approver', 'items.task', 'items.expense', 'items.timesheetEntry', 'items.assetCategory', 'payments']);
         $user = auth()->user();
         $workspace = $user->currentWorkspace;
         $userWorkspaceRole = $workspace->getMemberRole($user);
@@ -166,7 +166,8 @@ class InvoiceController extends Controller
             'invoice' => $invoiceData,
             'userWorkspaceRole' => $userWorkspaceRole,
             'emailNotificationsEnabled' => $emailNotificationsEnabled,
-            'invoiceSettings' => $invoiceSettings
+            'invoiceSettings' => $invoiceSettings,
+            'canApprove' => auth()->user()->can('invoice_approve') && $invoice->canBeApproved(),
         ]);
     }
 
@@ -177,59 +178,39 @@ class InvoiceController extends Controller
 
         $validated = $request->validate([
             'project_id' => 'required|exists:projects,id',
+            'task_id' => 'nullable|exists:tasks,id',
             'budget_category_id' => 'nullable|exists:budget_categories,id',
             'client_id' => 'nullable|exists:users,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'invoice_date' => 'required|date',
             'due_date' => 'nullable|date|after_or_equal:invoice_date',
-            'selected_taxes' => 'nullable|array',
-            'selected_taxes.*' => 'exists:taxes,id',
             'notes' => 'nullable|string',
             'terms' => 'nullable|string',
             'items' => 'required|array|min:1',
-            'items.*.type' => 'required|in:task',
-            'items.*.task_id' => 'required|exists:tasks,id',
-            'items.*.description' => 'nullable|string|max:500',
+            'items.*.type' => 'required|in:asset,service',
+            'items.*.task_id' => 'nullable|exists:tasks,id',
+            'items.*.asset_category_id' => 'nullable|exists:asset_categories,id',
+            'items.*.asset_name' => 'nullable|string|max:255',
+            'items.*.tax_id' => 'nullable|exists:taxes,id',
+            'items.*.description' => 'required|string|max:500',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.rate' => 'required|numeric|min:0',
         ]);
 
         $project = Project::findOrFail($validated['project_id']);
 
-        // Calculate totals
-        $subtotal = collect($validated['items'])->sum(fn($item) => ($item['rate'] ?? 0) * ($item['quantity'] ?? 1));
-        $taxAmount = 0;
-        $exclusiveTaxAmount = 0;
-        $taxData = [];
-        
-        if (!empty($validated['selected_taxes'])) {
-            $taxes = \App\Models\Tax::whereIn('id', $validated['selected_taxes'])->get();
-            foreach ($taxes as $tax) {
-                if ($tax->is_inclusive) {
-                    $amount = $subtotal - ($subtotal / (1 + ($tax->rate / 100)));
-                } else {
-                    $amount = ($subtotal * $tax->rate) / 100;
-                    $exclusiveTaxAmount += $amount;
-                }
-                $taxAmount += $amount;
-                $taxData[] = [
-                    'id' => $tax->id,
-                    'name' => $tax->name,
-                    'rate' => $tax->rate,
-                    'is_inclusive' => (bool) $tax->is_inclusive,
-                ];
+        foreach ($validated['items'] as $item) {
+            if ($item['type'] === 'asset' && empty($item['asset_category_id'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['items' => [__('Asset items require an asset category.')]]);
             }
         }
-        
-        $totalAmount = $subtotal + $exclusiveTaxAmount;
-        
-
 
         $validated['budget_category_id'] = $this->validateInvoiceBudgetCategory($validated['project_id'], $validated['budget_category_id'] ?? null);
 
         $invoice = Invoice::create([
             'project_id' => $validated['project_id'],
+            'task_id' => $validated['task_id'] ?? null,
             'budget_category_id' => $validated['budget_category_id'],
             'workspace_id' => $project->workspace_id,
             'client_id' => $validated['client_id'],
@@ -238,31 +219,32 @@ class InvoiceController extends Controller
             'description' => $validated['description'],
             'invoice_date' => $validated['invoice_date'],
             'due_date' => $validated['due_date'],
-            'tax_rate' => json_encode($taxData),
+            'tax_rate' => [],
             'notes' => $validated['notes'],
             'terms' => $validated['terms'],
-            'subtotal' => $subtotal,
-            'tax_amount' => $exclusiveTaxAmount,
-            'total_amount' => $totalAmount,
+            'subtotal' => 0,
+            'tax_amount' => 0,
+            'total_amount' => 0,
         ]);
 
-
-        // Create invoice items
         foreach ($validated['items'] as $index => $item) {
-            $task = Task::find($item['task_id']);
             $quantity = $item['quantity'] ?? 1;
             $rate = $item['rate'] ?? 0;
             InvoiceItem::create([
                 'invoice_id' => $invoice->id,
-                'type' => 'task',
-                'description' => $item['description'] ?: ($task ? $task->title : 'Task'),
+                'type' => $item['type'],
+                'description' => $item['description'],
                 'quantity' => $quantity,
                 'rate' => $rate,
                 'amount' => $rate * $quantity,
-                'task_id' => $item['task_id'],
+                'task_id' => $item['task_id'] ?? $validated['task_id'] ?? null,
+                'asset_category_id' => $item['asset_category_id'] ?? null,
+                'asset_name' => $item['asset_name'] ?? null,
+                'tax_id' => $item['tax_id'] ?? null,
                 'sort_order' => $index + 1,
             ]);
         }
+        $invoice->calculateTotals();
 
         // Fire event for Slack notification
         try {
@@ -279,54 +261,46 @@ class InvoiceController extends Controller
     public function update(Request $request, Invoice $invoice)
     {
         $validated = $request->validate([
+            'task_id' => 'nullable|exists:tasks,id',
+            'budget_category_id' => 'nullable|exists:budget_categories,id',
             'client_id' => 'nullable|exists:users,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'invoice_date' => 'required|date',
             'due_date' => 'nullable|date|after_or_equal:invoice_date',
-            'selected_taxes' => 'nullable|array',
-            'selected_taxes.*' => 'exists:taxes,id',
             'notes' => 'nullable|string',
             'terms' => 'nullable|string',
             'items' => 'required|array|min:1',
-            'items.*.type' => 'required|in:custom,task,expense,time',
-            'items.*.description' => 'required|string',
+            'items.*.type' => 'required|in:asset,service',
+            'items.*.description' => 'required|string|max:500',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.rate' => 'required|numeric|min:0',
             'items.*.task_id' => 'nullable|exists:tasks,id',
-            'items.*.expense_id' => 'nullable|exists:project_expenses,id',
-            'items.*.timesheet_entry_id' => 'nullable|exists:timesheet_entries,id',
+            'items.*.asset_category_id' => 'nullable|exists:asset_categories,id',
+            'items.*.asset_name' => 'nullable|string|max:255',
+            'items.*.tax_id' => 'nullable|exists:taxes,id',
         ]);
 
-        // Prepare tax data
-        $taxData = [];
-        if (!empty($validated['selected_taxes'])) {
-            $taxes = \App\Models\Tax::whereIn('id', $validated['selected_taxes'])->get();
-            foreach ($taxes as $tax) {
-                $taxData[] = [
-                    'id' => $tax->id,
-                    'name' => $tax->name,
-                    'rate' => $tax->rate,
-                    'is_inclusive' => (bool) $tax->is_inclusive,
-                ];
+        foreach ($validated['items'] as $item) {
+            if ($item['type'] === 'asset' && empty($item['asset_category_id'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['items' => [__('Asset items require an asset category.')]]);
             }
         }
-        
+
         $validated['budget_category_id'] = $this->validateInvoiceBudgetCategory($invoice->project_id, $validated['budget_category_id'] ?? null);
 
         $invoice->update([
+            'task_id' => $validated['task_id'] ?? null,
             'budget_category_id' => $validated['budget_category_id'],
             'client_id' => $validated['client_id'],
             'title' => $validated['title'],
             'description' => $validated['description'],
             'invoice_date' => $validated['invoice_date'],
             'due_date' => $validated['due_date'],
-            'tax_rate' => $taxData,
             'notes' => $validated['notes'],
             'terms' => $validated['terms'],
         ]);
 
-        // Update items
         $invoice->items()->delete();
         foreach ($validated['items'] as $index => $item) {
             $quantity = $item['quantity'] ?? 1;
@@ -338,14 +312,14 @@ class InvoiceController extends Controller
                 'quantity' => $quantity,
                 'rate' => $rate,
                 'amount' => $rate * $quantity,
-                'task_id' => $item['task_id'] ?? null,
-                'expense_id' => $item['expense_id'] ?? null,
-                'timesheet_entry_id' => $item['timesheet_entry_id'] ?? null,
+                'task_id' => $item['task_id'] ?? $validated['task_id'] ?? null,
+                'asset_category_id' => $item['asset_category_id'] ?? null,
+                'asset_name' => $item['asset_name'] ?? null,
+                'tax_id' => $item['tax_id'] ?? null,
                 'sort_order' => $index + 1,
             ]);
         }
 
-        // Recalculate totals using the model method
         $invoice->calculateTotals();
 
         return redirect()->route('invoices.show', $invoice)->with('success', __('Invoice updated successfully!'));
@@ -368,7 +342,8 @@ class InvoiceController extends Controller
         return Inertia::render('invoices/Form', [
             'projects' => $projects,
             'clients' => $clients,
-            'taxes' => $taxes
+            'taxes' => $taxes,
+            'assetCategories' => [],
         ]);
     }
 
@@ -387,10 +362,16 @@ class InvoiceController extends Controller
                 ->get(['id', 'name', 'color', 'allocated_amount'])
                 ->toArray();
 
+            $assetCategories = \App\Models\AssetCategory::forWorkspace($project->workspace_id)
+                ->ordered()
+                ->get(['id', 'name', 'color'])
+                ->toArray();
+
             return response()->json([
                 'tasks' => $tasks,
                 'clients' => $clients,
-                'budget_categories' => $budgetCategories
+                'budget_categories' => $budgetCategories,
+                'asset_categories' => $assetCategories,
             ]);
         } catch (\Exception $e) {
             \Log::error('Error loading project invoice data: ' . $e->getMessage());
@@ -398,6 +379,7 @@ class InvoiceController extends Controller
                 'tasks' => [],
                 'clients' => [],
                 'budget_categories' => [],
+                'asset_categories' => [],
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -445,11 +427,16 @@ class InvoiceController extends Controller
         }
         $invoiceData['selected_taxes'] = $selectedTaxIds;
 
+        $assetCategories = $invoice->project_id
+            ? \App\Models\AssetCategory::forWorkspace($invoice->project->workspace_id)->ordered()->get(['id', 'name', 'color'])->toArray()
+            : [];
+
         return Inertia::render('invoices/Form', [
             'invoice' => $invoiceData,
             'projects' => $projects,
             'clients' => $clients,
-            'taxes' => $taxes
+            'taxes' => $taxes,
+            'assetCategories' => $assetCategories,
         ]);
     }
 
@@ -461,8 +448,25 @@ class InvoiceController extends Controller
 
 
 
+    public function approve(Invoice $invoice)
+    {
+        if (!$invoice->canBeApproved()) {
+            return back()->with('error', __('Invoice cannot be approved in current status.'));
+        }
+        $invoice->update([
+            'approved_at' => now(),
+            'approved_by' => auth()->id(),
+        ]);
+        return back()->with('success', __('Invoice approved successfully!'));
+    }
+
     public function markAsPaid(Request $request, Invoice $invoice)
     {
+        $hasAssetItems = $invoice->items()->where('type', 'asset')->exists();
+        if ($hasAssetItems && !$invoice->approved_at) {
+            return back()->with('error', __('Please approve the invoice first before marking as paid. Assets will be created after approval and payment.'));
+        }
+
         $validated = $request->validate([
             'paid_amount' => 'nullable|numeric|min:0|max:' . $invoice->total_amount,
             'payment_method' => 'nullable|string|in:bank_transfer,company_card,personal,personal_card,cash',

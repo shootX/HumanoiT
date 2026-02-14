@@ -10,8 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
 class Asset extends Model
 {
     protected $fillable = [
-        'workspace_id', 'project_id', 'asset_category_id', 'name', 'asset_code', 'type',
-        'location', 'purchase_date', 'warranty_until', 'status', 'notes'
+        'workspace_id', 'project_id', 'invoice_id', 'asset_category_id', 'name', 'asset_code', 'type',
+        'location', 'purchase_date', 'warranty_until', 'status', 'value', 'notes'
     ];
 
     protected $casts = [
@@ -32,6 +32,11 @@ class Asset extends Model
     public function assetCategory(): BelongsTo
     {
         return $this->belongsTo(AssetCategory::class);
+    }
+
+    public function invoice(): BelongsTo
+    {
+        return $this->belongsTo(Invoice::class);
     }
 
     public function tasks(): HasMany

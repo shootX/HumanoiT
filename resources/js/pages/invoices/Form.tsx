@@ -13,12 +13,14 @@ import { Plus, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/utils/currency';
 
 interface InvoiceItem {
-    type: 'task';
+    type: 'service' | 'asset';
     description: string;
     quantity: number;
     rate: number;
     amount: number;
-    task_id: number | null;
+    tax_id: number | null;
+    asset_category_id: number | null;
+    asset_name: string;
 }
 
 interface Props {
@@ -27,14 +29,16 @@ interface Props {
     clients: any[];
     currencies: any[];
     taxes: any[];
+    assetCategories?: any[];
 }
 
-export default function InvoiceForm({ invoice, projects, clients, currencies, taxes }: Props) {
+export default function InvoiceForm({ invoice, projects, clients, currencies, taxes, assetCategories: initialAssetCategories = [] }: Props) {
     const { t } = useTranslation();
     const isEdit = !!invoice;
     
     const [formData, setFormData] = useState({
         project_id: invoice?.project_id?.toString() || '',
+        task_id: invoice?.task_id?.toString() || '',
         budget_category_id: invoice?.budget_category_id?.toString() || '',
         client_id: invoice?.client_id?.toString() || '',
         title: invoice?.title || '',
@@ -42,34 +46,38 @@ export default function InvoiceForm({ invoice, projects, clients, currencies, ta
         invoice_date: invoice?.invoice_date ? new Date(invoice.invoice_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         due_date: invoice?.due_date ? new Date(invoice.due_date).toISOString().split('T')[0] : '',
 
-        selected_taxes: invoice?.selected_taxes || [],
-
         currency: invoice?.currency || 'USD',
         notes: invoice?.notes || '',
         terms: invoice?.terms || '',
     });
 
+    const mapItemType = (t: string) => (['asset', 'service'].includes(t) ? t : 'service') as 'service' | 'asset';
     const [items, setItems] = useState<InvoiceItem[]>(
         invoice?.items?.map((item: any) => ({
-            type: 'task',
+            type: mapItemType(item.type),
             description: item.description || '',
             quantity: item.quantity || 1,
             rate: item.rate || 0,
-            amount: item.amount || 0,
-            task_id: item.task_id,
+            amount: (item.rate || 0) * (item.quantity || 1),
+            tax_id: item.tax_id ?? null,
+            asset_category_id: item.asset_category_id ?? null,
+            asset_name: item.asset_name || '',
         })) || [{
-            type: 'task',
+            type: 'service',
             description: '',
             quantity: 1,
             rate: 0,
             amount: 0,
-            task_id: null
+            tax_id: null,
+            asset_category_id: null,
+            asset_name: ''
         }]
     );
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [projectTasks, setProjectTasks] = useState([]);
     const [budgetCategories, setBudgetCategories] = useState<any[]>([]);
+    const [assetCategories, setAssetCategories] = useState<any[]>(initialAssetCategories);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [projectClients, setProjectClients] = useState([]);
     const [availableClients, setAvailableClients] = useState([]);
@@ -119,6 +127,7 @@ export default function InvoiceForm({ invoice, projects, clients, currencies, ta
         } else if (field === 'project_id' && !value) {
             setProjectTasks([]);
             setBudgetCategories([]);
+            setAssetCategories([]);
             setProjectClients([]);
             setAvailableClients(clients || []);
         }
@@ -142,6 +151,7 @@ export default function InvoiceForm({ invoice, projects, clients, currencies, ta
             setProjectTasks(data.tasks || []);
             setProjectClients(data.clients || []);
             setBudgetCategories(data.budget_categories || []);
+            setAssetCategories(data.asset_categories || []);
             
             // Merge project clients with all clients, ensuring current client is included
             const mergedClients = [...(data.clients || [])];
@@ -159,34 +169,51 @@ export default function InvoiceForm({ invoice, projects, clients, currencies, ta
             console.error('Failed to load project data:', error);
             setProjectTasks([]);
             setBudgetCategories([]);
+            setAssetCategories([]);
             setProjectClients([]);
             setAvailableClients(clients || []);
         }
     };
 
+    const getItemTaxAmount = (item: InvoiceItem) => {
+        const base = (item.quantity || 1) * (item.rate || 0);
+        if (!item.tax_id) return 0;
+        const tax = taxes?.find(t => t.id == item.tax_id);
+        if (!tax) return 0;
+        if (tax.is_inclusive) return base - (base / (1 + (tax.rate || 0) / 100));
+        return (base * (tax.rate || 0)) / 100;
+    };
+
+    const getItemTotal = (item: InvoiceItem) => {
+        const base = (item.quantity || 1) * (item.rate || 0);
+        return base + getItemTaxAmount(item);
+    };
+
     const handleItemChange = (index: number, field: string, value: any) => {
         const updatedItems = [...items];
-        updatedItems[index] = {
-            ...updatedItems[index],
-            [field]: value
-        };
-        // Auto-calculate amount = quantity × rate
-        if (field === 'quantity' || field === 'rate') {
-            const qty = field === 'quantity' ? (parseInt(value) || 0) : (updatedItems[index].quantity || 1);
-            const rate = field === 'rate' ? (parseFloat(value) || 0) : (updatedItems[index].rate || 0);
-            updatedItems[index].amount = qty * rate;
+        const item = { ...updatedItems[index], [field]: value };
+        if (field === 'type') {
+            if (value === 'service') { item.asset_category_id = null; item.asset_name = ''; }
         }
+        if (field === 'quantity' || field === 'rate') {
+            const qty = field === 'quantity' ? (parseInt(value) || 0) : (item.quantity || 1);
+            const rate = field === 'rate' ? (parseFloat(value) || 0) : (item.rate || 0);
+            item.amount = qty * rate;
+        }
+        updatedItems[index] = item;
         setItems(updatedItems);
     };
 
     const addItem = () => {
         setItems([...items, {
-            type: 'task',
+            type: 'service',
             description: '',
             quantity: 1,
             rate: 0,
             amount: 0,
-            task_id: null
+            tax_id: null,
+            asset_category_id: null,
+            asset_name: ''
         }]);
     };
 
@@ -196,44 +223,29 @@ export default function InvoiceForm({ invoice, projects, clients, currencies, ta
         }
     };
 
-    const calculateSubtotal = () => {
-        return items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-    };
-
-    const calculateTaxAmount = (subtotal: number, tax: any) => {
-        const rate = tax?.rate || 0;
-        if (tax?.is_inclusive) {
-            return subtotal - (subtotal / (1 + rate / 100));
-        }
-        return (subtotal * rate) / 100;
-    };
-
-    const calculateTax = () => {
-        if (!formData.selected_taxes || !formData.selected_taxes.length) return 0;
-        const subtotal = calculateSubtotal();
-        return formData.selected_taxes.reduce((total: number, taxId: number) => {
-            const tax = taxes?.find(t => t.id == taxId); // Use == for loose comparison
-            if (!tax) return total;
-            if (tax.is_inclusive) return total;
-            return total + calculateTaxAmount(subtotal, tax);
-        }, 0);
-    };
-
-    const calculateTotal = () => {
-        return calculateSubtotal() + calculateTax();
-    };
+    const calculateSubtotal = () => items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const calculateTotalTax = () => items.reduce((sum, item) => sum + getItemTaxAmount(item), 0);
+    const calculateTotal = () => items.reduce((sum, item) => sum + getItemTotal(item), 0);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
+        const validItems = items.filter(item => {
+            if (item.type === 'asset') return item.asset_category_id != null && item.description?.trim();
+            return !!item.description?.trim();
+        });
         const submitData = {
             ...formData,
+            task_id: formData.task_id && formData.task_id !== 'none' ? formData.task_id : null,
             client_id: formData.client_id === 'none' ? null : formData.client_id,
             budget_category_id: formData.budget_category_id && formData.budget_category_id !== 'none' ? formData.budget_category_id : null,
-            items: items.filter(item => item.task_id !== null && item.task_id !== 'no-tasks').map(item => ({
+            items: validItems.map(item => ({
                 type: item.type,
-                task_id: item.task_id,
+                task_id: formData.task_id && formData.task_id !== 'none' ? parseInt(formData.task_id) : null,
+                asset_category_id: item.type === 'asset' ? item.asset_category_id : null,
+                asset_name: item.type === 'asset' ? item.description : null,
+                tax_id: item.tax_id ?? null,
                 description: item.description,
                 quantity: item.quantity || 1,
                 rate: item.rate || 0,
@@ -280,6 +292,31 @@ setErrors(errors);
                                         {project.title}
                                     </SelectItem>
                                 ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="task_id">{t('Task')} <span className="text-muted-foreground text-xs">({t('optional')})</span></Label>
+                        <Select
+                            value={formData.task_id || 'none'}
+                            onValueChange={(value) => handleInputChange('task_id', value === 'none' ? '' : value)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('Select task')} />
+                            </SelectTrigger>
+                            <SelectContent className="z-[9999]">
+                                <SelectItem value="none">{t('—')}</SelectItem>
+                                {projectTasks.map((task: any) => (
+                                    <SelectItem key={task.id} value={task.id.toString()}>
+                                        {task.title}
+                                    </SelectItem>
+                                ))}
+                                {projectTasks.length === 0 && formData.project_id && (
+                                    <SelectItem value="no-tasks" disabled>
+                                        {t('No tasks found')}
+                                    </SelectItem>
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
@@ -380,7 +417,12 @@ setErrors(errors);
                 <Card>
                     <CardHeader>
                         <div className="flex justify-between items-center">
-                            <CardTitle>{t('Invoice Items')}</CardTitle>
+                            <div>
+                                <CardTitle>{t('Invoice Items')}</CardTitle>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    {t('Type')} · {t('Name')} · {t('Quantity')} · {t('Unit Price')} · {t('Tax Type')} · {t('Total')}
+                                </p>
+                            </div>
                             <Button type="button" onClick={addItem} size="sm">
                                 <Plus className="h-4 w-4 mr-2" />
                                 {t('Add Item')}
@@ -391,31 +433,105 @@ setErrors(errors);
                         <div className="space-y-4">
                             {items.map((item, index) => (
                                 <div key={index} className="rounded-lg border p-4 space-y-3">
-                                    <div className="grid grid-cols-12 gap-2 items-end">
-                                        <div className="col-span-11">
-                                            <Label>{t('Task')}</Label>
+                                    <div className="grid grid-cols-2 md:grid-cols-12 gap-3 items-end">
+                                        <div className="md:col-span-2">
+                                            <Label>{t('Type')}</Label>
                                             <Select 
-                                                value={item.task_id?.toString() || ''} 
-                                                onValueChange={(value) => handleItemChange(index, 'task_id', value ? parseInt(value) : null)}
+                                                value={item.type} 
+                                                onValueChange={(value) => handleItemChange(index, 'type', value as 'service' | 'asset')}
                                             >
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder={t('Select task')} />
+                                                    <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent className="z-[9999]">
-                                                    {projectTasks.map((task: any) => (
-                                                        <SelectItem key={task.id} value={task.id.toString()}>
-                                                            {task.title}
-                                                        </SelectItem>
-                                                    ))}
-                                                    {projectTasks.length === 0 && (
-                                                        <SelectItem value="no-tasks" disabled>
-                                                            {formData.project_id ? t('No tasks found') : t('Select project first')}
-                                                        </SelectItem>
-                                                    )}
+                                                    <SelectItem value="service">{t('Service')}</SelectItem>
+                                                    <SelectItem value="asset">{t('Asset')}</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <div className="col-span-1">
+                                        <div className="md:col-span-3">
+                                            <Label>{t('Name')}</Label>
+                                            <Input
+                                                value={item.description}
+                                                onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                                                placeholder={t('Item name')}
+                                            />
+                                        </div>
+                                        {item.type === 'asset' && (
+                                            <div className="md:col-span-2">
+                                                <Label>{t('Asset Category')} <span className="text-red-500">*</span></Label>
+                                                <Select 
+                                                    value={item.asset_category_id?.toString() || ''} 
+                                                    onValueChange={(value) => handleItemChange(index, 'asset_category_id', value ? parseInt(value) : null)}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder={t('Select')} />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="z-[9999]">
+                                                        {assetCategories.map((cat: any) => (
+                                                            <SelectItem key={cat.id} value={cat.id.toString()}>
+                                                                {cat.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+                                        <div className="md:col-span-1">
+                                            <Label>{t('Quantity')}</Label>
+                                            <Input
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={item.quantity}
+                                                onChange={(e) => {
+                                                    const v = e.target.value;
+                                                    const n = v === '' ? 1 : Math.max(1, parseInt(v.replace(/[^\d]/g, '')) || 1);
+                                                    handleItemChange(index, 'quantity', n);
+                                                }}
+                                                placeholder="1"
+                                            />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <Label>{t('Unit Price')}</Label>
+                                            <Input
+                                                type="text"
+                                                inputMode="decimal"
+                                                value={item.rate}
+                                                onChange={(e) => {
+                                                    const v = e.target.value.replace(',', '.');
+                                                    handleItemChange(index, 'rate', parseFloat(v) || 0);
+                                                }}
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <Label>{t('Tax Type')}</Label>
+                                            <Select 
+                                                value={item.tax_id?.toString() || 'none'} 
+                                                onValueChange={(value) => handleItemChange(index, 'tax_id', value && value !== 'none' ? parseInt(value) : null)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder={t('—')} />
+                                                </SelectTrigger>
+                                                <SelectContent className="z-[9999]">
+                                                    <SelectItem value="none">{t('—')}</SelectItem>
+                                                    {taxes?.map((tax: any) => (
+                                                        <SelectItem key={tax.id} value={tax.id.toString()}>
+                                                            {tax.name} ({tax.rate}%)
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <Label>{t('Total')}</Label>
+                                            <Input
+                                                value={formatCurrency(getItemTotal(item))}
+                                                readOnly
+                                                className="bg-gray-50 font-semibold"
+                                            />
+                                        </div>
+                                        <div className="md:col-span-1">
                                             <Button
                                                 type="button"
                                                 variant="outline"
@@ -425,45 +541,6 @@ setErrors(errors);
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-12 gap-2 items-end">
-                                        <div className="col-span-5">
-                                            <Label>{t('Description')}</Label>
-                                            <Input
-                                                value={item.description}
-                                                onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                                                placeholder={t('Item description')}
-                                            />
-                                        </div>
-                                        <div className="col-span-2">
-                                            <Label>{t('Quantity')}</Label>
-                                            <Input
-                                                type="number"
-                                                min="1"
-                                                step="1"
-                                                value={item.quantity}
-                                                onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 1)}
-                                            />
-                                        </div>
-                                        <div className="col-span-2">
-                                            <Label>{t('Unit Price')}</Label>
-                                            <Input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={item.rate}
-                                                onChange={(e) => handleItemChange(index, 'rate', parseFloat(e.target.value) || 0)}
-                                            />
-                                        </div>
-                                        <div className="col-span-3">
-                                            <Label>{t('Amount')}</Label>
-                                            <Input
-                                                type="number"
-                                                value={item.amount.toFixed(2)}
-                                                readOnly
-                                                className="bg-gray-50 font-semibold"
-                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -477,105 +554,18 @@ setErrors(errors);
                         <CardTitle>{t('Totals')}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-1 gap-4">
-                            <div className="space-y-2">
-                                <Label>{t('Taxes')}</Label>
-                                <Select 
-                                    value="" 
-                                    onValueChange={(value) => {
-                                        const taxId = parseInt(value);
-                                        if (!formData.selected_taxes.includes(taxId)) {
-                                            handleInputChange('selected_taxes', [...formData.selected_taxes, taxId]);
-                                        }
-                                    }}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={t('Select taxes')} />
-                                    </SelectTrigger>
-                                    <SelectContent className="z-[9999]">
-                                        {taxes?.filter(tax => !formData.selected_taxes.some((selectedId: number) => selectedId == tax.id)).map((tax: any) => (
-                                            <SelectItem key={tax.id} value={tax.id.toString()}>
-                                                {tax.name} ({tax.rate}%){tax.is_inclusive ? ' included' : ''}
-                                            </SelectItem>
-                                        ))}
-                                        {taxes?.filter(tax => !formData.selected_taxes.some((selectedId: number) => selectedId == tax.id)).length === 0 && (
-                                            <SelectItem value="no-taxes" disabled>
-                                                {taxes?.length === 0 ? t('No taxes configured') : t('All taxes selected')}
-                                            </SelectItem>
-                                        )}
-                                    </SelectContent>
-                                </Select>
-                                
-                                {/* Selected Taxes Display */}
-                                {formData.selected_taxes && formData.selected_taxes.length > 0 && (
-                                    <div className="flex flex-wrap gap-2 mt-2">
-                                        {formData.selected_taxes.map((taxId: number) => {
-                                            const tax = taxes?.find(t => t.id == taxId); // Use == for loose comparison
-                                            return tax ? (
-                                                <div key={taxId} className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
-                                                    <span>{tax.name} ({tax.rate}%){tax.is_inclusive ? ' included' : ''}</span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            handleInputChange('selected_taxes', formData.selected_taxes.filter((id: number) => id != taxId));
-                                                        }}
-                                                        className="ml-1 text-blue-600 hover:text-blue-800"
-                                                    >
-                                                        ×
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <div key={taxId} className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-1 rounded text-sm">
-                                                    <span>Tax ID: {taxId} (Not Found)</span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            handleInputChange('selected_taxes', formData.selected_taxes.filter((id: number) => id != taxId));
-                                                        }}
-                                                        className="ml-1 text-red-600 hover:text-red-800"
-                                                    >
-                                                        ×
-                                                    </button>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
+                        <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                            <div className="flex justify-between text-gray-700">
+                                <span>{t('Subtotal')}:</span>
+                                <span>{formatCurrency(calculateSubtotal())}</span>
                             </div>
-
-                        </div>
-                        
-                        <div className="mt-6 bg-gray-50 p-4 rounded-lg">
-                            <h3 className="text-lg font-semibold mb-4 flex items-center">
-                                <span className="mr-2">$</span>
-                                {t('Total Calculation')}
-                            </h3>
-                            
-                            <div className="space-y-3">
-                                <div className="flex justify-between text-gray-700">
-                                    <span>{t('Subtotal')}:</span>
-                                    <span>{formatCurrency(calculateSubtotal())}</span>
-                                </div>
-                                
-                                    {formData.selected_taxes && formData.selected_taxes.map((taxId: number) => {
-                                    const tax = taxes?.find(t => t.id == taxId); // Use == for loose comparison
-                                    if (!tax) return null;
-                                    const taxAmount = calculateTaxAmount(calculateSubtotal(), tax);
-                                    const labelSuffix = tax.is_inclusive ? ' (included)' : '';
-                                    return (
-                                        <div key={taxId} className="flex justify-between text-gray-700">
-                                            <span>{tax.name} ({tax.rate}%){labelSuffix}:</span>
-                                            <span>{formatCurrency(taxAmount)}</span>
-                                        </div>
-                                    );
-                                })}
-                                
-                                <div className="border-t pt-3">
-                                    <div className="flex justify-between font-bold text-xl text-blue-600">
-                                        <span>{t('Total')}:</span>
-                                        <span>{formatCurrency(calculateTotal())}</span>
-                                    </div>
-                                </div>
+                            <div className="flex justify-between text-gray-700">
+                                <span>{t('Tax')}:</span>
+                                <span>{formatCurrency(calculateTotalTax())}</span>
+                            </div>
+                            <div className="border-t pt-3 flex justify-between font-bold text-xl text-blue-600">
+                                <span>{t('Total')}:</span>
+                                <span>{formatCurrency(calculateTotal())}</span>
                             </div>
                         </div>
                     </CardContent>

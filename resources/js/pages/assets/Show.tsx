@@ -2,13 +2,13 @@ import { Link } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Package, Calendar, MapPin, Wrench, CheckSquare } from 'lucide-react';
+import { ArrowLeft, Package, Calendar, MapPin, Wrench, CheckSquare, FileText } from 'lucide-react';
 import { PageTemplate } from '@/components/page-template';
 import { useTranslation } from 'react-i18next';
 import { Asset } from '@/types';
 
 interface Props {
-    asset: Asset & { project?: { id: number; title: string }; tasks?: Array<{ id: number; title: string; project?: { id: number } }> };
+    asset: Asset & { project?: { id: number; title: string }; invoice?: { id: number; invoice_number: string } | null; tasks?: Array<{ id: number; title: string; project?: { id: number } }> };
 }
 
 export default function AssetShow({ asset }: Props) {
@@ -72,6 +72,17 @@ export default function AssetShow({ asset }: Props) {
                                     <Link href={route('projects.show', asset.project.id)} className="font-medium text-primary hover:underline">
                                         {asset.project.title}
                                     </Link>
+                                </div>
+                            )}
+                            {asset.invoice && (
+                                <div className="flex items-start gap-2">
+                                    <FileText className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">{t('Invoice')}</p>
+                                        <Link href={route('invoices.show', asset.invoice.id)} className="font-medium text-primary hover:underline">
+                                            {asset.invoice.invoice_number}
+                                        </Link>
+                                    </div>
                                 </div>
                             )}
                             {asset.purchase_date && (
