@@ -339,11 +339,16 @@ class InvoiceController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'rate', 'is_inclusive']);
 
+        $assetCategories = \App\Models\AssetCategory::forWorkspace($workspace->id)
+            ->ordered()
+            ->get(['id', 'name', 'color'])
+            ->toArray();
+
         return Inertia::render('invoices/Form', [
             'projects' => $projects,
             'clients' => $clients,
             'taxes' => $taxes,
-            'assetCategories' => [],
+            'assetCategories' => $assetCategories,
         ]);
     }
 
@@ -387,7 +392,7 @@ class InvoiceController extends Controller
 
     public function edit(Invoice $invoice)
     {
-        $invoice->load(['items']);
+        $invoice->load(['items', 'project']);
 
         $user = auth()->user();
         $workspace = $user->currentWorkspace;
@@ -427,9 +432,13 @@ class InvoiceController extends Controller
         }
         $invoiceData['selected_taxes'] = $selectedTaxIds;
 
-        $assetCategories = $invoice->project_id
-            ? \App\Models\AssetCategory::forWorkspace($invoice->project->workspace_id)->ordered()->get(['id', 'name', 'color'])->toArray()
-            : [];
+        $workspaceId = $invoice->project_id && $invoice->project
+            ? $invoice->project->workspace_id
+            : $workspace->id;
+        $assetCategories = \App\Models\AssetCategory::forWorkspace($workspaceId)
+            ->ordered()
+            ->get(['id', 'name', 'color'])
+            ->toArray();
 
         return Inertia::render('invoices/Form', [
             'invoice' => $invoiceData,

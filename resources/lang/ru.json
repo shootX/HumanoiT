@@ -1082,6 +1082,7 @@
     "Important Instructions": "Важные указания",
     "Important:": "Важно:",
     "Include your order reference in the transfer description": "Включите вашу ссылку на заказ в описание перевода",
+    "included": "включено",
     "Invalid Stripe secret key format": "Недействительный формат секретного ключа Stripe",
     "Invalid company record": "Недействительная регистрация компании",
     "Invalid coupon code": "Недействительный код купона",

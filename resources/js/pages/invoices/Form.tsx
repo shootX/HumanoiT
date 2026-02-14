@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2 } from 'lucide-react';
+import { Link } from '@inertiajs/react';
 import { formatCurrency } from '@/utils/currency';
 
 interface InvoiceItem {
@@ -176,17 +177,21 @@ export default function InvoiceForm({ invoice, projects, clients, currencies, ta
     };
 
     const getItemTaxAmount = (item: InvoiceItem) => {
-        const base = (item.quantity || 1) * (item.rate || 0);
+        const amount = (item.quantity || 1) * (item.rate || 0);
         if (!item.tax_id) return 0;
         const tax = taxes?.find(t => t.id == item.tax_id);
         if (!tax) return 0;
-        if (tax.is_inclusive) return base - (base / (1 + (tax.rate || 0) / 100));
-        return (base * (tax.rate || 0)) / 100;
+        if (tax.is_inclusive) return amount - (amount / (1 + (tax.rate || 0) / 100));
+        return (amount * (tax.rate || 0)) / 100;
     };
 
     const getItemTotal = (item: InvoiceItem) => {
-        const base = (item.quantity || 1) * (item.rate || 0);
-        return base + getItemTaxAmount(item);
+        const amount = (item.quantity || 1) * (item.rate || 0);
+        if (!item.tax_id) return amount;
+        const tax = taxes?.find(t => t.id == item.tax_id);
+        if (!tax) return amount;
+        if (tax.is_inclusive) return amount; // rate უკვე სრული თანხაა
+        return amount + getItemTaxAmount(item);
     };
 
     const handleItemChange = (index: number, field: string, value: any) => {
@@ -223,9 +228,30 @@ export default function InvoiceForm({ invoice, projects, clients, currencies, ta
         }
     };
 
-    const calculateSubtotal = () => items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const getItemBase = (item: InvoiceItem) => {
+        const amount = (item.quantity || 1) * (item.rate || 0);
+        if (!item.tax_id) return amount;
+        const tax = taxes?.find(t => t.id == item.tax_id);
+        if (!tax) return amount;
+        if (tax.is_inclusive) return amount / (1 + (tax.rate || 0) / 100);
+        return amount;
+    };
+    const calculateSubtotal = () => items.reduce((sum, item) => sum + getItemBase(item), 0);
     const calculateTotalTax = () => items.reduce((sum, item) => sum + getItemTaxAmount(item), 0);
     const calculateTotal = () => items.reduce((sum, item) => sum + getItemTotal(item), 0);
+
+    const getTaxBreakdown = (): { id: number; name: string; rate: number; amount: number; is_inclusive: boolean }[] => {
+        const byTax: Record<number, number> = {};
+        items.forEach(item => {
+            if (!item.tax_id) return;
+            const amt = getItemTaxAmount(item);
+            if (amt > 0) byTax[item.tax_id] = (byTax[item.tax_id] || 0) + amt;
+        });
+        return Object.entries(byTax).map(([id, amount]) => {
+            const tax = taxes?.find(t => t.id == parseInt(id));
+            return { id: parseInt(id), name: tax?.name || '', rate: tax?.rate || 0, amount, is_inclusive: tax?.is_inclusive || false };
+        });
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -462,7 +488,7 @@ setErrors(errors);
                                                 <Label>{t('Asset Category')} <span className="text-red-500">*</span></Label>
                                                 <Select 
                                                     value={item.asset_category_id?.toString() || ''} 
-                                                    onValueChange={(value) => handleItemChange(index, 'asset_category_id', value ? parseInt(value) : null)}
+                                                    onValueChange={(value) => handleItemChange(index, 'asset_category_id', value && value !== 'no-cats' ? parseInt(value) : null)}
                                                 >
                                                     <SelectTrigger>
                                                         <SelectValue placeholder={t('Select')} />
@@ -473,8 +499,20 @@ setErrors(errors);
                                                                 {cat.name}
                                                             </SelectItem>
                                                         ))}
+                                                        {assetCategories.length === 0 && (
+                                                            <SelectItem value="no-cats" disabled>
+                                                                {t('No categories')}
+                                                            </SelectItem>
+                                                        )}
                                                     </SelectContent>
                                                 </Select>
+                                                {assetCategories.length === 0 && (
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        <Link href={route('asset-categories.index')} className="text-primary hover:underline">
+                                                            {t('Create in Asset Categories')}
+                                                        </Link>
+                                                    </p>
+                                                )}
                                             </div>
                                         )}
                                         <div className="md:col-span-1">
@@ -559,10 +597,17 @@ setErrors(errors);
                                 <span>{t('Subtotal')}:</span>
                                 <span>{formatCurrency(calculateSubtotal())}</span>
                             </div>
-                            <div className="flex justify-between text-gray-700">
-                                <span>{t('Tax')}:</span>
-                                <span>{formatCurrency(calculateTotalTax())}</span>
-                            </div>
+                            {getTaxBreakdown().length > 0 && (
+                                <>
+                                    <div className="text-sm font-medium text-gray-600 mt-2">{t('Taxes')}:</div>
+                                    {getTaxBreakdown().map((tax) => (
+                                        <div key={tax.id} className="flex justify-between text-gray-700 pl-2">
+                                            <span>{tax.name} ({tax.rate}%){tax.is_inclusive ? ` ${t('included')}` : ''}:</span>
+                                            <span>{formatCurrency(tax.amount)}</span>
+                                        </div>
+                                    ))}
+                                </>
+                            )}
                             <div className="border-t pt-3 flex justify-between font-bold text-xl text-blue-600">
                                 <span>{t('Total')}:</span>
                                 <span>{formatCurrency(calculateTotal())}</span>

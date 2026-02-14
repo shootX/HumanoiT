@@ -486,30 +486,28 @@ export default function InvoiceShow() {
                             {/* Totals */}
                             <div className="bg-gray-50 p-4 rounded-lg">
                                 <div className="space-y-2">
-                                    <div className="flex justify-between">
+                                    <div className="flex justify-between text-gray-700">
                                         <span>{t('Subtotal')}:</span>
                                         <span>{formatCurrency(invoice.subtotal)}</span>
                                     </div>
-                                    
                                     {invoice.tax_rate && Array.isArray(invoice.tax_rate) && invoice.tax_rate.length > 0 && (
-                                        invoice.tax_rate.map((tax: any, index: number) => {
-                                            const taxAmount = tax.amount ?? (tax.is_inclusive
-                                                ? invoice.subtotal - (invoice.subtotal / (1 + (tax.rate || 0) / 100))
-                                                : (invoice.subtotal * (tax.rate || 0)) / 100);
-                                            const labelSuffix = tax.is_inclusive ? ' (included)' : '';
-                                            return (
-                                                <div key={index} className="flex justify-between">
-                                                    <span>{tax.name} ({tax.rate}%){labelSuffix}:</span>
-                                                    <span>{formatCurrency(taxAmount)}</span>
-                                                </div>
-                                            );
-                                        })
+                                        <>
+                                            <div className="text-sm font-medium text-gray-600 mt-2">{t('Taxes')}:</div>
+                                            {invoice.tax_rate.map((tax: any, index: number) => {
+                                                const taxAmount = tax.amount ?? (tax.is_inclusive
+                                                    ? invoice.subtotal - (invoice.subtotal / (1 + (tax.rate || 0) / 100))
+                                                    : (invoice.subtotal * (tax.rate || 0)) / 100);
+                                                return (
+                                                    <div key={index} className="flex justify-between text-gray-700 pl-2">
+                                                        <span>{tax.name} ({tax.rate}%){tax.is_inclusive ? ` ${t('included')}` : ''}:</span>
+                                                        <span>{formatCurrency(taxAmount)}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </>
                                     )}
-                                    
-                                    <hr className="my-2" />
-                                    
-                                    <div className="flex justify-between font-bold text-lg">
-                                        <span>{t('Total Amount')}:</span>
+                                    <div className="border-t pt-3 flex justify-between font-bold text-xl text-blue-600">
+                                        <span>{t('Total')}:</span>
                                         <span>{formatCurrency(invoice.total_amount)}</span>
                                     </div>
 

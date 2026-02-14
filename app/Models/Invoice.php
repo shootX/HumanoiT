@@ -232,21 +232,28 @@ class Invoice extends Model
 
     public function calculateTotals()
     {
-        $subtotal = 0;
+        $subtotal = 0;   // ბაზა (გადასახადამდე)
         $perItemTaxAmount = 0;
+        $totalAmount = 0;
         $taxData = [];
 
         foreach ($this->items()->with('tax')->get() as $item) {
             $itemAmount = $item->rate * ($item->quantity ?: 1);
-            $subtotal += $itemAmount;
 
             if ($item->tax_id && $item->tax) {
                 $rate = $item->tax->rate ?? 0;
                 $isInclusive = $item->tax->is_inclusive ?? false;
                 if ($isInclusive) {
-                    $taxAmt = $itemAmount - ($itemAmount / (1 + ($rate / 100)));
+                    // 100 ლარი = სრული თანხა, 18% დღგ უკვე შედის. ბაზა = 100/1.18, დღგ = 100 - ბაზა
+                    $base = $itemAmount / (1 + ($rate / 100));
+                    $taxAmt = $itemAmount - $base;
+                    $subtotal += $base;
+                    $totalAmount += $itemAmount; // სრული თანხა უკვე არის rate-ში
                 } else {
+                    // ექსკლუზიური: rate = ბაზა, დღგ ემატება
                     $taxAmt = ($itemAmount * $rate) / 100;
+                    $subtotal += $itemAmount;
+                    $totalAmount += $itemAmount + $taxAmt;
                 }
                 $perItemTaxAmount += $taxAmt;
                 $taxKey = $item->tax->id;
@@ -254,10 +261,11 @@ class Invoice extends Model
                     $taxData[$taxKey] = ['id' => $item->tax->id, 'name' => $item->tax->name, 'rate' => $item->tax->rate, 'is_inclusive' => (bool) $item->tax->is_inclusive, 'amount' => 0];
                 }
                 $taxData[$taxKey]['amount'] += $taxAmt;
+            } else {
+                $subtotal += $itemAmount;
+                $totalAmount += $itemAmount;
             }
         }
-
-        $totalAmount = $subtotal + $perItemTaxAmount;
 
         $this->update([
             'subtotal' => $subtotal,
