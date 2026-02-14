@@ -86,6 +86,15 @@ export function AppSidebar() {
             });
         }
 
+        // CRM Contacts
+        if (hasPermission(permissions, 'crm_contact_view_any')) {
+            items.push({
+                title: t('Contacts'),
+                href: route('crm-contacts.index'),
+                icon: Contact,
+            });
+        }
+
         // Tasks
         if (hasPermission(permissions, 'task_view_any')) {
             const taskChildren = [];

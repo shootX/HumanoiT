@@ -708,6 +708,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('landing-page/custom-pages/{customPage}', [CustomPageController::class, 'update'])->middleware('permission:custom_page_update')->name('landing-page.custom-pages.update');
         Route::delete('landing-page/custom-pages/{customPage}', [CustomPageController::class, 'destroy'])->middleware('permission:custom_page_delete')->name('landing-page.custom-pages.destroy');
 
+        // CRM Contacts routes
+        Route::get('crm-contacts', [\App\Http\Controllers\CrmContactController::class, 'index'])->middleware('permission:crm_contact_view_any')->name('crm-contacts.index');
+        Route::post('crm-contacts', [\App\Http\Controllers\CrmContactController::class, 'store'])->middleware('permission:crm_contact_create')->name('crm-contacts.store');
+        Route::put('crm-contacts/{crmContact}', [\App\Http\Controllers\CrmContactController::class, 'update'])->middleware('permission:crm_contact_update')->name('crm-contacts.update');
+        Route::delete('crm-contacts/{crmContact}', [\App\Http\Controllers\CrmContactController::class, 'destroy'])->middleware('permission:crm_contact_delete')->name('crm-contacts.destroy');
+        Route::get('crm-contacts/export', [\App\Http\Controllers\CrmContactController::class, 'export'])->middleware('permission:crm_contact_export')->name('crm-contacts.export');
+        Route::get('crm-contacts/template', [\App\Http\Controllers\ExportImportController::class, 'getTemplate'])->middleware('permission:crm_contact_view_any')->name('crm-contacts.template');
+        Route::post('crm-contacts/import', [\App\Http\Controllers\ExportImportController::class, 'import'])->middleware('permission:crm_contact_create')->name('crm-contacts.import');
+        Route::post('crm-contacts/import/data', [\App\Http\Controllers\ExportImportController::class, 'importData'])->middleware('permission:crm_contact_create')->name('crm-contacts.import.data');
+
         // Project routes
         Route::get('projects', [\App\Http\Controllers\ProjectController::class, 'index'])->middleware('permission:project_view_any')->name('projects.index');
         Route::get('projects/create', [\App\Http\Controllers\ProjectController::class, 'create'])->middleware('permission:project_create')->name('projects.create');

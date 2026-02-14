@@ -85,6 +85,7 @@ class RoleSeeder extends Seeder
                 'project_report',
                 'project_permissions',
                 'assets',
+                'crm_contact',
 
             ])->get();
 
@@ -168,6 +169,7 @@ class RoleSeeder extends Seeder
                 'google_meeting',
                 'project_permissions',
                 'assets',
+                'crm_contact',
 
             ])->get();
         }
@@ -224,6 +226,11 @@ class RoleSeeder extends Seeder
                 'project_view_gantt',
                 'project_permission_update',
                 'project_permission_view',
+                'crm_contact_view_any',
+                'crm_contact_create',
+                'crm_contact_update',
+                'crm_contact_delete',
+                'crm_contact_export',
             ])
             ->get();
         $managerRole->syncPermissions($managerPermissions);
@@ -285,7 +292,11 @@ class RoleSeeder extends Seeder
             'task_calendar_view_meetings',
             'project_report_view_any',
             'project_report_view',
-            'project_permission_view'
+            'project_permission_view',
+            'crm_contact_view_any',
+            'crm_contact_create',
+            'crm_contact_update',
+            'crm_contact_export',
         ])->get();
         $memberRole->syncPermissions($memberPermissions);
 
@@ -307,6 +318,7 @@ class RoleSeeder extends Seeder
             'task_view',
             'asset_view_any',
             'asset_view',
+            'crm_contact_view_any',
             'bug_view_any',
             'bug_view',
             'timesheet_view_any',

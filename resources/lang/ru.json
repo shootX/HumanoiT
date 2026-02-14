@@ -3526,5 +3526,17 @@
     "Password (Optional)": "Пароль (Необязательно)",
     "Share Link": "Поделиться ссылкой",
     "Protected Project": "Защищенный проект",
-    "This project is password protected. Please enter the password to continue.": "Этот проект защищен паролем. Пожалуйста, введите пароль для продолжения."
+    "This project is password protected. Please enter the password to continue.": "Этот проект защищен паролем. Пожалуйста, введите пароль для продолжения.",
+    "Physical Person": "Физическое лицо",
+    "Legal Entity": "Юридическое лицо",
+    "Company Name (LLC)": "Название компании (ООО)",
+    "Brand Name": "Брендовое название",
+    "Contact person name": "Имя контактного лица",
+    "CRM contact created successfully.": "Контакт успешно создан.",
+    "CRM contact updated successfully.": "Контакт успешно обновлен.",
+    "CRM contact deleted successfully.": "Контакт успешно удален.",
+    "Please select a workspace first.": "Пожалуйста, сначала выберите рабочее пространство.",
+    "Company name or brand name is required for legal entities.": "Для юридических лиц требуется название компании или бренда.",
+    "All Types": "Все типы",
+    "Identification Code": "Идентификационный код"
 }

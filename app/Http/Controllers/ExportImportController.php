@@ -59,10 +59,12 @@ class ExportImportController extends Controller
             $path = $request->path();
             if (str_contains($path, 'companies/import')) {
                 $type = 'companies';
-            } else            if (str_contains($path, 'projects/import')) {
+            } elseif (str_contains($path, 'projects/import')) {
                 $type = 'projects';
             } elseif (str_contains($path, 'assets/import')) {
                 $type = 'assets';
+            } elseif (str_contains($path, 'crm-contacts/import')) {
+                $type = 'crm_contacts';
             } else {
                 $type = $request->route()->parameter('type');
             }
@@ -162,6 +164,8 @@ class ExportImportController extends Controller
                 $type = 'projects';
             } elseif (str_contains($path, 'assets/template')) {
                 $type = 'assets';
+            } elseif (str_contains($path, 'crm-contacts/template')) {
+                $type = 'crm_contacts';
             } else {
                 $type = request()->route()->parameter('type');
             }
@@ -174,6 +178,12 @@ class ExportImportController extends Controller
             if ($type === 'assets') {
                 $filename = 'აქტივების_ნიმუში_' . date('Y-m-d') . '.xlsx';
                 return Excel::download(new \App\Exports\AssetTemplateExport(), $filename);
+            }
+
+            // CRM Contacts: generate template with Georgian headers via Excel
+            if ($type === 'crm_contacts') {
+                $filename = 'კონტაქტების_ნიმუში_' . date('Y-m-d') . '.xlsx';
+                return Excel::download(new \App\Exports\CrmContactTemplateExport(), $filename);
             }
             
             // Download template file from storage
@@ -213,6 +223,10 @@ class ExportImportController extends Controller
             'assets' => [
                 'view' => 'asset_view_any',
                 'create' => 'asset_create'
+            ],
+            'crm_contacts' => [
+                'view' => 'crm_contact_view_any',
+                'create' => 'crm_contact_create'
             ]
         ];
 
@@ -389,6 +403,10 @@ class ExportImportController extends Controller
             case 'assets':
                 $tableFields = ['name', 'asset_code', 'category', 'location', 'project', 'purchase_date', 'warranty_until', 'status', 'notes'];
                 break;
+            case 'crm-contacts':
+            case 'crm_contacts':
+                $tableFields = ['type', 'name', 'company_name', 'brand_name', 'identification_code', 'email', 'phone', 'address', 'notes'];
+                break;
             default:
                 $error = 'Something went wrong!';
                 $tableFields = [];
@@ -414,6 +432,10 @@ class ExportImportController extends Controller
             case 'assets':
                 $workspaceId = auth()->user()->current_workspace_id ?? 0;
                 return strtolower(trim($data['name'] ?? '')) . '_' . strtolower(trim($data['asset_code'] ?? '')) . '_' . $workspaceId;
+            case 'crm-contacts':
+            case 'crm_contacts':
+                $workspaceId = auth()->user()->current_workspace_id ?? 0;
+                return strtolower(trim($data['name'] ?? '')) . '_' . strtolower(trim($data['email'] ?? '')) . '_' . $workspaceId;
             default:
                 return '';
         }
@@ -441,6 +463,15 @@ class ExportImportController extends Controller
                 $q = \App\Models\Asset::where('workspace_id', $workspaceId)->where('name', $data['name']);
                 if (!empty($data['asset_code'])) {
                     $q->where('asset_code', $data['asset_code']);
+                }
+                return $q->exists();
+            case 'crm-contacts':
+            case 'crm_contacts':
+                $workspaceId = auth()->user()->current_workspace_id;
+                if (!$workspaceId || empty($data['name'])) return false;
+                $q = \App\Models\CrmContact::where('workspace_id', $workspaceId)->where('name', trim($data['name']));
+                if (!empty($data['email'])) {
+                    $q->where('email', trim($data['email']));
                 }
                 return $q->exists();
             default:
@@ -588,9 +619,49 @@ class ExportImportController extends Controller
                 }
                 $asset->save();
                 break;
+            case 'crm-contacts':
+            case 'crm_contacts':
+                $workspaceId = auth()->user()->current_workspace_id;
+                if (!$workspaceId) {
+                    throw new \Exception('No active workspace found');
+                }
+                $typeRaw = trim($data['type'] ?? 'individual');
+                $type = $this->parseCrmContactType($typeRaw);
+
+                $contact = new \App\Models\CrmContact();
+                $contact->workspace_id = $workspaceId;
+                $contact->type = $type;
+                $contact->name = trim($data['name'] ?? '');
+                $contact->company_name = !empty($data['company_name']) ? trim($data['company_name']) : null;
+                $contact->brand_name = !empty($data['brand_name']) ? trim($data['brand_name']) : null;
+                $contact->identification_code = !empty($data['identification_code']) ? trim($data['identification_code']) : null;
+                $contact->email = !empty($data['email']) ? trim($data['email']) : null;
+                $contact->phone = !empty($data['phone']) ? trim($data['phone']) : null;
+                $contact->address = !empty($data['address']) ? trim($data['address']) : null;
+                $contact->notes = !empty($data['notes']) ? trim($data['notes']) : null;
+                $contact->created_by = auth()->id();
+
+                if ($type === 'legal' && empty($contact->company_name) && empty($contact->brand_name)) {
+                    throw new \Exception('Legal entity requires company name or brand name');
+                }
+                if (empty($contact->name)) {
+                    throw new \Exception('Name is required');
+                }
+
+                $contact->save();
+                break;
             default:
                 throw new \Exception('Unsupported table type');
         }
+    }
+
+    private function parseCrmContactType($value): string
+    {
+        $v = strtolower(trim($value));
+        if (in_array($v, ['legal', 'იურიდიული', 'იურიდიული პირი', 'juridical'])) {
+            return 'legal';
+        }
+        return 'individual';
     }
 
     private function validateProjectStatus($status)

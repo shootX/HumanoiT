@@ -3560,5 +3560,17 @@
     "Password (Optional)": "Password (Optional)",
     "Share Link": "Share Link",
     "Protected Project": "Protected Project",
-    "This project is password protected. Please enter the password to continue.": "This project is password protected. Please enter the password to continue."
+    "This project is password protected. Please enter the password to continue.": "This project is password protected. Please enter the password to continue.",
+    "Physical Person": "ფიზიკური პირი",
+    "Legal Entity": "იურიდიული პირი",
+    "Company Name (LLC)": "შპს სახელი",
+    "Brand Name": "ბრენდული სახელი",
+    "Contact person name": "კონტაქტის პირის სახელი",
+    "CRM contact created successfully.": "კონტაქტი წარმატებით შეიქმნა.",
+    "CRM contact updated successfully.": "კონტაქტი წარმატებით განახლდა.",
+    "CRM contact deleted successfully.": "კონტაქტი წარმატებით წაიშალა.",
+    "Please select a workspace first.": "გთხოვთ ჯერ აირჩიოთ სამუშაო სივრცე.",
+    "Company name or brand name is required for legal entities.": "იურიდიული პირისთვის საჭიროა შპს სახელი ან ბრენდული სახელი.",
+    "All Types": "ყველა ტიპი",
+    "Identification Code": "საიდენტიფიკაციო კოდი"
 }

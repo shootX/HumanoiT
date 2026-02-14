@@ -3560,5 +3560,17 @@
     "Password (Optional)": "Password (Optional)",
     "Share Link": "Share Link",
     "Protected Project": "Protected Project",
-    "This project is password protected. Please enter the password to continue.": "This project is password protected. Please enter the password to continue."
+    "This project is password protected. Please enter the password to continue.": "This project is password protected. Please enter the password to continue.",
+    "Physical Person": "Physical Person",
+    "Legal Entity": "Legal Entity",
+    "Company Name (LLC)": "Company Name (LLC)",
+    "Brand Name": "Brand Name",
+    "Contact person name": "Contact person name",
+    "CRM contact created successfully.": "CRM contact created successfully.",
+    "CRM contact updated successfully.": "CRM contact updated successfully.",
+    "CRM contact deleted successfully.": "CRM contact deleted successfully.",
+    "Please select a workspace first.": "Please select a workspace first.",
+    "Company name or brand name is required for legal entities.": "Company name or brand name is required for legal entities.",
+    "All Types": "All Types",
+    "Identification Code": "Identification Code"
 }

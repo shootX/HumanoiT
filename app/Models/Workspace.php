@@ -92,6 +92,11 @@ class Workspace extends Model
     {
         return $this->hasMany(Timesheet::class);
     }
+
+    public function crmContacts(): HasMany
+    {
+        return $this->hasMany(CrmContact::class);
+    }
     
 
     

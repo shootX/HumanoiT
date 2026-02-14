@@ -170,7 +170,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         const url = window.URL.createObjectURL(blob); 
         const a = document.createElement('a');
         a.href = url;
-        const ext = type === 'assets' ? 'xlsx' : 'csv';
+        const ext = (type === 'assets' || type === 'crm-contacts') ? 'xlsx' : 'csv';
         a.download = `sample_${type}.${ext}`;
         document.body.appendChild(a);
         a.click();

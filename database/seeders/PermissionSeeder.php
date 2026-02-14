@@ -312,7 +312,14 @@ class PermissionSeeder extends Seeder
             ['name' => 'newsletter_bulk_operations', 'module' => 'newsletter', 'label' => 'Newsletter Bulk Operations', 'description' => 'Perform bulk operations on newsletters'],
             ['name' => 'newsletter_export', 'module' => 'newsletter', 'label' => 'Export Newsletter', 'description' => 'Export newsletter data'],
 
-            // Contact Module
+            // CRM Contact Module
+            ['name' => 'crm_contact_view_any', 'module' => 'crm_contact', 'label' => 'View All CRM Contacts', 'description' => 'View all CRM contacts in workspace'],
+            ['name' => 'crm_contact_create', 'module' => 'crm_contact', 'label' => 'Create CRM Contact', 'description' => 'Add new CRM contact'],
+            ['name' => 'crm_contact_update', 'module' => 'crm_contact', 'label' => 'Update CRM Contact', 'description' => 'Modify CRM contact'],
+            ['name' => 'crm_contact_delete', 'module' => 'crm_contact', 'label' => 'Delete CRM Contact', 'description' => 'Remove CRM contact'],
+            ['name' => 'crm_contact_export', 'module' => 'crm_contact', 'label' => 'Export CRM Contacts', 'description' => 'Export CRM contact data'],
+
+            // Contact Module (Landing Page)
             ['name' => 'contact_view_any', 'module' => 'contact', 'label' => 'View All Contacts', 'description' => 'View all contact submissions'],
             ['name' => 'contact_view', 'module' => 'contact', 'label' => 'View Contact', 'description' => 'View individual contact submission'],
             ['name' => 'contact_create', 'module' => 'contact', 'label' => 'Create Contact', 'description' => 'Add new contact submission'],
