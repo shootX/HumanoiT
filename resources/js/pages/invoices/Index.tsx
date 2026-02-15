@@ -36,6 +36,11 @@ interface Invoice {
         name: string;
         avatar?: string;
     };
+    crm_contact?: {
+        id: number;
+        name: string;
+        company_name?: string;
+    } | null;
     title: string;
     total_amount: number;
     status: 'draft' | 'sent' | 'viewed' | 'paid' | 'partial_paid' | 'overdue' | 'cancelled';
@@ -52,7 +57,7 @@ interface Invoice {
 
 export default function InvoiceIndex() {
     const { t } = useTranslation();
-    const { invoices, projects, clients, filters, auth, userWorkspaceRole, flash, emailNotificationsEnabled } = usePage().props as any;
+    const { invoices, projects, clients, crmContacts = [], filters, auth, userWorkspaceRole, flash, emailNotificationsEnabled } = usePage().props as any;
 
     // Show flash messages
     useEffect(() => {
@@ -68,6 +73,7 @@ export default function InvoiceIndex() {
     const [searchTerm, setSearchTerm] = useState(filters?.search || '');
     const [selectedProject, setSelectedProject] = useState(filters?.project_id || 'all');
     const [selectedClient, setSelectedClient] = useState(filters?.client_id || 'all');
+    const [selectedContact, setSelectedContact] = useState(filters?.crm_contact_id || 'all');
     const [selectedStatus, setSelectedStatus] = useState(filters?.status || 'all');
     const [showFilters, setShowFilters] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -88,6 +94,7 @@ export default function InvoiceIndex() {
         if (searchTerm) params.search = searchTerm;
         if (selectedProject !== 'all') params.project_id = selectedProject;
         if (selectedClient !== 'all') params.client_id = selectedClient;
+        if (selectedContact !== 'all') params.crm_contact_id = selectedContact;
         if (selectedStatus !== 'all') params.status = selectedStatus;
         router.get(route('invoices.index'), params, { preserveState: true, preserveScroll: true });
     };
@@ -209,6 +216,7 @@ export default function InvoiceIndex() {
                     if (searchTerm) params.append('search', searchTerm);
                     if (selectedProject !== 'all') params.append('project_id', selectedProject);
                     if (selectedClient !== 'all') params.append('client_id', selectedClient);
+                    if (selectedContact !== 'all') params.append('crm_contact_id', selectedContact);
                     if (selectedStatus !== 'all') params.append('status', selectedStatus);
                     
                     const response = await fetch(route('invoices.export', params));
@@ -252,9 +260,9 @@ export default function InvoiceIndex() {
             breadcrumbs={breadcrumbs}
             noPadding
         >
-            {/* Overview Stats */}
-            <div className="bg-white rounded-lg shadow mb-4 p-4">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {/* Overview Stats + Contact Filter */}
+            <div className="bg-white rounded-lg shadow mb-4 p-3 sm:p-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4">
                     <div className="text-center">
                         <div className="text-2xl font-bold text-blue-600">{invoices?.total || 0}</div>
                         <div className="text-sm text-gray-600">{t('Total Invoices')}</div>
@@ -281,7 +289,7 @@ export default function InvoiceIndex() {
                         <div className="text-2xl font-bold text-purple-600">
                             {(() => {
                                 if (!invoices?.data || invoices.data.length === 0) {
-                                    return '$0.00';
+                                    return '₾0.00';
                                 }
                                 const total = invoices.data.reduce((sum: number, inv: Invoice) => {
                                     return sum + (parseFloat(inv.total_amount?.toString()) || 0);
@@ -291,16 +299,43 @@ export default function InvoiceIndex() {
                         </div>
                         <div className="text-sm text-gray-600">{t('Total Value')}</div>
                     </div>
+                    <div className="text-center flex flex-col justify-center">
+                        <div className="text-sm text-gray-600 mb-2">{t('Contact')}</div>
+                        <Select 
+                            value={selectedContact} 
+                            onValueChange={(value) => {
+                                setSelectedContact(value);
+                                const params: any = { page: 1 };
+                                if (searchTerm) params.search = searchTerm;
+                                if (selectedProject !== 'all') params.project_id = selectedProject;
+                                if (value !== 'all') params.crm_contact_id = value;
+                                if (selectedStatus !== 'all') params.status = selectedStatus;
+                                router.get(route('invoices.index'), params, { preserveState: true, preserveScroll: true });
+                            }}
+                        >
+                            <SelectTrigger className="h-9 w-full max-w-[140px] mx-auto border-gray-200">
+                                <SelectValue placeholder={t('All Contacts')} />
+                            </SelectTrigger>
+                            <SelectContent className="z-[9999]">
+                                <SelectItem value="all">{t('All Contacts')}</SelectItem>
+                                {crmContacts?.map((contact: any) => (
+                                    <SelectItem key={contact.id} value={contact.id.toString()}>
+                                        {contact.company_name ? `${contact.name} (${contact.company_name})` : contact.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
             </div>
 
             {/* Search and filters */}
             <div className="bg-white rounded-lg shadow mb-4">
-                <div className="p-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                <div className="p-3 sm:p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
                             <form onSubmit={handleSearch} className="flex gap-2">
-                                <div className="relative w-64">
+                                <div className="relative w-full sm:w-64">
                                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                     <Input
                                         placeholder={t('Search invoices...')}
@@ -309,7 +344,7 @@ export default function InvoiceIndex() {
                                         className="w-full pl-9"
                                     />
                                 </div>
-                                <Button type="submit" size="sm">
+                                <Button type="submit" size="sm" className="min-h-[44px] sm:min-h-0 touch-manipulation">
                                     <Search className="h-4 w-4 mr-1.5" />
                                     {t('Search')}
                                 </Button>
@@ -318,6 +353,7 @@ export default function InvoiceIndex() {
                             <Button 
                                 variant="outline"
                                 size="sm" 
+                                className="min-h-[44px] sm:min-h-0 touch-manipulation"
                                 onClick={() => setShowFilters(!showFilters)}
                             >
                                 <Filter className="h-3.5 w-3.5 mr-1.5" />
@@ -325,7 +361,7 @@ export default function InvoiceIndex() {
                             </Button>
                         </div>
                         
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                             <div className="border rounded-md p-0.5 mr-2">
                                 <Button 
                                     size="sm" 
@@ -345,6 +381,7 @@ export default function InvoiceIndex() {
                                 </Button>
                             </div>
                             
+                            <div className="hidden sm:flex items-center gap-2">
                             <Label className="text-xs text-muted-foreground">{t('Per Page')}:</Label>
                             <Select 
                                 value={filters?.per_page?.toString() || "12"} 
@@ -353,6 +390,7 @@ export default function InvoiceIndex() {
                                     if (searchTerm) params.search = searchTerm;
                                     if (selectedProject !== 'all') params.project_id = selectedProject;
                                     if (selectedClient !== 'all') params.client_id = selectedClient;
+                                    if (selectedContact !== 'all') params.crm_contact_id = selectedContact;
                                     if (selectedStatus !== 'all') params.status = selectedStatus;
                                     router.get(route('invoices.index'), params, { preserveState: false, preserveScroll: false });
                                 }}
@@ -366,15 +404,25 @@ export default function InvoiceIndex() {
                                     <SelectItem value="48">48</SelectItem>
                                 </SelectContent>
                             </Select>
+                            </div>
                         </div>
                     </div>
                     
                     {showFilters && (
-                        <div className="w-full mt-3 p-4 bg-gray-50 border rounded-md">
-                            <div className="flex flex-wrap gap-4 items-end">
+                        <div className="w-full mt-3 p-3 sm:p-4 bg-gray-50 border rounded-md">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4 sm:items-end">
                                 <div className="space-y-2">
                                     <Label>{t('Project')}</Label>
-                                    <Select value={selectedProject} onValueChange={setSelectedProject}>
+                                    <Select value={selectedProject} onValueChange={(v) => {
+                                        setSelectedProject(v);
+                                        const params: any = { page: 1 };
+                                        if (searchTerm) params.search = searchTerm;
+                                        if (v !== 'all') params.project_id = v;
+                                        if (selectedClient !== 'all') params.client_id = selectedClient;
+                                        if (selectedContact !== 'all') params.crm_contact_id = selectedContact;
+                                        if (selectedStatus !== 'all') params.status = selectedStatus;
+                                        router.get(route('invoices.index'), params, { preserveState: true, preserveScroll: true });
+                                    }}>
                                         <SelectTrigger className="w-40">
                                             <SelectValue placeholder={t('All Projects')} />
                                         </SelectTrigger>
@@ -390,8 +438,43 @@ export default function InvoiceIndex() {
                                 </div>
                                 
                                 <div className="space-y-2">
+                                    <Label>{t('Contact')}</Label>
+                                    <Select value={selectedContact} onValueChange={(v) => {
+                                        setSelectedContact(v);
+                                        const params: any = { page: 1 };
+                                        if (searchTerm) params.search = searchTerm;
+                                        if (selectedProject !== 'all') params.project_id = selectedProject;
+                                        if (selectedClient !== 'all') params.client_id = selectedClient;
+                                        if (v !== 'all') params.crm_contact_id = v;
+                                        if (selectedStatus !== 'all') params.status = selectedStatus;
+                                        router.get(route('invoices.index'), params, { preserveState: true, preserveScroll: true });
+                                    }}>
+                                        <SelectTrigger className="w-40">
+                                            <SelectValue placeholder={t('All Contacts')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">{t('All Contacts')}</SelectItem>
+                                            {crmContacts?.map((contact: any) => (
+                                                <SelectItem key={contact.id} value={contact.id.toString()}>
+                                                    {contact.company_name ? `${contact.name} (${contact.company_name})` : contact.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                
+                                <div className="space-y-2">
                                     <Label>{t('Status')}</Label>
-                                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                                    <Select value={selectedStatus} onValueChange={(v) => {
+                                        setSelectedStatus(v);
+                                        const params: any = { page: 1 };
+                                        if (searchTerm) params.search = searchTerm;
+                                        if (selectedProject !== 'all') params.project_id = selectedProject;
+                                        if (selectedClient !== 'all') params.client_id = selectedClient;
+                                        if (selectedContact !== 'all') params.crm_contact_id = selectedContact;
+                                        if (v !== 'all') params.status = v;
+                                        router.get(route('invoices.index'), params, { preserveState: true, preserveScroll: true });
+                                    }}>
                                         <SelectTrigger className="w-40">
                                             <SelectValue placeholder={t('All Status')} />
                                         </SelectTrigger>
@@ -462,17 +545,23 @@ export default function InvoiceIndex() {
                                         <span className="text-sm">{invoice.project?.title || t('No Project')}</span>
                                     </div>
                                     
-                                    {invoice.client && (
+                                    {(invoice.crm_contact || invoice.client) && (
                                         <div className="flex items-center justify-between">
-                                            <span className="text-sm text-muted-foreground">Client:</span>
+                                            <span className="text-sm text-muted-foreground">{t('Contact')}:</span>
                                             <div className="flex items-center gap-1">
-                                                <Avatar className="h-5 w-5">
-                                                    <AvatarImage src={invoice.client.avatar} />
-                                                    <AvatarFallback className="text-xs">
-                                                        {invoice.client.name?.charAt(0)}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <span className="text-sm">{invoice.client.name}</span>
+                                                {invoice.crm_contact ? (
+                                                    <span className="text-sm">{invoice.crm_contact.company_name || invoice.crm_contact.name}</span>
+                                                ) : invoice.client ? (
+                                                    <>
+                                                        <Avatar className="h-5 w-5">
+                                                            <AvatarImage src={invoice.client.avatar} />
+                                                            <AvatarFallback className="text-xs">
+                                                                {invoice.client.name?.charAt(0)}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <span className="text-sm">{invoice.client.name}</span>
+                                                    </>
+                                                ) : null}
                                             </div>
                                         </div>
                                     )}
@@ -491,7 +580,7 @@ export default function InvoiceIndex() {
                                 </div>
                             </CardContent>
                             
-                            <CardFooter className="flex justify-end gap-1 pt-0 pb-2">
+                            <CardFooter className="flex justify-end gap-2 pt-0 pb-2">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button 
@@ -615,18 +704,18 @@ export default function InvoiceIndex() {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Invoice</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">{t('Project')}</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Amount</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Status</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Due Date</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {invoices?.data?.filter((inv: Invoice | null) => inv != null)?.map((invoice: Invoice) => (
                                     <tr key={invoice.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <div 
                                                 className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
                                                 onClick={() => handleAction('view', invoice)}
@@ -635,15 +724,15 @@ export default function InvoiceIndex() {
                                             </div>
                                             <div className="text-sm text-gray-500">{invoice.title}</div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <div className="text-sm font-medium text-gray-900">{invoice.project?.title || t('No Project')}</div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <div className="text-sm font-medium text-gray-900">
                                                 {formatCurrency(invoice.total_amount)}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <div className="flex items-center gap-2">
                                                 {invoice.is_overdue && <AlertTriangle className="h-4 w-4 text-red-500" />}
                                                 <Badge className={getStatusColor(invoice.status)} variant="secondary">
@@ -651,7 +740,7 @@ export default function InvoiceIndex() {
                                                 </Badge>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 sm:px-6">
                                             <div>{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '—'}</div>
                                             {invoice.is_overdue && (
                                                 <div className="text-xs text-red-600">
@@ -659,8 +748,8 @@ export default function InvoiceIndex() {
                                                 </div>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <div className="flex gap-1">
+                                        <td className="px-3 py-4 whitespace-nowrap text-sm font-medium sm:px-6">
+                                            <div className="flex gap-2">
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
                                                         <Button 

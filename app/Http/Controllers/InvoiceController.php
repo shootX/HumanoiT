@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CrmContact;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Project;
@@ -20,7 +21,7 @@ class InvoiceController extends Controller
         $workspace = $user->currentWorkspace;
         $userWorkspaceRole = $workspace->getMemberRole($user);
        
-        $query = Invoice::with(['project:id,title', 'client:id,name,avatar', 'creator:id,name', 'payments'])
+        $query = Invoice::with(['project:id,title', 'client:id,name,avatar', 'crmContact:id,name,company_name,email', 'creator:id,name', 'payments'])
             ->where('workspace_id', $workspace->id);
 
         // Apply role-based filtering
@@ -81,6 +82,10 @@ class InvoiceController extends Controller
             $query->where('client_id', $request->client_id);
         }
 
+        if ($request->crm_contact_id) {
+            $query->where('crm_contact_id', $request->crm_contact_id);
+        }
+
         $perPage = $request->get('per_page', 12);
         $invoices = $query->latest()->paginate($perPage)->withQueryString();
 
@@ -118,11 +123,16 @@ class InvoiceController extends Controller
             })
             ->get(['users.id', 'users.name']);
 
+        $crmContacts = CrmContact::forWorkspace($workspace->id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'company_name', 'type']);
+
         return Inertia::render('invoices/Index', [
             'invoices' => $invoices,
             'projects' => $projects,
             'clients' => $clients,
-            'filters' => $request->only(['search', 'status', 'project_id', 'client_id', 'per_page']),
+            'crmContacts' => $crmContacts,
+            'filters' => $request->only(['search', 'status', 'project_id', 'client_id', 'crm_contact_id', 'per_page']),
             'userWorkspaceRole' => $userWorkspaceRole,
             'emailNotificationsEnabled' => emailNotificationEnabled()
         ]);
@@ -130,7 +140,7 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice)
     {
-        $invoice->load(['project', 'budgetCategory', 'client', 'creator', 'approver', 'items.task', 'items.expense', 'items.timesheetEntry', 'items.assetCategory', 'payments']);
+        $invoice->load(['project', 'budgetCategory', 'client', 'crmContact', 'creator', 'approver', 'items.task', 'items.expense', 'items.timesheetEntry', 'items.assetCategory', 'payments']);
         $user = auth()->user();
         $workspace = $user->currentWorkspace;
         $userWorkspaceRole = $workspace->getMemberRole($user);
@@ -208,12 +218,28 @@ class InvoiceController extends Controller
 
         $validated['budget_category_id'] = $this->validateInvoiceBudgetCategory($validated['project_id'], $validated['budget_category_id'] ?? null);
 
+        $clientDetails = null;
+        if (!empty($validated['crm_contact_id'])) {
+            $contact = CrmContact::find($validated['crm_contact_id']);
+            if ($contact) {
+                $clientDetails = [
+                    'name' => $contact->display_name,
+                    'company_name' => $contact->company_name,
+                    'email' => $contact->email,
+                    'phone' => $contact->phone,
+                    'address' => $contact->address,
+                ];
+            }
+        }
+
         $invoice = Invoice::create([
             'project_id' => $validated['project_id'],
             'task_id' => $validated['task_id'] ?? null,
             'budget_category_id' => $validated['budget_category_id'],
             'workspace_id' => $project->workspace_id,
             'client_id' => $validated['client_id'],
+            'crm_contact_id' => $validated['crm_contact_id'] ?? null,
+            'client_details' => $clientDetails,
             'created_by' => $user->id,
             'title' => $validated['title'],
             'description' => $validated['description'],
@@ -264,6 +290,7 @@ class InvoiceController extends Controller
             'task_id' => 'nullable|exists:tasks,id',
             'budget_category_id' => 'nullable|exists:budget_categories,id',
             'client_id' => 'nullable|exists:users,id',
+            'crm_contact_id' => 'nullable|exists:crm_contacts,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'invoice_date' => 'required|date',
@@ -289,10 +316,26 @@ class InvoiceController extends Controller
 
         $validated['budget_category_id'] = $this->validateInvoiceBudgetCategory($invoice->project_id, $validated['budget_category_id'] ?? null);
 
+        $clientDetails = null;
+        if (!empty($validated['crm_contact_id'])) {
+            $contact = CrmContact::find($validated['crm_contact_id']);
+            if ($contact) {
+                $clientDetails = [
+                    'name' => $contact->display_name,
+                    'company_name' => $contact->company_name,
+                    'email' => $contact->email,
+                    'phone' => $contact->phone,
+                    'address' => $contact->address,
+                ];
+            }
+        }
+
         $invoice->update([
             'task_id' => $validated['task_id'] ?? null,
             'budget_category_id' => $validated['budget_category_id'],
             'client_id' => $validated['client_id'],
+            'crm_contact_id' => $validated['crm_contact_id'] ?? null,
+            'client_details' => $clientDetails,
             'title' => $validated['title'],
             'description' => $validated['description'],
             'invoice_date' => $validated['invoice_date'],
@@ -344,9 +387,14 @@ class InvoiceController extends Controller
             ->get(['id', 'name', 'color'])
             ->toArray();
 
+        $crmContacts = CrmContact::forWorkspace($workspace->id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'company_name', 'type', 'email']);
+
         return Inertia::render('invoices/Form', [
             'projects' => $projects,
             'clients' => $clients,
+            'crmContacts' => $crmContacts,
             'taxes' => $taxes,
             'assetCategories' => $assetCategories,
         ]);
@@ -440,10 +488,15 @@ class InvoiceController extends Controller
             ->get(['id', 'name', 'color'])
             ->toArray();
 
+        $crmContacts = CrmContact::forWorkspace($workspace->id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'company_name', 'type', 'email']);
+
         return Inertia::render('invoices/Form', [
             'invoice' => $invoiceData,
             'projects' => $projects,
             'clients' => $clients,
+            'crmContacts' => $crmContacts,
             'taxes' => $taxes,
             'assetCategories' => $assetCategories,
         ]);

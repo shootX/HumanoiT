@@ -28,12 +28,13 @@ interface Props {
     invoice?: any;
     projects: any[];
     clients: any[];
+    crmContacts?: any[];
     currencies: any[];
     taxes: any[];
     assetCategories?: any[];
 }
 
-export default function InvoiceForm({ invoice, projects, clients, currencies, taxes, assetCategories: initialAssetCategories = [] }: Props) {
+export default function InvoiceForm({ invoice, projects, clients, crmContacts = [], currencies, taxes, assetCategories: initialAssetCategories = [] }: Props) {
     const { t } = useTranslation();
     const isEdit = !!invoice;
     
@@ -42,6 +43,7 @@ export default function InvoiceForm({ invoice, projects, clients, currencies, ta
         task_id: invoice?.task_id?.toString() || '',
         budget_category_id: invoice?.budget_category_id?.toString() || '',
         client_id: invoice?.client_id?.toString() || '',
+        crm_contact_id: invoice?.crm_contact_id?.toString() || '',
         title: invoice?.title || '',
         description: invoice?.description || '',
         invoice_date: invoice?.invoice_date ? new Date(invoice.invoice_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
@@ -265,6 +267,7 @@ export default function InvoiceForm({ invoice, projects, clients, currencies, ta
             ...formData,
             task_id: formData.task_id && formData.task_id !== 'none' ? formData.task_id : null,
             client_id: formData.client_id === 'none' ? null : formData.client_id,
+            crm_contact_id: formData.crm_contact_id && formData.crm_contact_id !== 'none' ? formData.crm_contact_id : null,
             budget_category_id: formData.budget_category_id && formData.budget_category_id !== 'none' ? formData.budget_category_id : null,
             items: validItems.map(item => ({
                 type: item.type,
@@ -303,6 +306,26 @@ setErrors(errors);
         >
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="crm_contact_id">{t('Billing recipient')}</Label>
+                        <Select
+                            value={formData.crm_contact_id || 'none'}
+                            onValueChange={(value) => handleInputChange('crm_contact_id', value === 'none' ? '' : value)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('Select contact')} />
+                            </SelectTrigger>
+                            <SelectContent className="z-[9999]">
+                                <SelectItem value="none">{t('—')}</SelectItem>
+                                {crmContacts?.map((contact: any) => (
+                                    <SelectItem key={contact.id} value={contact.id.toString()}>
+                                        {contact.company_name ? `${contact.name} (${contact.company_name})` : contact.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
                     <div className="space-y-2">
                         <Label htmlFor="project_id">{t('Project')} <span className="text-red-500">*</span></Label>
                         <Select 

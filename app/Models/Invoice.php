@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\LogsActivity;
+use App\Models\CrmContact;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +19,7 @@ class Invoice extends Model
         'task_id',
         'workspace_id',
         'client_id',
+        'crm_contact_id',
         'created_by',
         'title',
         'description',
@@ -92,6 +94,11 @@ class Invoice extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(User::class, 'client_id');
+    }
+
+    public function crmContact(): BelongsTo
+    {
+        return $this->belongsTo(CrmContact::class);
     }
 
     public function creator(): BelongsTo

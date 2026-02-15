@@ -57,6 +57,13 @@ interface Invoice {
         name: string;
         avatar?: string;
     };
+    crm_contact?: {
+        id: number;
+        name: string;
+        company_name?: string;
+        email?: string;
+    } | null;
+    client_details?: { name?: string; company_name?: string; email?: string; address?: string } | null;
     creator: {
         id: number;
         name: string;
@@ -407,10 +414,26 @@ export default function InvoiceShow() {
                 <Card>
                     <CardContent className="pt-6">
                         <div className="flex justify-between items-start">
-                            {invoice.client && (
+                            {(invoice.crm_contact || invoice.client_details || invoice.client) && (
                                 <div>
                                     <h3 className="font-bold mb-2">{t('Bill To')}</h3>
-                                    <p>{invoice.client.name}</p>
+                                    {invoice.crm_contact && (
+                                        <>
+                                            <p>{invoice.crm_contact.company_name || invoice.crm_contact.name}</p>
+                                            {invoice.crm_contact.name && invoice.crm_contact.company_name && <p className="text-sm text-muted-foreground">{invoice.crm_contact.name}</p>}
+                                            {invoice.crm_contact.email && <p className="text-sm text-muted-foreground">{invoice.crm_contact.email}</p>}
+                                        </>
+                                    )}
+                                    {!invoice.crm_contact && invoice.client_details && (
+                                        <>
+                                            <p>{invoice.client_details.company_name || invoice.client_details.name}</p>
+                                            {invoice.client_details.name && invoice.client_details.company_name && <p className="text-sm text-muted-foreground">{invoice.client_details.name}</p>}
+                                            {invoice.client_details.email && <p className="text-sm text-muted-foreground">{invoice.client_details.email}</p>}
+                                        </>
+                                    )}
+                                    {!invoice.crm_contact && !invoice.client_details && invoice.client && (
+                                        <p>{invoice.client.name}</p>
+                                    )}
                                 </div>
                             )}
 
