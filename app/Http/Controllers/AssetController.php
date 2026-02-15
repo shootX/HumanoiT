@@ -69,7 +69,7 @@ class AssetController extends Controller
             abort(403);
         }
 
-        $asset->load(['project', 'assetCategory', 'invoice:id,invoice_number', 'tasks' => fn ($q) => $q->with('project')->limit(20)]);
+        $asset->load(['project', 'assetCategory', 'invoice:id,invoice_number', 'tasks' => fn ($q) => $q->with('project')->limit(20), 'attachments.mediaItem', 'warrantyCases' => fn ($q) => $q->orderByDesc('reported_at')]);
 
         return Inertia::render('assets/Show', [
             'asset' => $asset,

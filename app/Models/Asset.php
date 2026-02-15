@@ -44,6 +44,16 @@ class Asset extends Model
         return $this->hasMany(Task::class);
     }
 
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(AssetAttachment::class);
+    }
+
+    public function warrantyCases(): HasMany
+    {
+        return $this->hasMany(AssetWarrantyCase::class);
+    }
+
     public function scopeForWorkspace(Builder $query, $workspaceId): Builder
     {
         return $query->where('workspace_id', $workspaceId);

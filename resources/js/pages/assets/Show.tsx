@@ -1,18 +1,29 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Package, Calendar, MapPin, Wrench, CheckSquare, FileText } from 'lucide-react';
+import { ArrowLeft, Package, Calendar, MapPin, CheckSquare, FileText, FileCheck } from 'lucide-react';
 import { PageTemplate } from '@/components/page-template';
 import { useTranslation } from 'react-i18next';
 import { Asset } from '@/types';
+import AssetAttachments from '@/components/assets/AssetAttachments';
+import AssetWarrantyCases from '@/components/assets/AssetWarrantyCases';
+import { hasPermission } from '@/utils/authorization';
 
 interface Props {
-    asset: Asset & { project?: { id: number; title: string }; invoice?: { id: number; invoice_number: string } | null; tasks?: Array<{ id: number; title: string; project?: { id: number } }> };
+    asset: Asset & {
+        project?: { id: number; title: string };
+        invoice?: { id: number; invoice_number: string } | null;
+        tasks?: Array<{ id: number; title: string; project?: { id: number } }>;
+        attachments?: Array<{ id: number; asset_id: number; media_item_id: number; media_item?: { id: number; name: string; url: string; thumb_url: string; mime_type: string } }>;
+        warranty_cases?: Array<{ id: number; asset_id: number; damage_description: string | null; comment: string | null; status: string; reported_at: string | null; created_at: string }>;
+    };
 }
 
 export default function AssetShow({ asset }: Props) {
     const { t } = useTranslation();
+    const { auth } = usePage().props as any;
+    const canEdit = hasPermission(auth?.permissions || [], 'asset_update');
 
     const getTypeLabel = (type: string) => t(`asset_type_${type}`);
     const getStatusLabel = (status: string) => t(`asset_status_${status}`);
@@ -107,6 +118,44 @@ export default function AssetShow({ asset }: Props) {
                                 <p className="whitespace-pre-wrap">{asset.notes}</p>
                             </div>
                         )}
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <FileCheck className="h-5 w-5" />
+                            {t('Warranty documents')}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            {t('Attach warranty certificates and related documents')}
+                        </p>
+                    </CardHeader>
+                    <CardContent>
+                        <AssetAttachments
+                            asset={{ id: asset.id }}
+                            attachments={asset.attachments || []}
+                            canEdit={canEdit}
+                        />
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <FileCheck className="h-5 w-5" />
+                            {t('Warranty cases')}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            {t('Damage reports, repair status and comments')}
+                        </p>
+                    </CardHeader>
+                    <CardContent>
+                        <AssetWarrantyCases
+                            asset={{ id: asset.id }}
+                            warrantyCases={asset.warranty_cases || []}
+                            canEdit={canEdit}
+                        />
                     </CardContent>
                 </Card>
 

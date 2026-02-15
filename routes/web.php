@@ -796,6 +796,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('assets/{asset}', [\App\Http\Controllers\AssetController::class, 'show'])->middleware('permission:asset_view')->name('assets.show');
         Route::put('assets/{asset}', [\App\Http\Controllers\AssetController::class, 'update'])->middleware('permission:asset_update')->name('assets.update');
         Route::delete('assets/{asset}', [\App\Http\Controllers\AssetController::class, 'destroy'])->middleware('permission:asset_delete')->name('assets.destroy');
+        Route::post('assets/{asset}/attachments', [\App\Http\Controllers\AssetAttachmentController::class, 'store'])->middleware('permission:asset_update')->name('asset-attachments.store');
+        Route::delete('asset-attachments/{assetAttachment}', [\App\Http\Controllers\AssetAttachmentController::class, 'destroy'])->middleware('permission:asset_update')->name('asset-attachments.destroy');
+        Route::get('asset-attachments/{assetAttachment}/download', [\App\Http\Controllers\AssetAttachmentController::class, 'download'])->middleware('permission:asset_view')->name('asset-attachments.download');
+        Route::post('assets/{asset}/warranty-cases', [\App\Http\Controllers\AssetWarrantyCaseController::class, 'store'])->middleware('permission:asset_update')->name('asset-warranty-cases.store');
+        Route::put('asset-warranty-cases/{assetWarrantyCase}', [\App\Http\Controllers\AssetWarrantyCaseController::class, 'update'])->middleware('permission:asset_update')->name('asset-warranty-cases.update');
+        Route::delete('asset-warranty-cases/{assetWarrantyCase}', [\App\Http\Controllers\AssetWarrantyCaseController::class, 'destroy'])->middleware('permission:asset_update')->name('asset-warranty-cases.destroy');
 
         // Asset categories
         Route::get('asset-categories', [\App\Http\Controllers\AssetCategoryController::class, 'index'])->middleware('permission:asset_manage_categories')->name('asset-categories.index');
