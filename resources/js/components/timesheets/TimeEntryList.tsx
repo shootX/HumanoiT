@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -40,6 +41,7 @@ interface Props {
 }
 
 export default function TimeEntryList({ entries, timesheetId, projects, onRefresh, filters = {} }: Props) {
+    const { t } = useTranslation();
     const [selectedEntries, setSelectedEntries] = useState<number[]>([]);
     const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -274,13 +276,13 @@ export default function TimeEntryList({ entries, timesheetId, projects, onRefres
                         <div className="w-full mt-3 p-4 bg-gray-50 border rounded-md">
                             <div className="flex flex-wrap gap-4 items-end">
                                 <div className="space-y-2">
-                                    <Label>Project</Label>
+                                    <Label>{t('Project')}</Label>
                                     <Select value={selectedProject} onValueChange={handleProjectFilter}>
                                         <SelectTrigger className="w-40">
-                                            <SelectValue placeholder="All Projects" />
+                                            <SelectValue placeholder={t('All Projects')} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="all">All Projects</SelectItem>
+                                            <SelectItem value="all">{t('All Projects')}</SelectItem>
                                             {projects.map((project) => (
                                                 <SelectItem key={project.id} value={project.id.toString()}>
                                                     {project.title}
@@ -412,7 +414,7 @@ export default function TimeEntryList({ entries, timesheetId, projects, onRefres
                                     />
                                 </th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Project</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('Project')}</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Task</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hours</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Billable</th>

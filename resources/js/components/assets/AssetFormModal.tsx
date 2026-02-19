@@ -29,6 +29,7 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, asset
     const { t } = useTranslation();
     const [formData, setFormData] = useState({
         name: '',
+        quantity: '1',
         asset_code: '',
         asset_category_id: '' as string,
         location: '',
@@ -43,6 +44,7 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, asset
         if (asset) {
             setFormData({
                 name: asset.name,
+                quantity: String(asset.quantity ?? 1),
                 asset_code: asset.asset_code || '',
                 asset_category_id: asset.asset_category_id?.toString() || 'none',
                 location: asset.location || '',
@@ -55,6 +57,7 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, asset
         } else {
             setFormData({
                 name: '',
+                quantity: '1',
                 asset_code: '',
                 asset_category_id: 'none',
                 location: '',
@@ -71,6 +74,7 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, asset
         e.preventDefault();
         const data: Record<string, unknown> = {
             name: formData.name,
+            quantity: parseInt(formData.quantity, 10) || 1,
             asset_code: formData.asset_code || null,
             asset_category_id: formData.asset_category_id && formData.asset_category_id !== 'none' ? formData.asset_category_id : null,
             location: formData.location || null,
@@ -97,6 +101,17 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, asset
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             required
+                            className="mt-1"
+                        />
+                    </div>
+                    <div>
+                        <Label htmlFor="quantity">{t('Quantity')}</Label>
+                        <Input
+                            id="quantity"
+                            type="number"
+                            min={1}
+                            value={formData.quantity}
+                            onChange={(e) => setFormData({ ...formData, quantity: e.target.value || '1' })}
                             className="mt-1"
                         />
                     </div>

@@ -31,16 +31,15 @@ interface Invoice {
         id: number;
         title: string;
     };
+    task?: {
+        id: number;
+        title: string;
+    };
     client?: {
         id: number;
         name: string;
         avatar?: string;
     };
-    crm_contact?: {
-        id: number;
-        name: string;
-        company_name?: string;
-    } | null;
     title: string;
     total_amount: number;
     status: 'draft' | 'sent' | 'viewed' | 'paid' | 'partial_paid' | 'overdue' | 'cancelled';
@@ -57,7 +56,7 @@ interface Invoice {
 
 export default function InvoiceIndex() {
     const { t } = useTranslation();
-    const { invoices, projects, clients, crmContacts = [], filters, auth, userWorkspaceRole, flash, emailNotificationsEnabled } = usePage().props as any;
+    const { invoices, projects, clients, filters, auth, userWorkspaceRole, flash, emailNotificationsEnabled } = usePage().props as any;
 
     // Show flash messages
     useEffect(() => {
@@ -73,7 +72,6 @@ export default function InvoiceIndex() {
     const [searchTerm, setSearchTerm] = useState(filters?.search || '');
     const [selectedProject, setSelectedProject] = useState(filters?.project_id || 'all');
     const [selectedClient, setSelectedClient] = useState(filters?.client_id || 'all');
-    const [selectedContact, setSelectedContact] = useState(filters?.crm_contact_id || 'all');
     const [selectedStatus, setSelectedStatus] = useState(filters?.status || 'all');
     const [showFilters, setShowFilters] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -94,7 +92,6 @@ export default function InvoiceIndex() {
         if (searchTerm) params.search = searchTerm;
         if (selectedProject !== 'all') params.project_id = selectedProject;
         if (selectedClient !== 'all') params.client_id = selectedClient;
-        if (selectedContact !== 'all') params.crm_contact_id = selectedContact;
         if (selectedStatus !== 'all') params.status = selectedStatus;
         router.get(route('invoices.index'), params, { preserveState: true, preserveScroll: true });
     };
@@ -216,7 +213,6 @@ export default function InvoiceIndex() {
                     if (searchTerm) params.append('search', searchTerm);
                     if (selectedProject !== 'all') params.append('project_id', selectedProject);
                     if (selectedClient !== 'all') params.append('client_id', selectedClient);
-                    if (selectedContact !== 'all') params.append('crm_contact_id', selectedContact);
                     if (selectedStatus !== 'all') params.append('status', selectedStatus);
                     
                     const response = await fetch(route('invoices.export', params));
@@ -260,9 +256,9 @@ export default function InvoiceIndex() {
             breadcrumbs={breadcrumbs}
             noPadding
         >
-            {/* Overview Stats + Contact Filter */}
+            {/* Overview Stats */}
             <div className="bg-white rounded-lg shadow mb-4 p-3 sm:p-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
                     <div className="text-center">
                         <div className="text-2xl font-bold text-blue-600">{invoices?.total || 0}</div>
                         <div className="text-sm text-gray-600">{t('Total Invoices')}</div>
@@ -289,7 +285,7 @@ export default function InvoiceIndex() {
                         <div className="text-2xl font-bold text-purple-600">
                             {(() => {
                                 if (!invoices?.data || invoices.data.length === 0) {
-                                    return '₾0.00';
+                                    return '$0.00';
                                 }
                                 const total = invoices.data.reduce((sum: number, inv: Invoice) => {
                                     return sum + (parseFloat(inv.total_amount?.toString()) || 0);
@@ -298,33 +294,6 @@ export default function InvoiceIndex() {
                             })()}
                         </div>
                         <div className="text-sm text-gray-600">{t('Total Value')}</div>
-                    </div>
-                    <div className="text-center flex flex-col justify-center">
-                        <div className="text-sm text-gray-600 mb-2">{t('Contact')}</div>
-                        <Select 
-                            value={selectedContact} 
-                            onValueChange={(value) => {
-                                setSelectedContact(value);
-                                const params: any = { page: 1 };
-                                if (searchTerm) params.search = searchTerm;
-                                if (selectedProject !== 'all') params.project_id = selectedProject;
-                                if (value !== 'all') params.crm_contact_id = value;
-                                if (selectedStatus !== 'all') params.status = selectedStatus;
-                                router.get(route('invoices.index'), params, { preserveState: true, preserveScroll: true });
-                            }}
-                        >
-                            <SelectTrigger className="h-9 w-full max-w-[140px] mx-auto border-gray-200">
-                                <SelectValue placeholder={t('All Contacts')} />
-                            </SelectTrigger>
-                            <SelectContent className="z-[9999]">
-                                <SelectItem value="all">{t('All Contacts')}</SelectItem>
-                                {crmContacts?.map((contact: any) => (
-                                    <SelectItem key={contact.id} value={contact.id.toString()}>
-                                        {contact.company_name ? `${contact.name} (${contact.company_name})` : contact.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
                     </div>
                 </div>
             </div>
@@ -390,7 +359,6 @@ export default function InvoiceIndex() {
                                     if (searchTerm) params.search = searchTerm;
                                     if (selectedProject !== 'all') params.project_id = selectedProject;
                                     if (selectedClient !== 'all') params.client_id = selectedClient;
-                                    if (selectedContact !== 'all') params.crm_contact_id = selectedContact;
                                     if (selectedStatus !== 'all') params.status = selectedStatus;
                                     router.get(route('invoices.index'), params, { preserveState: false, preserveScroll: false });
                                 }}
@@ -413,16 +381,7 @@ export default function InvoiceIndex() {
                             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4 sm:items-end">
                                 <div className="space-y-2">
                                     <Label>{t('Project')}</Label>
-                                    <Select value={selectedProject} onValueChange={(v) => {
-                                        setSelectedProject(v);
-                                        const params: any = { page: 1 };
-                                        if (searchTerm) params.search = searchTerm;
-                                        if (v !== 'all') params.project_id = v;
-                                        if (selectedClient !== 'all') params.client_id = selectedClient;
-                                        if (selectedContact !== 'all') params.crm_contact_id = selectedContact;
-                                        if (selectedStatus !== 'all') params.status = selectedStatus;
-                                        router.get(route('invoices.index'), params, { preserveState: true, preserveScroll: true });
-                                    }}>
+                                    <Select value={selectedProject} onValueChange={setSelectedProject}>
                                         <SelectTrigger className="w-40">
                                             <SelectValue placeholder={t('All Projects')} />
                                         </SelectTrigger>
@@ -438,43 +397,8 @@ export default function InvoiceIndex() {
                                 </div>
                                 
                                 <div className="space-y-2">
-                                    <Label>{t('Contact')}</Label>
-                                    <Select value={selectedContact} onValueChange={(v) => {
-                                        setSelectedContact(v);
-                                        const params: any = { page: 1 };
-                                        if (searchTerm) params.search = searchTerm;
-                                        if (selectedProject !== 'all') params.project_id = selectedProject;
-                                        if (selectedClient !== 'all') params.client_id = selectedClient;
-                                        if (v !== 'all') params.crm_contact_id = v;
-                                        if (selectedStatus !== 'all') params.status = selectedStatus;
-                                        router.get(route('invoices.index'), params, { preserveState: true, preserveScroll: true });
-                                    }}>
-                                        <SelectTrigger className="w-40">
-                                            <SelectValue placeholder={t('All Contacts')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">{t('All Contacts')}</SelectItem>
-                                            {crmContacts?.map((contact: any) => (
-                                                <SelectItem key={contact.id} value={contact.id.toString()}>
-                                                    {contact.company_name ? `${contact.name} (${contact.company_name})` : contact.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                
-                                <div className="space-y-2">
                                     <Label>{t('Status')}</Label>
-                                    <Select value={selectedStatus} onValueChange={(v) => {
-                                        setSelectedStatus(v);
-                                        const params: any = { page: 1 };
-                                        if (searchTerm) params.search = searchTerm;
-                                        if (selectedProject !== 'all') params.project_id = selectedProject;
-                                        if (selectedClient !== 'all') params.client_id = selectedClient;
-                                        if (selectedContact !== 'all') params.crm_contact_id = selectedContact;
-                                        if (v !== 'all') params.status = v;
-                                        router.get(route('invoices.index'), params, { preserveState: true, preserveScroll: true });
-                                    }}>
+                                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                                         <SelectTrigger className="w-40">
                                             <SelectValue placeholder={t('All Status')} />
                                         </SelectTrigger>
@@ -545,23 +469,31 @@ export default function InvoiceIndex() {
                                         <span className="text-sm">{invoice.project?.title || t('No Project')}</span>
                                     </div>
                                     
-                                    {(invoice.crm_contact || invoice.client) && (
+                                    {invoice.task && (
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="text-sm text-muted-foreground shrink-0">Task:</span>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span className="text-sm truncate min-w-0 block">{invoice.task.title}</span>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="bottom" className="max-w-xs break-words">
+                                                    {invoice.task.title}
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </div>
+                                    )}
+                                    
+                                    {invoice.client && (
                                         <div className="flex items-center justify-between">
-                                            <span className="text-sm text-muted-foreground">{t('Contact')}:</span>
+                                            <span className="text-sm text-muted-foreground">Client:</span>
                                             <div className="flex items-center gap-1">
-                                                {invoice.crm_contact ? (
-                                                    <span className="text-sm">{invoice.crm_contact.company_name || invoice.crm_contact.name}</span>
-                                                ) : invoice.client ? (
-                                                    <>
-                                                        <Avatar className="h-5 w-5">
-                                                            <AvatarImage src={invoice.client.avatar} />
-                                                            <AvatarFallback className="text-xs">
-                                                                {invoice.client.name?.charAt(0)}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <span className="text-sm">{invoice.client.name}</span>
-                                                    </>
-                                                ) : null}
+                                                <Avatar className="h-5 w-5">
+                                                    <AvatarImage src={invoice.client.avatar} />
+                                                    <AvatarFallback className="text-xs">
+                                                        {invoice.client.name?.charAt(0)}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <span className="text-sm">{invoice.client.name}</span>
                                             </div>
                                         </div>
                                     )}
@@ -597,22 +529,23 @@ export default function InvoiceIndex() {
                                 
                                 {userWorkspaceRole !== 'client' && (
                                     <>
+                                        {['owner', 'manager'].includes(userWorkspaceRole) && (
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        onClick={() => handleAction('edit', invoice)}
+                                                        className="text-amber-500 hover:text-amber-700 h-8 w-8"
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>Edit</TooltipContent>
+                                            </Tooltip>
+                                        )}
                                         {invoice.status === 'draft' && ['owner', 'manager'].includes(userWorkspaceRole) && (
                                             <>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button 
-                                                            variant="ghost" 
-                                                            size="icon" 
-                                                            onClick={() => handleAction('edit', invoice)}
-                                                            className="text-amber-500 hover:text-amber-700 h-8 w-8"
-                                                        >
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>Edit</TooltipContent>
-                                                </Tooltip>
-                                                
                                                 {emailNotificationsEnabled && (
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
@@ -705,7 +638,8 @@ export default function InvoiceIndex() {
                             <thead className="bg-gray-50">
                                 <tr>
                                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Invoice</th>
-                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">{t('Project')}</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Project</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Task</th>
                                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Amount</th>
                                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Status</th>
                                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Due Date</th>
@@ -726,6 +660,20 @@ export default function InvoiceIndex() {
                                         </td>
                                         <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <div className="text-sm font-medium text-gray-900">{invoice.project?.title || t('No Project')}</div>
+                                        </td>
+                                        <td className="px-3 py-4 sm:px-6 max-w-[140px]">
+                                            {invoice.task ? (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <div className="text-sm text-gray-900 truncate">{invoice.task.title}</div>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="bottom" className="max-w-xs break-words">
+                                                        {invoice.task.title}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            ) : (
+                                                <span className="text-sm text-muted-foreground">—</span>
+                                            )}
                                         </td>
                                         <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <div className="text-sm font-medium text-gray-900">
@@ -764,22 +712,23 @@ export default function InvoiceIndex() {
                                                     <TooltipContent>View</TooltipContent>
                                                 </Tooltip>
                                                 
-                                                {['owner', 'manager'].includes(userWorkspaceRole) && invoice.status === 'draft' && (
+                                                {['owner', 'manager'].includes(userWorkspaceRole) && (
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                onClick={() => handleAction('edit', invoice)}
+                                                                className="text-amber-500 hover:text-amber-700 h-8 w-8"
+                                                            >
+                                                                <Edit className="h-4 w-4" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>Edit</TooltipContent>
+                                                    </Tooltip>
+                                                )}
+                                                {invoice.status === 'draft' && ['owner', 'manager'].includes(userWorkspaceRole) && (
                                                     <>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <Button 
-                                                                    variant="ghost" 
-                                                                    size="icon" 
-                                                                    onClick={() => handleAction('edit', invoice)}
-                                                                    className="text-amber-500 hover:text-amber-700 h-8 w-8"
-                                                                >
-                                                                    <Edit className="h-4 w-4" />
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>Edit</TooltipContent>
-                                                        </Tooltip>
-                                                        
                                                         {emailNotificationsEnabled && (
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>

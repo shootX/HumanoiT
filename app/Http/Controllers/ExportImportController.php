@@ -401,7 +401,7 @@ class ExportImportController extends Controller
                 $tableFields = ['title', 'description', 'status', 'priority', 'start_date', 'deadline', 'estimated_hours', 'is_public', 'created_at', 'updated_at'];
                 break;
             case 'assets':
-                $tableFields = ['name', 'asset_code', 'category', 'location', 'project', 'purchase_date', 'warranty_until', 'status', 'notes'];
+                $tableFields = ['name', 'quantity', 'asset_code', 'category', 'location', 'project', 'purchase_date', 'warranty_until', 'status', 'notes'];
                 break;
             case 'crm-contacts':
             case 'crm_contacts':
@@ -583,7 +583,8 @@ class ExportImportController extends Controller
                 $asset = new \App\Models\Asset();
                 $asset->workspace_id = $workspaceId;
                 $asset->name = $data['name'] ?? '';
-                $asset->asset_code = !empty($data['asset_code']) ? trim($data['asset_code']) : null;
+                $asset->quantity = !empty($data['quantity']) ? (int) $data['quantity'] : 1;
+                $asset->asset_code = !empty($data['asset_code']) ? trim($data['asset_code']) : \App\Models\Asset::generateUniqueAssetCode($workspaceId);
                 $asset->location = !empty($data['location']) ? trim($data['location']) : null;
                 $asset->status = in_array($data['status'] ?? '', ['active', 'maintenance', 'retired']) ? $data['status'] : 'active';
                 $asset->notes = !empty($data['notes']) ? trim($data['notes']) : null;

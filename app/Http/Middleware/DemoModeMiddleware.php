@@ -62,7 +62,32 @@ class DemoModeMiddleware
             'timesheet-approvals.approve',
             'timesheet-approvals.reject',
             'timesheet-approvals.bulk-approve',
-            'timesheet-approvals.bulk-reject'
+            'timesheet-approvals.bulk-reject',
+            // Settings: brand has demo handling (saves theme to cookies); allow all settings updates
+            'settings.brand.update',
+            'settings.system.update',
+            'settings.storage.update',
+            'settings.recaptcha.update',
+            'settings.chatgpt.update',
+            'settings.cookie.update',
+            'settings.seo.update',
+            'settings.currency.update',
+            'settings.email.update',
+            'settings.email-notifications.update',
+            'settings.slack-notifications.update',
+            'settings.telegram-notifications.update',
+            'settings.zoom.update',
+            'settings.google-meet.update',
+            'settings.google-calendar.update',
+            'settings.invoice.store',
+            'settings.cache.clear',
+            'settings.webhooks.store',
+            'settings.webhooks.update',
+            'settings.webhooks.destroy',
+            'slack.test-webhook',
+            'telegram.test',
+            'settings.zoom.test',
+            'payment.settings',
         ];
         
         if ($routeName && in_array($routeName, $allowedDemoRoutes)) {

@@ -45,6 +45,7 @@ export default function SharedProjectSettingsModal({ isOpen, onClose, project }:
             const autoSettings = { ...settings };
 
             autoSettings.overview = true; // Always enable overview
+            autoSettings.activity = true; // Always show updates
             if (project?.members?.length > 0 || project?.clients?.length > 0) autoSettings.member = true;
             if (project?.milestones?.length > 0) autoSettings.milestone = true;
             if (project?.notes?.data?.length > 0) autoSettings.notes = true;
@@ -108,17 +109,17 @@ export default function SharedProjectSettingsModal({ isOpen, onClose, project }:
     };
 
     const settingsConfig = [
-        { key: 'overview', label: 'Overview', description: 'Project overview and summary information' },
+        { key: 'overview', label: 'Overview', description: t('Project overview and summary information') },
         { key: 'member', label: 'Team Members', description: 'Team members, clients and their roles' },
-        { key: 'milestone', label: 'Milestone', description: 'Project milestones and deadlines' },
-        { key: 'notes', label: 'Notes', description: 'Project notes and documentation' },
-        { key: 'budget', label: 'Budget', description: 'Project budget and financial information' },
-        { key: 'expenses', label: 'Expenses', description: 'Project expenses and costs' },
-        { key: 'task', label: 'Task', description: 'Project tasks and assignments' },
+        { key: 'milestone', label: 'Milestone', description: t('Project milestones and deadlines') },
+        { key: 'notes', label: 'Notes', description: t('Project notes and documentation') },
+        { key: 'budget', label: 'Budget', description: t('Project budget and financial information') },
+        { key: 'expenses', label: 'Expenses', description: t('Project expenses and costs') },
+        { key: 'task', label: 'Task', description: t('Project tasks and assignments') },
         { key: 'recent_bugs', label: 'Recent Bugs', description: 'Recent bug reports and issues' },
         { key: 'timesheet', label: 'Timesheet', description: 'Timesheet entries and approvals' },
-        { key: 'files', label: 'Files', description: 'Project attachments and documents' },
-        { key: 'activity', label: 'Activity', description: 'Project activity log and updates' },
+        { key: 'files', label: 'Files', description: t('Project attachments and documents') },
+        { key: 'activity', label: 'Activity', description: t('Project activity log and updates') },
 
     ];
 
@@ -196,7 +197,7 @@ export default function SharedProjectSettingsModal({ isOpen, onClose, project }:
                                     size="sm"
                                     onClick={copyShareLink}
                                     className="flex items-center gap-2"
-                                    title="Copy Project Link"
+                                    title={t('Copy Project Link')}
                                 >
                                     <Copy className="h-4 w-4" />
                                 </Button>

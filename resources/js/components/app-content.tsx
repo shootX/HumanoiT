@@ -20,7 +20,7 @@ export function AppContent({ variant = 'header', children, ...props }: AppConten
     }
 
     return (
-        <main className="mx-auto flex h-full w-full max-w-7xl flex-1 flex-col gap-4 rounded-xl" {...props}>
+        <main className="mx-auto flex h-full w-full max-w-7xl flex-1 flex-col gap-4 rounded-xl p-3 sm:p-4 md:p-6" {...props}>
             <div dir={position === 'right' ? 'rtl' : 'ltr'}>
                 {children}
             </div>

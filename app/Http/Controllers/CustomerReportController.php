@@ -71,7 +71,7 @@ class CustomerReportController extends Controller
         $project = $query->first();
 
         if (!$project) {
-            return response()->json(['error' => 'Project not found'], 404);
+            return response()->json(['error' => __('Project not found in current workspace')], 404);
         }
 
         // Filter activities by date range

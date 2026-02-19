@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { router, usePage, Head } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import { PageTemplate } from '@/components/page-template';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -8,6 +9,7 @@ import GanttChart from '@/components/gantt/GanttChart';
 import axios from 'axios';
 
 export default function ProjectGantt() {
+    const { t } = useTranslation();
     const { auth, project: initialProject, tasks: initialTasks } = usePage().props as any;
     const [viewMode, setViewMode] = useState('Week');
     const [tasks, setTasks] = useState<any[]>(initialTasks || []);
@@ -65,8 +67,8 @@ export default function ProjectGantt() {
 
     const breadcrumbs = [
         { title: 'Dashboard', href: route('dashboard') },
-        { title: 'Projects', href: route('projects.index') },
-        { title: project?.title || 'Project', href: project ? route('projects.show', project) : '#' },
+        { title: t('Projects'), href: route('projects.index') },
+        { title: project?.title || t('Project'), href: project ? route('projects.show', project) : '#' },
         { title: 'Gantt Chart' }
     ];
 

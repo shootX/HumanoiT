@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Models\Project;
-use App\Models\Asset;
 use App\Models\TaskStage;
 use App\Models\ProjectMilestone;
 use App\Models\User;
+use App\Models\Asset;
 use App\Services\GoogleCalendarService;
 use App\Traits\HasPermissionChecks;
 use Illuminate\Http\Request;
@@ -32,7 +32,7 @@ class TaskController extends Controller
         $workspace = $user->currentWorkspace;
         $userWorkspaceRole = $workspace->getMemberRole($user);
 
-        $query = Task::with(['project', 'taskStage', 'assignedTo', 'creator', 'milestone', 'members', 'asset'])
+        $query = Task::with(['project', 'taskStage', 'assignedTo', 'creator', 'milestone', 'members'])
             ->whereHas('project', function ($q) use ($user, $userWorkspaceRole) {
                 $q->forWorkspace($user->current_workspace_id);
 
@@ -54,7 +54,9 @@ class TaskController extends Controller
         if ($userWorkspaceRole === 'member') {
             $query->where(function ($taskQuery) use ($user) {
                 $taskQuery->where('assigned_to', $user->id)
-                    ->orWhereHas('members', fn ($q) => $q->where('user_id', $user->id))
+                    ->orWhereHas('members', function ($mq) use ($user) {
+                        $mq->where('user_id', $user->id);
+                    })
                     ->orWhere('created_by', $user->id);
             });
         }
@@ -74,7 +76,9 @@ class TaskController extends Controller
         if ($request->assigned_to) {
             $query->where(function ($q) use ($request) {
                 $q->where('assigned_to', $request->assigned_to)
-                    ->orWhereHas('members', fn ($mq) => $mq->where('user_id', $request->assigned_to));
+                    ->orWhereHas('members', function ($mq) use ($request) {
+                        $mq->where('user_id', $request->assigned_to);
+                    });
             });
         }
 
@@ -112,11 +116,13 @@ class TaskController extends Controller
 
         $projects = $projectsQuery->get();
         $stages = TaskStage::forWorkspace($user->current_workspace_id)->ordered()->get();
+        $assets = Asset::forWorkspace($workspace->id)
+            ->whereRaw('COALESCE(quantity, 1) > 0')
+            ->orderBy('name')
+            ->get(['id', 'name', 'asset_code', 'quantity']);
         $members = User::whereHas('workspaces', function ($q) use ($workspace) {
             $q->where('workspace_id', $workspace->id)->where('status', 'active');
-        })->where('type', '!=', 'superadmin')->get();
-
-        $assets = Asset::forWorkspace($workspace->id)->orderBy('name')->get(['id', 'name', 'asset_code', 'type', 'project_id']);
+        })->whereNotIn('type', ['company', 'superadmin'])->get();
 
         // Get Google Calendar sync settings from company owner
         $companyOwner = $workspace->owner; // Get the company owner
@@ -126,8 +132,8 @@ class TaskController extends Controller
             'tasks' => $tasks,
             'projects' => $projects,
             'stages' => $stages,
-            'members' => $members,
             'assets' => $assets,
+            'members' => $members,
             'filters' => array_merge(
                 $request->only(['project_id', 'stage_id', 'priority', 'assigned_to', 'search', 'per_page']),
                 ['view' => $view]
@@ -163,6 +169,7 @@ class TaskController extends Controller
             'creator',
             'milestone',
             'asset',
+            'assets',
             'members',
             'comments.user',
             'checklists.assignedTo',
@@ -200,18 +207,16 @@ class TaskController extends Controller
             $checklist->can_delete = $checklist->canBeDeletedBy($currentUser);
         });
 
-        $allMembers = User::whereHas('workspaces', function ($q) use ($workspace) {
-            $q->where('workspace_id', $workspace->id)->where('status', 'active');
-        })->where('type', '!=', 'superadmin')->get();
+        $memberUsers = $task->project->members()->with('user')->get()->filter(fn ($m) => $m->user)->pluck('user');
+        $clientUsers = $task->project->clients;
+        $projectMembers = $memberUsers->merge($clientUsers)->unique('id')->values()->toArray();
 
         $stages = TaskStage::forWorkspace($currentUser->current_workspace_id)->ordered()->get();
         $milestones = $task->project->milestones ?? [];
-        $assets = Asset::forWorkspace($workspace->id)->orderBy('name')->get(['id', 'name', 'asset_code', 'type', 'project_id']);
 
         return response()->json([
             'task' => $task,
-            'members' => $allMembers,
-            'assets' => $assets,
+            'members' => $projectMembers,
             'stages' => $stages,
             'milestones' => $milestones,
             'permissions' => [
@@ -242,13 +247,14 @@ class TaskController extends Controller
         $validated = $request->validate([
             'project_id' => 'required|exists:projects,id',
             'milestone_id' => 'nullable|exists:project_milestones,id',
-            'asset_id' => 'nullable|exists:assets,id',
+            'asset_items' => 'nullable|array',
+            'asset_items.*.asset_id' => 'required_with:asset_items|exists:assets,id',
+            'asset_items.*.quantity' => 'required_with:asset_items|integer|min:1',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'required|in:low,medium,high,critical',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after:start_date',
-            'assigned_to' => 'nullable|exists:users,id',
             'assigned_user_ids' => 'nullable|array',
             'assigned_user_ids.*' => 'exists:users,id',
             'is_googlecalendar_sync' => 'nullable|boolean'
@@ -260,29 +266,38 @@ class TaskController extends Controller
             abort(403, 'Project not found in current workspace.');
         }
 
-        $ids = $validated['assigned_user_ids'] ?? [];
-        if (empty($ids) && !empty($validated['assigned_to'])) {
-            $ids = [$validated['assigned_to']];
+        $assetItems = $validated['asset_items'] ?? [];
+        foreach ($assetItems as $item) {
+            $asset = Asset::find($item['asset_id']);
+            if (!$asset || $asset->workspace_id != $workspace->id) {
+                abort(403, 'Asset not found in current workspace.');
+            }
         }
-        $ids = array_values(array_unique(array_map('intval', $ids)));
-
-        $taskData = collect($validated)->except(['assigned_user_ids'])->toArray();
-        $taskData['assigned_to'] = $ids[0] ?? $validated['assigned_to'] ?? null;
 
         // Get first stage for the workspace
         $firstStage = TaskStage::forWorkspace(auth()->user()->current_workspace_id)
             ->ordered()
             ->first();
 
-        $task = Task::create([
-            ...$taskData,
-            'task_stage_id' => $firstStage->id,
-            'created_by' => auth()->id(),
-            'progress' => 0
-        ]);
+        $createData = collect($validated)->except(['assigned_user_ids', 'asset_items'])->toArray();
+        $createData['task_stage_id'] = $firstStage->id;
+        $createData['created_by'] = auth()->id();
+        $createData['progress'] = 0;
+        $createData['assigned_to'] = !empty($validated['assigned_user_ids']) ? (int) $validated['assigned_user_ids'][0] : null;
 
-        if (!empty($ids)) {
-            $task->members()->sync(collect($ids)->mapWithKeys(fn ($id) => [$id => ['assigned_by' => auth()->id()]])->toArray());
+        $task = Task::create($createData);
+
+        if (!empty($assetItems)) {
+            $task->assets()->sync(
+                collect($assetItems)->mapWithKeys(fn ($i) => [$i['asset_id'] => ['quantity' => $i['quantity']]])->toArray()
+            );
+        }
+
+        if (!empty($validated['assigned_user_ids'])) {
+            $syncData = collect($validated['assigned_user_ids'])->mapWithKeys(function ($userId) {
+                return [$userId => ['assigned_by' => auth()->id()]];
+            })->toArray();
+            $task->members()->sync($syncData);
         }
 
         // Sync with Google Calendar if enabled
@@ -295,13 +310,16 @@ class TaskController extends Controller
             event(new \App\Events\TaskCreated($task));
         }
 
-        // Fire TaskAssigned for each assigned user
-        if (!empty($ids) && !config('app.is_demo', true)) {
-            $task->load(['project', 'members']);
-            foreach ($ids as $userId) {
+        // Log activity and fire event for each assigned user
+        if (!empty($validated['assigned_user_ids'])) {
+            $task->load('project');
+            foreach ($validated['assigned_user_ids'] as $userId) {
                 $assignedUser = User::find($userId);
                 if ($assignedUser) {
-                    event(new \App\Events\TaskAssigned($task, $assignedUser, auth()->user()));
+                    $task->logAssignment($assignedUser);
+                    if (!config('app.is_demo', true)) {
+                        event(new \App\Events\TaskAssigned($task, $assignedUser, auth()->user()));
+                    }
                 }
             }
         }
@@ -325,41 +343,51 @@ class TaskController extends Controller
             'priority' => 'required|in:low,medium,high,critical',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after:start_date',
-            'assigned_to' => 'nullable|exists:users,id',
             'assigned_user_ids' => 'nullable|array',
             'assigned_user_ids.*' => 'exists:users,id',
             'milestone_id' => 'nullable|exists:project_milestones,id',
-            'asset_id' => 'nullable|exists:assets,id',
+            'asset_items' => 'nullable|array',
+            'asset_items.*.asset_id' => 'required_with:asset_items|exists:assets,id',
+            'asset_items.*.quantity' => 'required_with:asset_items|integer|min:1',
             'is_googlecalendar_sync' => 'nullable|boolean'
         ]);
 
-        $ids = $validated['assigned_user_ids'] ?? null;
-        if ($ids === null && isset($validated['assigned_to'])) {
-            $ids = $validated['assigned_to'] ? [$validated['assigned_to']] : [];
-        }
-        $ids = $ids !== null ? array_values(array_unique(array_map('intval', $ids))) : null;
-
-        $oldMemberIds = $task->members->pluck('id')->toArray();
-
-        if ($ids !== null) {
-            $task->members()->sync(collect($ids)->mapWithKeys(fn ($id) => [$id => ['assigned_by' => auth()->id()]])->toArray());
-            $newlyAssigned = array_diff($ids, $oldMemberIds);
-            if (!empty($newlyAssigned) && !config('app.is_demo', true)) {
-                $task->load(['project', 'members']);
-                foreach ($newlyAssigned as $userId) {
-                    $assignedUser = User::find($userId);
-                    if ($assignedUser) {
-                        event(new \App\Events\TaskAssigned($task, $assignedUser, auth()->user()));
-                    }
-                }
+        $assetItems = $validated['asset_items'] ?? [];
+        foreach ($assetItems as $item) {
+            $asset = Asset::find($item['asset_id']);
+            if (!$asset || $asset->workspace_id != $workspace->id) {
+                abort(403, 'Asset not found in current workspace.');
             }
         }
 
-        $updateData = collect($validated)->except(['assigned_user_ids'])->toArray();
-        if ($ids !== null) {
-            $updateData['assigned_to'] = $ids[0] ?? null;
+        $assigneesProvided = array_key_exists('assigned_user_ids', $validated);
+        $oldMemberIds = $task->members->pluck('id')->sort()->values()->toArray();
+        $newMemberIds = $assigneesProvided
+            ? collect($validated['assigned_user_ids'] ?? [])->map(fn ($id) => (int) $id)->sort()->values()->toArray()
+            : $oldMemberIds;
+
+        $updateData = collect($validated)->except(['assigned_user_ids', 'asset_items'])->toArray();
+        if ($assigneesProvided) {
+            $updateData['assigned_to'] = !empty($newMemberIds) ? $newMemberIds[0] : null;
         }
         $task->update($updateData);
+
+        if (array_key_exists('asset_items', $validated)) {
+            $task->assets()->sync(
+                collect($assetItems)->mapWithKeys(fn ($i) => [$i['asset_id'] => ['quantity' => $i['quantity']]])->toArray()
+            );
+        }
+
+        if ($assigneesProvided) {
+            if (!empty($newMemberIds)) {
+                $syncData = collect($newMemberIds)->mapWithKeys(function ($userId) {
+                    return [$userId => ['assigned_by' => auth()->id()]];
+                })->toArray();
+                $task->members()->sync($syncData);
+            } else {
+                $task->members()->detach();
+            }
+        }
 
         // Sync with Google Calendar if enabled
         if ($validated['is_googlecalendar_sync'] ?? false) {
@@ -367,6 +395,20 @@ class TaskController extends Controller
         } elseif ($task->google_calendar_event_id && !($validated['is_googlecalendar_sync'] ?? false)) {
             $this->googleCalendarService->deleteEvent($task->google_calendar_event_id, auth()->id());
             $task->update(['google_calendar_event_id' => null]);
+        }
+
+        if ($assigneesProvided) {
+            $task->load('project');
+            $newlyAssignedIds = array_diff($newMemberIds, $oldMemberIds);
+            foreach ($newlyAssignedIds as $userId) {
+                $assignedUser = User::find($userId);
+                if ($assignedUser) {
+                    $task->logAssignment($assignedUser);
+                    if (!config('app.is_demo', true)) {
+                        event(new \App\Events\TaskAssigned($task, $assignedUser, auth()->user()));
+                    }
+                }
+            }
         }
 
         if (!$request->header('X-Inertia') && ($request->wantsJson() || $request->ajax())) {
@@ -421,12 +463,14 @@ class TaskController extends Controller
         $newTask->end_date = null;
         $newTask->progress = 0;
         $newTask->created_by = auth()->id();
-        $memberIds = $task->members->pluck('id')->toArray();
-        $newTask->assigned_to = $memberIds[0] ?? $task->assigned_to;
+        $newTask->assigned_to = $task->assigned_to;
         $newTask->save();
 
-        if (!empty($memberIds)) {
-            $newTask->members()->sync(collect($memberIds)->mapWithKeys(fn ($id) => [$id => ['assigned_by' => auth()->id()]])->toArray());
+        if ($task->members->isNotEmpty()) {
+            $syncData = $task->members->mapWithKeys(function ($user) {
+                return [$user->id => ['assigned_by' => auth()->id()]];
+            })->toArray();
+            $newTask->members()->sync($syncData);
         }
 
         // Copy checklists
@@ -458,6 +502,8 @@ class TaskController extends Controller
         $oldStage = $task->taskStage->name ?? 'Unknown';
         $task->update($validated);
         $newStage = TaskStage::find($validated['task_stage_id'])->name ?? 'Unknown';
+
+        $task->logStatusChange($oldStage, $newStage);
 
         // Fire event for Slack notification
         if (!config('app.is_demo', true)) {

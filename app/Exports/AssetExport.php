@@ -55,6 +55,7 @@ class AssetExport implements FromQuery, WithHeadings, WithMapping
     {
         return [
             'სახელი',
+            'რაოდენობა',
             'აქტივის კოდი',
             'კატეგორია',
             'მდებარეობა',
@@ -70,6 +71,7 @@ class AssetExport implements FromQuery, WithHeadings, WithMapping
     {
         return [
             $asset->name,
+            $asset->quantity ?? 1,
             $asset->asset_code,
             $asset->assetCategory?->name ?? $asset->type ?? '',
             $asset->location,

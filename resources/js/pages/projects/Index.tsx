@@ -331,11 +331,11 @@ export default function ProjectIndex() {
 
             {/* Search and filters section */}
             <div className="bg-white rounded-lg shadow mb-4">
-                <div className="p-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                <div className="p-3 sm:p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
                             <form onSubmit={handleSearch} className="flex gap-2">
-                                <div className="relative w-64">
+                                <div className="relative w-full sm:w-64">
                                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                     <Input
                                         placeholder={t('Search projects...')}
@@ -344,31 +344,29 @@ export default function ProjectIndex() {
                                         className="w-full pl-9"
                                     />
                                 </div>
-                                <Button type="submit" size="sm">
+                                <Button type="submit" size="sm" className="min-h-[44px] sm:min-h-0 touch-manipulation">
                                     <Search className="h-4 w-4 mr-1.5" />
                                     {t('Search')}
                                 </Button>
                             </form>
                             
-                            <div className="ml-2">
-                                <Button 
-                                    variant={hasActiveFilters() ? "default" : "outline"}
-                                    size="sm" 
-                                    className="h-8 px-2 py-1"
-                                    onClick={() => setShowFilters(!showFilters)}
-                                >
-                                    <Filter className="h-3.5 w-3.5 mr-1.5" />
-                                    {showFilters ? t('Hide Filters') : t('Filters')}
-                                    {hasActiveFilters() && (
-                                        <span className="ml-1 bg-primary-foreground text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                                            {activeFilterCount()}
-                                        </span>
-                                    )}
-                                </Button>
-                            </div>
+                            <Button 
+                                variant={hasActiveFilters() ? "default" : "outline"}
+                                size="sm" 
+                                className="h-10 min-h-[44px] px-2 py-1 sm:h-8 sm:min-h-0 touch-manipulation"
+                                onClick={() => setShowFilters(!showFilters)}
+                            >
+                                <Filter className="h-3.5 w-3.5 mr-1.5" />
+                                {showFilters ? t('Hide Filters') : t('Filters')}
+                                {hasActiveFilters() && (
+                                    <span className="ml-1 bg-primary-foreground text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                        {activeFilterCount()}
+                                    </span>
+                                )}
+                            </Button>
                         </div>
                         
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                             <div className="border rounded-md p-0.5 mr-2">
                                 <Button 
                                     size="sm" 
@@ -388,6 +386,7 @@ export default function ProjectIndex() {
                                 </Button>
                             </div>
                             
+                            <div className="hidden sm:flex items-center gap-2">
                             <Label className="text-xs text-muted-foreground">{t('Per Page')}:</Label>
                             <Select 
                                 value={pageFilters.per_page?.toString() || "12"} 
@@ -408,12 +407,13 @@ export default function ProjectIndex() {
                                     <SelectItem value="48">48</SelectItem>
                                 </SelectContent>
                             </Select>
+                            </div>
                         </div>
                     </div>
                     
                     {showFilters && (
-                        <div className="w-full mt-3 p-4 bg-gray-50 border rounded-md">
-                            <div className="flex flex-wrap gap-4 items-end">
+                        <div className="w-full mt-3 p-3 sm:p-4 bg-gray-50 border rounded-md">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4 sm:items-end">
                                 <div className="space-y-2">
                                     <Label>{t('Status')}</Label>
                                     <Select value={selectedStatus} onValueChange={handleStatusFilter}>
@@ -552,7 +552,7 @@ export default function ProjectIndex() {
                             </div>
                         </CardContent>
                         
-                        <CardFooter className="flex justify-end gap-1 pt-0 pb-2">
+                        <CardFooter className="flex justify-end gap-2 pt-0 pb-2">
                             {hasPermission(permissions, 'project_view') && (
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -608,19 +608,19 @@ export default function ProjectIndex() {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Project')}</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deadline</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">{t('Project')}</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Status</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Priority</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Progress</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Team</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Deadline</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {projects?.data?.map((project: any) => (
                                     <tr key={project.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <div>
                                                 <div 
                                                     className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
@@ -631,7 +631,7 @@ export default function ProjectIndex() {
                                                 <div className="text-sm text-gray-500 truncate max-w-xs">{project.description}</div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <div className="flex gap-1">
                                                 <Badge className={getStatusColor(project.status)} variant="secondary">
                                                     {formatText(project.status)}
@@ -647,12 +647,12 @@ export default function ProjectIndex() {
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <Badge className={getPriorityColor(project.priority)} variant="outline">
                                                 {project.priority}
                                             </Badge>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <div className="flex items-center">
                                                 <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
                                                     <div className="bg-blue-600 h-2 rounded-full" style={{width: `${project.progress}%`}}></div>
@@ -660,7 +660,7 @@ export default function ProjectIndex() {
                                                 <span className="text-sm text-gray-900">{project.progress}%</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <div className="flex -space-x-1">
                                                 {project.members?.slice(0, 3).map((member: any, index: number) => (
                                                     <Tooltip key={index}>
@@ -691,11 +691,11 @@ export default function ProjectIndex() {
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 sm:px-6">
                                             {new Date(project.deadline).toLocaleDateString()}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <div className="flex gap-1">
+                                        <td className="px-3 py-4 whitespace-nowrap text-sm font-medium sm:px-6">
+                                            <div className="flex gap-2">
                                                 {hasPermission(permissions, 'project_view') && (
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>

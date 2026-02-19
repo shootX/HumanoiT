@@ -202,7 +202,7 @@ export default function TimesheetFilters({
 
                         {/* Project */}
                         <div className="space-y-2">
-                            <Label>Project</Label>
+                            <Label>{t('Project')}</Label>
                             <Select 
                                 value={localFilters.project_id || 'all'} 
                                 onValueChange={(value) => handleFilterChange('project_id', value)}

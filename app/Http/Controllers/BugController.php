@@ -364,7 +364,7 @@ class BugController extends Controller
                     'success' => false,
                     'members' => [],
                     'milestones' => [],
-                    'message' => 'Project not found or access denied'
+                    'message' => __('Project not found in current workspace')
                 ]);
             }
 

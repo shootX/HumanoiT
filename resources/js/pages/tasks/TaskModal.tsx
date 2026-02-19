@@ -296,8 +296,29 @@ export default function TaskModal({ task, isOpen, onClose, members, stages, mile
                             )}
                         </div>
 
-                        {/* Asset */}
-                        {currentTask.asset && (
+                        {/* Used Assets */}
+                        {((currentTask as any).assets?.length ?? 0) > 0 ? (
+                            <div>
+                                <h3 className="text-sm font-medium text-gray-900 mb-2">{t('Used Assets')}</h3>
+                                <ul className="space-y-2">
+                                    {(currentTask as any).assets.map((a: any) => {
+                                        const qty = a.pivot?.quantity ?? 1;
+                                        const label = `${qty} ${a.name}${a.asset_code ? ` (${a.asset_code})` : ''}`;
+                                        return (
+                                            <li key={a.id} className="flex items-center gap-2">
+                                                <Package className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                                <Link
+                                                    href={route('assets.show', a.id)}
+                                                    className="text-sm text-primary hover:underline truncate"
+                                                >
+                                                    {label}
+                                                </Link>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </div>
+                        ) : currentTask.asset && (
                             <div>
                                 <h3 className="text-sm font-medium text-gray-900 mb-2">{t('Asset')}</h3>
                                 <Link

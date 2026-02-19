@@ -189,6 +189,6 @@ test.describe('Site check (auth, navigation, invoices, settings)', () => {
 });
 
 test.afterAll(async () => {
-  // eslint-disable-next-line no-console
+   
   console.log('\nLog file:', getLogPath());
 });

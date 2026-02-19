@@ -27,11 +27,14 @@ trait LogsActivity
             return;
         }
 
+        $description = $metadata['description'] ?? $this->getActivityDescription($action);
+        unset($metadata['description']);
+
         ProjectActivity::create([
             'project_id' => $this->getProjectId(),
             'user_id' => auth()->id() ?? 1,
             'action' => $this->getActivityAction($action),
-            'description' => $this->getActivityDescription($action),
+            'description' => $description,
             'metadata' => array_merge($this->getActivityMetadata(), $metadata)
         ]);
     }

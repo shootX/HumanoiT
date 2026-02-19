@@ -20,6 +20,7 @@ interface InvoiceItem {
     rate: number;
     amount: number;
     tax_id: number | null;
+    asset_id: number | null;
     asset_category_id: number | null;
     asset_name: string;
 }
@@ -32,9 +33,10 @@ interface Props {
     currencies: any[];
     taxes: any[];
     assetCategories?: any[];
+    assets?: { id: number; name: string; asset_code?: string; quantity?: number }[];
 }
 
-export default function InvoiceForm({ invoice, projects, clients, crmContacts = [], currencies, taxes, assetCategories: initialAssetCategories = [] }: Props) {
+export default function InvoiceForm({ invoice, projects, clients, crmContacts = [], currencies, taxes, assetCategories: initialAssetCategories = [], assets = [] }: Props) {
     const { t } = useTranslation();
     const isEdit = !!invoice;
     
@@ -63,6 +65,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             rate: item.rate || 0,
             amount: (item.rate || 0) * (item.quantity || 1),
             tax_id: item.tax_id ?? null,
+            asset_id: item.asset_id ?? null,
             asset_category_id: item.asset_category_id ?? null,
             asset_name: item.asset_name || '',
         })) || [{
@@ -72,6 +75,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             rate: 0,
             amount: 0,
             tax_id: null,
+            asset_id: null,
             asset_category_id: null,
             asset_name: ''
         }]
@@ -200,11 +204,15 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
         const updatedItems = [...items];
         const item = { ...updatedItems[index], [field]: value };
         if (field === 'type') {
-            if (value === 'service') { item.asset_category_id = null; item.asset_name = ''; }
+            if (value === 'service') { item.asset_id = null; item.asset_category_id = null; item.asset_name = ''; }
+        }
+        if (field === 'asset_id' && value) {
+            const a = assets.find((x: any) => x.id === parseInt(value, 10));
+            if (a) item.description = a.name;
         }
         if (field === 'quantity' || field === 'rate') {
-            const qty = field === 'quantity' ? (parseInt(value) || 0) : (item.quantity || 1);
-            const rate = field === 'rate' ? (parseFloat(value) || 0) : (item.rate || 0);
+            const qty = field === 'quantity' ? (parseFloat(value) || 0) : (item.quantity ?? 0);
+            const rate = field === 'rate' ? (parseFloat(value) || 0) : (item.rate ?? 0);
             item.amount = qty * rate;
         }
         updatedItems[index] = item;
@@ -219,6 +227,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             rate: 0,
             amount: 0,
             tax_id: null,
+            asset_id: null,
             asset_category_id: null,
             asset_name: ''
         }]);
@@ -259,10 +268,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
         e.preventDefault();
         setIsSubmitting(true);
 
-        const validItems = items.filter(item => {
-            if (item.type === 'asset') return item.asset_category_id != null && item.description?.trim();
-            return !!item.description?.trim();
-        });
+        const validItems = items.filter(item => !!item.description?.trim());
         const submitData = {
             ...formData,
             task_id: formData.task_id && formData.task_id !== 'none' ? formData.task_id : null,
@@ -272,7 +278,8 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             items: validItems.map(item => ({
                 type: item.type,
                 task_id: formData.task_id && formData.task_id !== 'none' ? parseInt(formData.task_id) : null,
-                asset_category_id: item.type === 'asset' ? item.asset_category_id : null,
+                asset_id: null,
+                asset_category_id: item.type === 'asset' ? (item.asset_category_id ?? null) : null,
                 asset_name: item.type === 'asset' ? item.description : null,
                 tax_id: item.tax_id ?? null,
                 description: item.description,
@@ -319,7 +326,7 @@ setErrors(errors);
                                 <SelectItem value="none">{t('—')}</SelectItem>
                                 {crmContacts?.map((contact: any) => (
                                     <SelectItem key={contact.id} value={contact.id.toString()}>
-                                        {contact.company_name ? `${contact.name} (${contact.company_name})` : contact.name}
+                                        {contact.brand_name || contact.company_name || contact.name || '—'}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -506,47 +513,15 @@ setErrors(errors);
                                                 placeholder={t('Item name')}
                                             />
                                         </div>
-                                        {item.type === 'asset' && (
-                                            <div className="md:col-span-2">
-                                                <Label>{t('Asset Category')} <span className="text-red-500">*</span></Label>
-                                                <Select 
-                                                    value={item.asset_category_id?.toString() || ''} 
-                                                    onValueChange={(value) => handleItemChange(index, 'asset_category_id', value && value !== 'no-cats' ? parseInt(value) : null)}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder={t('Select')} />
-                                                    </SelectTrigger>
-                                                    <SelectContent className="z-[9999]">
-                                                        {assetCategories.map((cat: any) => (
-                                                            <SelectItem key={cat.id} value={cat.id.toString()}>
-                                                                {cat.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                        {assetCategories.length === 0 && (
-                                                            <SelectItem value="no-cats" disabled>
-                                                                {t('No categories')}
-                                                            </SelectItem>
-                                                        )}
-                                                    </SelectContent>
-                                                </Select>
-                                                {assetCategories.length === 0 && (
-                                                    <p className="text-xs text-muted-foreground mt-1">
-                                                        <Link href={route('asset-categories.index')} className="text-primary hover:underline">
-                                                            {t('Create in Asset Categories')}
-                                                        </Link>
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
                                         <div className="md:col-span-1">
                                             <Label>{t('Quantity')}</Label>
                                             <Input
                                                 type="text"
-                                                inputMode="numeric"
+                                                inputMode="decimal"
                                                 value={item.quantity}
                                                 onChange={(e) => {
-                                                    const v = e.target.value;
-                                                    const n = v === '' ? 1 : Math.max(1, parseInt(v.replace(/[^\d]/g, '')) || 1);
+                                                    const v = e.target.value.replace(',', '.');
+                                                    const n = v === '' ? 0 : Math.max(0, parseFloat(v) || 0);
                                                     handleItemChange(index, 'quantity', n);
                                                 }}
                                                 placeholder="1"

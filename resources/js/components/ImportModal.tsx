@@ -190,7 +190,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className={showMapping ? "max-w-6xl max-h-[90vh] overflow-y-auto" : "max-w-md"}>
+      <DialogContent className={showMapping ? "max-w-[95vw] sm:max-w-6xl max-h-[90vh] overflow-y-auto" : "max-w-[95vw] sm:max-w-md"}>
         <DialogHeader>
           <DialogTitle>{t('Import')} {t(title)}</DialogTitle>
         </DialogHeader>

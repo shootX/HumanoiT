@@ -540,7 +540,7 @@ export function CrudFormModal({
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={`${getModalSizeClass()} max-h-[90vh]`} modalId={modalId}>
+      <DialogContent className={`max-w-[95vw] ${getModalSizeClass()} max-h-[90vh] overflow-y-auto`} modalId={modalId}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description || " "}</DialogDescription>

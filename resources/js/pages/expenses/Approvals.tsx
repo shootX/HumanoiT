@@ -251,7 +251,7 @@ export default function Approvals({ expenses, stats, projects, filters, permissi
                                     </div>
                                     
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium">Project</label>
+                                        <label className="text-sm font-medium">{t('Project')}</label>
                                         <Select value={selectedProject} onValueChange={(value) => {
                                             setSelectedProject(value);
                                             const params: any = { page: 1 };

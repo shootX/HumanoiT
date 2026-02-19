@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CrmContact;
+use App\Models\Invoice;
 use App\Traits\HasPermissionChecks;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -51,6 +52,26 @@ class CrmContactController extends Controller
         ]);
     }
 
+    public function show(CrmContact $crmContact)
+    {
+        $this->authorizePermission('crm_contact_view_any');
+
+        if ($crmContact->workspace_id !== auth()->user()->current_workspace_id) {
+            abort(403);
+        }
+
+        $crmContact->load('creator:id,name');
+        $invoices = Invoice::where('crm_contact_id', $crmContact->id)
+            ->with(['project:id,title'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return Inertia::render('crm-contacts/Show', [
+            'contact' => $crmContact,
+            'invoices' => $invoices,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $this->authorizePermission('crm_contact_create');
@@ -62,7 +83,7 @@ class CrmContactController extends Controller
 
         $validated = $request->validate([
             'type' => 'required|in:individual,legal',
-            'name' => 'required|string|max:255',
+            'name' => 'nullable|string|max:255',
             'company_name' => 'nullable|string|max:255',
             'brand_name' => 'nullable|string|max:255',
             'identification_code' => 'nullable|string|max:50',
@@ -76,6 +97,9 @@ class CrmContactController extends Controller
             if (empty(trim($validated['company_name'] ?? '')) && empty(trim($validated['brand_name'] ?? ''))) {
                 return back()->withErrors(['company_name' => __('Company name or brand name is required for legal entities.')])->withInput();
             }
+        }
+        if ($validated['type'] === 'individual' && empty(trim($validated['name'] ?? ''))) {
+            return back()->withErrors(['name' => __('Name is required for physical persons.')])->withInput();
         }
 
         CrmContact::create([
@@ -97,7 +121,7 @@ class CrmContactController extends Controller
 
         $validated = $request->validate([
             'type' => 'required|in:individual,legal',
-            'name' => 'required|string|max:255',
+            'name' => 'nullable|string|max:255',
             'company_name' => 'nullable|string|max:255',
             'brand_name' => 'nullable|string|max:255',
             'identification_code' => 'nullable|string|max:50',
@@ -111,6 +135,9 @@ class CrmContactController extends Controller
             if (empty(trim($validated['company_name'] ?? '')) && empty(trim($validated['brand_name'] ?? ''))) {
                 return back()->withErrors(['company_name' => __('Company name or brand name is required for legal entities.')])->withInput();
             }
+        }
+        if ($validated['type'] === 'individual' && empty(trim($validated['name'] ?? ''))) {
+            return back()->withErrors(['name' => __('Name is required for physical persons.')])->withInput();
         }
 
         $crmContact->update($validated);

@@ -177,7 +177,7 @@ class ProjectController extends Controller
 
         // Ensure project belongs to current workspace
         if ($project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
 
         $userWorkspaceRole = $workspace->getMemberRole($user);
@@ -389,7 +389,7 @@ class ProjectController extends Controller
         $workspace = $user->currentWorkspace;
 
         if (!$workspace || $project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -421,7 +421,7 @@ class ProjectController extends Controller
         $workspace = $user->currentWorkspace;
 
         if (!$workspace || $project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
 
         $userWorkspaceRole = $workspace->getMemberRole($user);
@@ -460,7 +460,7 @@ class ProjectController extends Controller
         $workspace = $user->currentWorkspace;
 
         if (!$workspace || $project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
 
         $userWorkspaceRole = $workspace->getMemberRole($user);
@@ -523,7 +523,7 @@ class ProjectController extends Controller
         $workspace = $user->currentWorkspace;
 
         if (!$workspace || $project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
@@ -549,7 +549,7 @@ class ProjectController extends Controller
         $workspace = $currentUser->currentWorkspace;
 
         if (!$workspace || $project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
         $project->members()->where('user_id', $user->id)->delete();
         $project->logActivity('member_removed', "User '{$user->name}' was removed from project");
@@ -565,7 +565,7 @@ class ProjectController extends Controller
         $workspace = $user->currentWorkspace;
 
         if (!$workspace || $project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
         $validated = $request->validate([
             'progress' => 'required|integer|min:0|max:100'
@@ -585,7 +585,7 @@ class ProjectController extends Controller
         $workspace = $user->currentWorkspace;
 
         if (!$workspace || $project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id'
@@ -610,7 +610,7 @@ class ProjectController extends Controller
         $workspace = $currentUser->currentWorkspace;
 
         if (!$workspace || $project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
         \App\Models\ProjectClient::where('project_id', $project->id)
             ->where('user_id', $user->id)
@@ -629,7 +629,7 @@ class ProjectController extends Controller
         $workspace = $user->currentWorkspace;
 
         if (!$workspace || $project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
         $validated = $request->validate([
             'client_ids' => 'required|array',
@@ -664,7 +664,7 @@ class ProjectController extends Controller
         $workspace = $user->currentWorkspace;
 
         if (!$workspace || $project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
         $validated = $request->validate([
             'member_ids' => 'required|array',
@@ -698,7 +698,7 @@ class ProjectController extends Controller
         $workspace = $user->currentWorkspace;
 
         if (!$workspace || $project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
         $validated = $request->validate([
             'manager_ids' => 'required|array',
@@ -732,7 +732,7 @@ class ProjectController extends Controller
         $workspace = $user->currentWorkspace;
 
         if (!$workspace || $project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
         $project->updateProgressFromMilestones();
         $project->logActivity('progress_recalculated', "Project progress was recalculated to {$project->fresh()->progress}%");
@@ -749,7 +749,7 @@ class ProjectController extends Controller
         $workspace = $user->currentWorkspace;
 
         if (!$workspace || $project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
 
         // Get all project members (assigned users)
@@ -772,7 +772,7 @@ class ProjectController extends Controller
         $workspace = $user->currentWorkspace;
 
         if (!$workspace || $project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
 
         $validated = $request->validate([
@@ -812,7 +812,7 @@ class ProjectController extends Controller
         $workspace = $user->currentWorkspace;
 
         if (!$workspace || $project->workspace_id != $workspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
 
         // Create encrypted project ID with timestamp for security
@@ -838,7 +838,7 @@ class ProjectController extends Controller
 
         // Ensure project belongs to current workspace
         if ($project->workspace_id != $currentWorkspace->id) {
-            abort(403, 'Project not found in current workspace.');
+            abort(403, __('Project not found in current workspace'));
         }
 
         $userWorkspaceRole = $currentWorkspace->getMemberRole($objUser);
@@ -896,7 +896,7 @@ class ProjectController extends Controller
         
         // Ensure project belongs to current workspace
         if ($project->workspace_id != $currentWorkspace->id) {
-            return response()->json(['is_success' => false, 'message' => 'Project not found in current workspace'], 403);
+            return response()->json(['is_success' => false, 'message' => __('Project not found in current workspace')], 403);
         }
         
         $userWorkspaceRole = $currentWorkspace->getMemberRole($objUser);

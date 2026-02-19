@@ -20,6 +20,7 @@ class AssetTemplateExport implements FromCollection, WithHeadings
     {
         return [
             'სახელი',
+            'რაოდენობა',
             'აქტივის კოდი',
             'კატეგორია',
             'მდებარეობა',

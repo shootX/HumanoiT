@@ -81,7 +81,7 @@ export default function PublicPasswordPrompt({ project, encryptedId, errors }: P
                             className="w-full"
                             disabled={isLoading || !password}
                         >
-                            {isLoading ? 'Verifying...' : 'Access Project'}
+                            {isLoading ? 'Verifying...' : t('Access Project')}
                         </Button>
                     </form>
 

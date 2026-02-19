@@ -369,7 +369,7 @@ export default function Index({ bugs, projects, statuses, members, filters, user
                         <div className="w-full mt-3 p-4 bg-gray-50 border rounded-md">
                             <div className="flex flex-wrap gap-4 items-end">
                                 <div className="space-y-2">
-                                    <Label>Project</Label>
+                                    <Label>{t('Project')}</Label>
                                     <Select value={selectedProject} onValueChange={setSelectedProject}>
                                         <SelectTrigger className="w-40">
                                             <SelectValue placeholder="All Projects" />
@@ -732,7 +732,7 @@ export default function Index({ bugs, projects, statuses, members, filters, user
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Severity</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Project')}</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>

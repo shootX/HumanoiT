@@ -168,9 +168,9 @@ export default function AssetsIndex() {
         <PageTemplate title={t('Assets')} url="/assets" actions={pageActions} breadcrumbs={breadcrumbs} noPadding>
             <div className="space-y-4">
                 <Card>
-                    <CardContent className="p-4">
-                        <form onSubmit={handleSearch} className="flex flex-wrap gap-3 items-end">
-                            <div className="flex-1 min-w-[180px]">
+                    <CardContent className="p-3 sm:p-4">
+                        <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                            <div className="w-full flex-1 min-w-0 sm:min-w-[180px]">
                                 <Input
                                     placeholder={t('Search by name, code, location...')}
                                     value={searchTerm}
@@ -179,7 +179,7 @@ export default function AssetsIndex() {
                                 />
                             </div>
                             <Select value={selectedType} onValueChange={setSelectedType}>
-                                <SelectTrigger className="w-[140px] h-9">
+                                <SelectTrigger className="w-full sm:w-[140px] h-9 min-h-[44px] sm:min-h-0">
                                     <SelectValue placeholder={t('Type')} />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -190,7 +190,7 @@ export default function AssetsIndex() {
                                 </SelectContent>
                             </Select>
                             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                                <SelectTrigger className="w-[140px] h-9">
+                                <SelectTrigger className="w-full sm:w-[140px] h-9 min-h-[44px] sm:min-h-0">
                                     <SelectValue placeholder={t('Status')} />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -201,7 +201,7 @@ export default function AssetsIndex() {
                                 </SelectContent>
                             </Select>
                             <Select value={selectedProject} onValueChange={setSelectedProject}>
-                                <SelectTrigger className="w-[160px] h-9">
+                                <SelectTrigger className="w-full sm:w-[160px] h-9 min-h-[44px] sm:min-h-0">
                                     <SelectValue placeholder={t('Project')} />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -212,7 +212,7 @@ export default function AssetsIndex() {
                                 </SelectContent>
                             </Select>
                             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                                <SelectTrigger className="w-[160px] h-9">
+                                <SelectTrigger className="w-full sm:w-[160px] h-9 min-h-[44px] sm:min-h-0">
                                     <SelectValue placeholder={t('Category')} />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -222,7 +222,7 @@ export default function AssetsIndex() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Button type="submit" variant="secondary" size="sm">{t('Apply')}</Button>
+                            <Button type="submit" variant="secondary" size="sm" className="min-h-[44px] sm:min-h-0 touch-manipulation w-full sm:w-auto">{t('Apply')}</Button>
                         </form>
                     </CardContent>
                 </Card>
@@ -234,6 +234,7 @@ export default function AssetsIndex() {
                                 <TableRow>
                                     <TableHead className="w-[40px]">#</TableHead>
                                     <TableHead>{t('Name')}</TableHead>
+                                    <TableHead className="text-center w-[90px]">{t('Quantity')}</TableHead>
                                     <TableHead>{t('Asset Code')}</TableHead>
                                     <TableHead>{t('Category')}</TableHead>
                                     <TableHead>{t('Project')}</TableHead>
@@ -253,6 +254,7 @@ export default function AssetsIndex() {
                                                 <span className="font-medium">{asset.name}</span>
                                             </div>
                                         </TableCell>
+                                        <TableCell className="text-center font-medium">{asset.quantity ?? 1}</TableCell>
                                         <TableCell className="text-muted-foreground">{asset.asset_code || '—'}</TableCell>
                                         <TableCell>
                                             {asset.asset_category ? asset.asset_category.name : (asset.type ? getTypeLabel(asset.type) : '—')}
@@ -301,7 +303,7 @@ export default function AssetsIndex() {
                                 ))}
                                 {items.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                                        <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                                             {t('No results found.')}
                                         </TableCell>
                                     </TableRow>

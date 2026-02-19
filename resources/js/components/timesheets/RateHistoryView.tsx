@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export default function RateHistoryView({ userId, userName, history, isOpen, onClose }: Props) {
+    const { t } = useTranslation();
     const getRateChange = (current: number, previous?: number) => {
         if (!previous) return null;
         const change = current - previous;
@@ -91,7 +93,7 @@ export default function RateHistoryView({ userId, userName, history, isOpen, onC
                                                     <Badge variant="secondary">Default</Badge>
                                                 )}
                                                 {record.project && (
-                                                    <Badge variant="outline">Project Specific</Badge>
+                                                    <Badge variant="outline">{t('Project Specific')}</Badge>
                                                 )}
                                                 {index === 0 && (
                                                     <Badge variant="default">Current</Badge>

@@ -43,17 +43,18 @@ export function PageTemplate({
     <AppLayout breadcrumbs={pageBreadcrumbs}>
       <Head title={title} />
       
-      <div className="flex h-full flex-1 flex-col gap-4 p-4">
+      <div className="flex h-full flex-1 flex-col gap-4 p-3 sm:p-4">
         {/* Header with action buttons */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">{title}</h1>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-base font-semibold sm:text-xl">{title}</h1>
           {actions && actions.length > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap gap-2">
               {actions.map((action, index) => (
                 <Button 
                   key={index}
                   variant={action.variant || 'outline'} 
                   size="sm"
+                  className="min-h-[44px] sm:min-h-0 touch-manipulation"
                   onClick={action.onClick}
                 >
                   {action.icon}
@@ -65,7 +66,7 @@ export function PageTemplate({
         </div>
         
         {/* Content */}
-        <div className={noPadding ? "" : "rounded-xl border p-6"}>
+        <div className={noPadding ? "" : "rounded-xl border p-3 sm:p-4 md:p-6"}>
           {children}
         </div>
       </div>

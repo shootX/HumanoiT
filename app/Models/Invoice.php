@@ -428,7 +428,8 @@ class Invoice extends Model
     }
 
     /**
-     * When invoice is paid and approved, create Assets from items with type='asset'.
+     * When invoice is paid and approved, create Assets from items with type='asset' (without asset_id).
+     * Items with asset_id already link to existing assets.
      */
     public function createAssetsFromPaidInvoice(): array
     {
@@ -438,12 +439,8 @@ class Invoice extends Model
         if (!$this->workspace_id) {
             return [];
         }
-        $assetItems = $this->items()->where('type', 'asset')->get();
+        $assetItems = $this->items()->where('type', 'asset')->whereNull('asset_id')->get();
         if ($assetItems->isEmpty()) {
-            return [];
-        }
-        $existingCount = Asset::where('invoice_id', $this->id)->count();
-        if ($existingCount >= $assetItems->count()) {
             return [];
         }
         $created = [];
@@ -463,12 +460,14 @@ class Invoice extends Model
                 'invoice_id' => $this->id,
                 'asset_category_id' => $item->asset_category_id,
                 'name' => $name,
+                'quantity' => $item->quantity ?? 1,
                 'value' => $item->amount,
                 'location' => $location,
                 'purchase_date' => $this->invoice_date,
                 'status' => 'active',
                 'notes' => __('From invoice :number', ['number' => $this->invoice_number]),
             ]);
+            $item->update(['asset_id' => $asset->id]);
             $created[] = $asset;
         }
         return $created;

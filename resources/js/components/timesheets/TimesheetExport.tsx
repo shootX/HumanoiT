@@ -137,7 +137,7 @@ export default function TimesheetExport({ onExport }: Props) {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="date">Date</SelectItem>
-                                <SelectItem value="project">Project</SelectItem>
+                                <SelectItem value="project">{t('Project')}</SelectItem>
                                 <SelectItem value="member">Member</SelectItem>
                                 <SelectItem value="none">No Grouping</SelectItem>
                             </SelectContent>

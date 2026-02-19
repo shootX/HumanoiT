@@ -258,8 +258,8 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
             
             {/* Overview Row */}
             <Card className="mb-4 hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                    <div className="grid grid-cols-5 gap-4">
+                <CardContent className="p-3 sm:p-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
                         <div className="text-center">
                             <div className="text-xl font-bold text-blue-600">
                                 {Array.isArray(tasks) ? tasks.length : (tasks?.total || 0)}
@@ -296,11 +296,11 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
 
             {/* Filters Row */}
             <div className="bg-white rounded-lg shadow mb-4">
-                <div className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
+                <div className="p-3 sm:p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
                             <form onSubmit={handleSearch} className="flex gap-2">
-                                <div className="relative w-64">
+                                <div className="relative w-full sm:w-64">
                                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                     <Input
                                         placeholder={t('Search tasks...')}
@@ -323,7 +323,7 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                         className="w-full pl-9"
                                     />
                                 </div>
-                                <Button type="submit" size="sm">
+                                <Button type="submit" size="sm" className="min-h-[44px] sm:min-h-0 touch-manipulation">
                                     <Search className="h-4 w-4 mr-1.5" />
                                     {t('Search')}
                                 </Button>
@@ -332,6 +332,7 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                             <Button 
                                 variant={hasActiveFilters() ? "default" : "outline"}
                                 size="sm" 
+                                className="min-h-[44px] sm:min-h-0 touch-manipulation"
                                 onClick={() => setShowFilters(!showFilters)}
                             >
                                 <Filter className="h-4 w-4 mr-1.5" />
@@ -344,7 +345,7 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                             </Button>
                         </div>
                         
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                             <div className="flex items-center gap-1 border rounded-md p-1">
                                 <Button
                                     variant={viewMode === 'card' ? 'default' : 'ghost'}
@@ -402,7 +403,7 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                 </Button>
                             </div>
                             {viewMode !== 'kanban' && (
-                                <>
+                                <div className="hidden sm:flex items-center gap-2">
                                     <Label className="text-xs text-muted-foreground">{t('Per Page')}:</Label>
                                     <Select 
                                         value={tasks?.per_page?.toString() || "20"} 
@@ -427,14 +428,14 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                             <SelectItem value="100">100</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                </>
+                                </div>
                             )}
                         </div>
                     </div>
                     
                     {showFilters && (
-                        <div className="p-4 bg-gray-50 border rounded-md">
-                            <div className="flex flex-wrap gap-4 items-end">
+                        <div className="p-3 sm:p-4 bg-gray-50 border rounded-md">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4 sm:items-end">
                                 <div className="space-y-2">
                                     <Label>{t('Project')}</Label>
                                     <Select value={selectedProject} onValueChange={(value) => handleFilter('project_id', value)}>
@@ -828,7 +829,7 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                         </div>
                                     </CardContent>
                                     
-                                    <CardFooter className="flex justify-end gap-1 pt-0 pb-2">
+                                    <CardFooter className="flex justify-end gap-2 pt-0 pb-2">
                                         <Tooltip>
                                             <TooltipTrigger asChild>
                                                 <Button 
@@ -895,22 +896,22 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Task')}</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">{t('Task')}</th>
                                     {!project_name && (
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
+                                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Project</th>
                                     )}
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stage</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Stage</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Priority</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Assignee</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Progress</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Due Date</th>
+                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {tasks?.data?.filter((t: Task | null) => t != null)?.map((task: Task) => (
                                     <tr key={`table-${task.id}`} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <div>
                                                 <div 
                                                     className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
@@ -922,11 +923,11 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                             </div>
                                         </td>
                                         {!project_name && (
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 sm:px-6">
                                                 {task.project?.title}
                                             </td>
                                         )}
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <Badge 
                                                 variant="outline" 
                                                 style={{ backgroundColor: task.task_stage?.color + '20', borderColor: task.task_stage?.color }}
@@ -934,12 +935,12 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                                 {task.task_stage?.name}
                                             </Badge>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <Badge className={getPriorityColor(task.priority)} variant="outline">
                                                 {task.priority}
                                             </Badge>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             {(() => {
                                                 const assignees = task.members?.length ? task.members : (task.assigned_to ? [task.assigned_to] : []);
                                                 if (!assignees.length) return <span className="text-sm text-gray-400">{t('Unassigned')}</span>;
@@ -968,7 +969,7 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                                 );
                                             })()}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <div className="flex items-center">
                                                 <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
                                                     <div className="bg-blue-600 h-2 rounded-full" style={{width: `${task.progress}%`}}></div>
@@ -976,7 +977,7 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                                 <span className="text-sm text-gray-900">{task.progress}%</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 sm:px-6">
                                             <div className="flex items-center gap-2">
                                                 {task.end_date && isTaskOverdue(task.end_date) && (
                                                     <Badge variant="destructive" className="text-xs">
@@ -987,8 +988,8 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                                 <span>{task.end_date ? new Date(task.end_date).toLocaleDateString() : 'No due date'}</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <div className="flex gap-1">
+                                        <td className="px-3 py-4 whitespace-nowrap text-sm font-medium sm:px-6">
+                                            <div className="flex gap-2">
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
                                                         <Button 

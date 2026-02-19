@@ -69,7 +69,11 @@ class AssetController extends Controller
             abort(403);
         }
 
-        $asset->load(['project', 'assetCategory', 'invoice:id,invoice_number', 'tasks' => fn ($q) => $q->with('project')->limit(20), 'attachments.mediaItem', 'warrantyCases' => fn ($q) => $q->orderByDesc('reported_at')]);
+        $asset->load([
+            'project', 'assetCategory', 'invoice:id,invoice_number',
+            'taskAllocations' => fn ($q) => $q->with('project:id,title')->orderBy('asset_task.created_at', 'desc')->limit(50),
+        ]);
+
 
         return Inertia::render('assets/Show', [
             'asset' => $asset,
@@ -84,6 +88,7 @@ class AssetController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'quantity' => 'nullable|integer|min:1',
             'asset_code' => 'nullable|string|max:255',
             'asset_category_id' => 'nullable|exists:asset_categories,id',
             'type' => 'nullable|string|max:255',
@@ -102,7 +107,9 @@ class AssetController extends Controller
             }
         }
 
-        if (!empty($validated['asset_code'])) {
+        if (empty(trim($validated['asset_code'] ?? ''))) {
+            $validated['asset_code'] = Asset::generateUniqueAssetCode($workspaceId);
+        } else {
             $exists = Asset::forWorkspace($workspaceId)
                 ->where('asset_code', $validated['asset_code'])
                 ->exists();
@@ -134,6 +141,7 @@ class AssetController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'quantity' => 'nullable|integer|min:1',
             'asset_code' => 'nullable|string|max:255',
             'asset_category_id' => 'nullable|exists:asset_categories,id',
             'type' => 'nullable|string|max:255',
@@ -152,7 +160,9 @@ class AssetController extends Controller
             }
         }
 
-        if (!empty($validated['asset_code'])) {
+        if (empty(trim($validated['asset_code'] ?? ''))) {
+            $validated['asset_code'] = Asset::generateUniqueAssetCode($asset->workspace_id);
+        } else {
             $exists = Asset::forWorkspace($asset->workspace_id)
                 ->where('asset_code', $validated['asset_code'])
                 ->where('id', '!=', $asset->id)

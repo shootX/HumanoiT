@@ -332,7 +332,7 @@ export default function TimesheetFormModal({ isOpen, onClose, timesheet, project
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label>Project *</Label>
+                                        <Label>{t('Project')} *</Label>
                                         <Select
                                             value={entry.project_id}
                                             onValueChange={(value) => updateEntry(index, 'project_id', value)}

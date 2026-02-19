@@ -47,6 +47,13 @@ class Task extends Model
         return $this->belongsTo(Asset::class);
     }
 
+    public function assets(): BelongsToMany
+    {
+        return $this->belongsToMany(Asset::class, 'asset_task')
+            ->withPivot('quantity')
+            ->withTimestamps();
+    }
+
     public function assignedTo(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');

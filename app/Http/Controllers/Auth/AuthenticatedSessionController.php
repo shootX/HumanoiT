@@ -35,7 +35,6 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
-        $request->session()->regenerateToken();
 
         $this->logLoginHistory($request);
 

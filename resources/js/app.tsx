@@ -136,6 +136,13 @@ createInertiaApp({
                 }
                 
                 (window as any).page = event.detail.page;
+
+                // Update CSRF meta tag after navigation (e.g. after login)
+                const newToken = event.detail.page.props?.csrf_token;
+                if (newToken) {
+                    const meta = document.querySelector('meta[name="csrf-token"]');
+                    if (meta) meta.setAttribute('content', newToken);
+                }
                 
                 // Sync language on navigation
                 // syncLanguage(event.detail.page);

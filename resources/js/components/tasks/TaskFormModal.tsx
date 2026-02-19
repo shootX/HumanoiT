@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { SimpleMultiSelect } from '@/components/simple-multi-select';
-import { Save } from 'lucide-react';
+import { Save, Plus, Trash2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Task, Project, ProjectMilestone, User, Asset } from '@/types';
 import { toast } from '@/components/custom-toast';
@@ -35,7 +36,7 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
     const [formData, setFormData] = useState({
         project_id: task?.project_id?.toString() || '',
         milestone_id: task?.milestone_id?.toString() || 'none',
-        asset_id: task?.asset_id?.toString() || 'none',
+        asset_items: [] as { asset_id: string; quantity: string }[],
         title: task?.title || '',
         description: task?.description || '',
         priority: task?.priority || 'medium',
@@ -50,18 +51,30 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const getProjectTeamMembers = (project: any): User[] => {
+        const memberUsers = (project?.members || []).filter((m: any) => m.user).map((m: any) => m.user);
+        const clientUsers = project?.clients || [];
+        return [...memberUsers, ...clientUsers].filter((u: any, i: number, arr: any[]) => 
+            arr.findIndex((x: any) => x.id === u.id) === i
+        );
+    };
+
     // Reset form when task changes
     useEffect(() => {
         if (task) {
             // Editing mode - populate with task data
             const project = projects.find(p => p.id === task.project_id);
             setCurrentMilestones(project?.milestones || []);
-            setCurrentMembers(members.filter((m: any) => (m.type || m.user?.type) !== 'superadmin'));
+            setCurrentMembers(getProjectTeamMembers(project));
+            const assetItems = (task as any).assets?.map((a: any) => ({
+                asset_id: String(a.id),
+                quantity: String(a.pivot?.quantity ?? 1)
+            })) ?? [];
             setFormData(prev => ({
                 ...prev,
                 project_id: task.project_id?.toString() || '',
                 milestone_id: task.milestone_id?.toString() || 'none',
-                asset_id: task.asset_id?.toString() || 'none',
+                asset_items: assetItems.length > 0 ? assetItems : (task.asset_id ? [{ asset_id: String(task.asset_id), quantity: '1' }] : []),
                 title: task.title,
                 description: task.description || '',
                 priority: task.priority,
@@ -75,7 +88,7 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
             setFormData({
                 project_id: '',
                 milestone_id: 'none',
-                asset_id: 'none',
+                asset_items: assets.length > 0 ? [{ asset_id: '', quantity: '1' }] : [],
                 title: '',
                 description: '',
                 priority: 'medium',
@@ -85,7 +98,7 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                 is_googlecalendar_sync: false
             });
             setCurrentMilestones([]);
-            setCurrentMembers(members.filter((m: any) => (m.type || m.user?.type) !== 'superadmin'));
+            setCurrentMembers([]);
         }
     }, [task, projects, members]);
 
@@ -98,12 +111,8 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
         }));
         
         const project = projects.find(p => p.id.toString() === projectId);
-        
-        // Load project milestones
-        const milestones = project?.milestones || [];
-        setCurrentMilestones(milestones);
-        
-        setCurrentMembers(members.filter((m: any) => (m.type || m.user?.type) !== 'superadmin'));
+        setCurrentMilestones(project?.milestones || []);
+        setCurrentMembers(getProjectTeamMembers(project) || []);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -117,7 +126,10 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
         const submitData = {
             ...formData,
             milestone_id: formData.milestone_id === 'none' ? '' : formData.milestone_id,
-            asset_id: formData.asset_id === 'none' ? '' : formData.asset_id,
+            asset_items: formData.asset_items.filter(x => x.asset_id && parseInt(x.quantity, 10) > 0).map(x => ({
+                asset_id: x.asset_id,
+                quantity: parseInt(x.quantity, 10) || 1
+            })),
             assigned_user_ids: formData.assigned_user_ids
         };
         
@@ -196,26 +208,89 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                         </div>
                     )}
 
-                    {assets.length > 0 && (
+                    {(() => {
+                        const getAvailable = (a: { id: number; quantity?: number } & Record<string, unknown>) => {
+                            return Number(a.quantity ?? 1);
+                        };
+                        const assetsFromTask = ((task as any)?.assets ?? []).filter((a: any) => !assets.some((x: any) => x.id === a.id));
+                        const availableAssets = [...assets, ...assetsFromTask];
+                        return availableAssets.length > 0 && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                {t('Asset')}
+                                {t('Used Assets')}
                             </label>
-                            <Select value={formData.asset_id} onValueChange={(value) => setFormData({...formData, asset_id: value})}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder={t('Select asset (optional)')} />
-                                </SelectTrigger>
-                                <SelectContent className="z-[9999]">
-                                    <SelectItem value="none">{t('No asset')}</SelectItem>
-                                    {assets.map((asset) => (
-                                        <SelectItem key={asset.id} value={asset.id.toString()}>
-                                            {asset.name}{asset.asset_code ? ` (${asset.asset_code})` : ''}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <p className="text-xs text-muted-foreground mb-2">{t('Select assets and quantity used for this task')}</p>
+                            <div className="space-y-2">
+                                {formData.asset_items.map((item, idx) => {
+                                    const selectedAsset = availableAssets.find((a: any) => String(a.id) === item.asset_id);
+                                    const maxQty = selectedAsset ? getAvailable(selectedAsset) - formData.asset_items.reduce((sum, itm, i) =>
+                                        i !== idx && itm.asset_id === item.asset_id ? sum + (parseInt(itm.quantity, 10) || 0) : sum, 0) : 999;
+                                    return (
+                                    <div key={idx} className="flex gap-2 items-center">
+                                        <select
+                                            value={item.asset_id || ''}
+                                            onChange={(e) => {
+                                                const next = [...formData.asset_items];
+                                                next[idx] = { ...next[idx], asset_id: e.target.value, quantity: '1' };
+                                                setFormData({ ...formData, asset_items: next });
+                                            }}
+                                            className={cn(
+                                                'flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
+                                                'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
+                                            )}
+                                        >
+                                            <option value="">{t('Select asset')}</option>
+                                            {availableAssets.map((asset: any) => {
+                                                const avail = getAvailable(asset) - formData.asset_items.reduce((s, itm, i) =>
+                                                    i !== idx && itm.asset_id === String(asset.id) ? s + (parseInt(itm.quantity, 10) || 0) : s, 0);
+                                                return (
+                                                    <option key={asset.id} value={asset.id}>
+                                                        {asset.name}{asset.asset_code ? ` (${asset.asset_code})` : ''} — {t('Available')}: {Math.max(0, avail)}
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                        <Input
+                                            type="number"
+                                            min={1}
+                                            max={maxQty}
+                                            className="w-20"
+                                            placeholder="Qty"
+                                            value={item.quantity}
+                                            onChange={(e) => {
+                                                const next = [...formData.asset_items];
+                                                const v = Math.min(Math.max(1, parseInt(e.target.value, 10) || 1), maxQty);
+                                                next[idx] = { ...next[idx], quantity: String(v) };
+                                                setFormData({ ...formData, asset_items: next });
+                                            }}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="shrink-0 text-red-500"
+                                            onClick={() => setFormData({ ...formData, asset_items: formData.asset_items.filter((_, i) => i !== idx) })}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    );
+                                })}
+                                {availableAssets.length > 0 && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setFormData({ ...formData, asset_items: [...formData.asset_items, { asset_id: '', quantity: '1' }] })}
+                                    >
+                                        <Plus className="h-4 w-4 mr-1" />
+                                        {t('Add asset')}
+                                    </Button>
+                                )}
+                            </div>
                         </div>
-                    )}
+                        );
+                    })()}
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PageTemplate } from '@/components/page-template';
-import { usePage, router } from '@inertiajs/react';
+import { usePage, router, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -75,12 +75,6 @@ export default function CrmContactsIndex() {
   const handleEdit = (contact: any) => {
     setCurrentContact(contact);
     setFormMode('edit');
-    setIsFormModalOpen(true);
-  };
-
-  const handleView = (contact: any) => {
-    setCurrentContact(contact);
-    setFormMode('view');
     setIsFormModalOpen(true);
   };
 
@@ -175,7 +169,7 @@ export default function CrmContactsIndex() {
       ],
       readOnly: formMode === 'view',
     },
-    { name: 'name', label: t('Name'), type: 'text' as const, required: true, placeholder: t('Contact person name') },
+    { name: 'name', label: t('Name'), type: 'text' as const, required: false, placeholder: t('Contact person name') },
     {
       name: 'company_name',
       label: t('Company Name (LLC)'),
@@ -259,11 +253,11 @@ export default function CrmContactsIndex() {
       noPadding
     >
       <div className="bg-white rounded-lg shadow mb-4">
-        <div className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+        <div className="p-3 sm:p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
               <form onSubmit={handleSearch} className="flex gap-2">
-                <div className="relative w-64">
+                <div className="relative w-full sm:w-64">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder={t('Search contacts...')}
@@ -272,7 +266,7 @@ export default function CrmContactsIndex() {
                     className="w-full pl-9"
                   />
                 </div>
-                <Button type="submit" size="sm">
+                <Button type="submit" size="sm" className="min-h-[44px] sm:min-h-0 touch-manipulation">
                   <Search className="h-4 w-4 mr-1.5" />
                   {t('Search')}
                 </Button>
@@ -280,7 +274,7 @@ export default function CrmContactsIndex() {
               <Button
                 variant={hasActiveFilters() ? 'default' : 'outline'}
                 size="sm"
-                className="h-8 px-2 py-1"
+                className="h-10 min-h-[44px] px-2 py-1 sm:h-8 sm:min-h-0 touch-manipulation"
                 onClick={() => setShowFilters(!showFilters)}
               >
                 <Filter className="h-3.5 w-3.5 mr-1.5" />
@@ -292,7 +286,7 @@ export default function CrmContactsIndex() {
                 )}
               </Button>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="hidden items-center gap-2 sm:flex">
               <Label className="text-xs text-muted-foreground">{t('Per Page:')}</Label>
               <Select
                 value={pageFilters.per_page?.toString() || '15'}
@@ -379,12 +373,14 @@ export default function CrmContactsIndex() {
                       {col.render ? col.render(contact[col.key], contact) : contact[col.key]}
                     </td>
                   ))}
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-1">
+                  <td className="px-2 py-3 text-right sm:px-4">
+                    <div className="flex justify-end gap-2">
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => handleView(contact)} className="text-blue-500 hover:text-blue-700">
-                            <Eye className="h-4 w-4" />
+                          <Button variant="ghost" size="icon" asChild className="text-blue-500 hover:text-blue-700">
+                            <Link href={route('crm-contacts.show', contact.id)}>
+                              <Eye className="h-4 w-4" />
+                            </Link>
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>{t('View')}</TooltipContent>
@@ -420,7 +416,7 @@ export default function CrmContactsIndex() {
           </table>
         </div>
 
-        <div className="p-4 border-t flex items-center justify-between">
+        <div className="p-3 sm:p-4 border-t flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm text-muted-foreground">
             {t('Showing')} <span className="font-medium">{contacts?.from || 0}</span> {t('to')} <span className="font-medium">{contacts?.to || 0}</span> {t('of')} <span className="font-medium">{contacts?.total || 0}</span> {t('contacts')}
           </div>

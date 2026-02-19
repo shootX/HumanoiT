@@ -15,6 +15,7 @@ class InvoiceItem extends Model
         'task_id',
         'expense_id',
         'timesheet_entry_id',
+        'asset_id',
         'asset_category_id',
         'asset_name',
         'tax_id',
@@ -29,7 +30,7 @@ class InvoiceItem extends Model
     protected $casts = [
         'rate' => 'decimal:2',
         'amount' => 'decimal:2',
-        'quantity' => 'integer',
+        'quantity' => 'float',
         'sort_order' => 'integer',
     ];
 
@@ -51,6 +52,11 @@ class InvoiceItem extends Model
     public function timesheetEntry(): BelongsTo
     {
         return $this->belongsTo(TimesheetEntry::class);
+    }
+
+    public function asset(): BelongsTo
+    {
+        return $this->belongsTo(Asset::class);
     }
 
     public function assetCategory(): BelongsTo

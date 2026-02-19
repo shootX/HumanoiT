@@ -710,11 +710,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // CRM Contacts routes
         Route::get('crm-contacts', [\App\Http\Controllers\CrmContactController::class, 'index'])->middleware('permission:crm_contact_view_any')->name('crm-contacts.index');
+        Route::get('crm-contacts/export', [\App\Http\Controllers\CrmContactController::class, 'export'])->middleware('permission:crm_contact_export')->name('crm-contacts.export');
+        Route::get('crm-contacts/template', [\App\Http\Controllers\ExportImportController::class, 'getTemplate'])->middleware('permission:crm_contact_view_any')->name('crm-contacts.template');
+        Route::get('crm-contacts/{crmContact}', [\App\Http\Controllers\CrmContactController::class, 'show'])->middleware('permission:crm_contact_view_any')->name('crm-contacts.show');
         Route::post('crm-contacts', [\App\Http\Controllers\CrmContactController::class, 'store'])->middleware('permission:crm_contact_create')->name('crm-contacts.store');
         Route::put('crm-contacts/{crmContact}', [\App\Http\Controllers\CrmContactController::class, 'update'])->middleware('permission:crm_contact_update')->name('crm-contacts.update');
         Route::delete('crm-contacts/{crmContact}', [\App\Http\Controllers\CrmContactController::class, 'destroy'])->middleware('permission:crm_contact_delete')->name('crm-contacts.destroy');
-        Route::get('crm-contacts/export', [\App\Http\Controllers\CrmContactController::class, 'export'])->middleware('permission:crm_contact_export')->name('crm-contacts.export');
-        Route::get('crm-contacts/template', [\App\Http\Controllers\ExportImportController::class, 'getTemplate'])->middleware('permission:crm_contact_view_any')->name('crm-contacts.template');
         Route::post('crm-contacts/import', [\App\Http\Controllers\ExportImportController::class, 'import'])->middleware('permission:crm_contact_create')->name('crm-contacts.import');
         Route::post('crm-contacts/import/data', [\App\Http\Controllers\ExportImportController::class, 'importData'])->middleware('permission:crm_contact_create')->name('crm-contacts.import.data');
 

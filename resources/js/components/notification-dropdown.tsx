@@ -183,7 +183,7 @@ export function NotificationDropdown() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h4 className="text-sm font-medium">{notification.title}</h4>
+                        <h4 className="text-sm font-medium">{t(notification.title)}</h4>
                         <p className="text-xs text-muted-foreground">{notification.content}</p>
                         <div className="text-xs text-muted-foreground mt-1">
                           {formatTimeAgo(notification.created_at)}

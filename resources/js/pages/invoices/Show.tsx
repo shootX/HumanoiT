@@ -48,6 +48,10 @@ interface Invoice {
         id: number;
         title: string;
     };
+    task?: {
+        id: number;
+        title: string;
+    };
     budget_category?: {
         id: number;
         name: string;
@@ -57,13 +61,6 @@ interface Invoice {
         name: string;
         avatar?: string;
     };
-    crm_contact?: {
-        id: number;
-        name: string;
-        company_name?: string;
-        email?: string;
-    } | null;
-    client_details?: { name?: string; company_name?: string; email?: string; address?: string } | null;
     creator: {
         id: number;
         name: string;
@@ -229,7 +226,7 @@ export default function InvoiceShow() {
         }
     ];
     
-    if (invoice.status === 'draft' && ['owner', 'manager'].includes(userWorkspaceRole)) {
+    if (['owner', 'manager'].includes(userWorkspaceRole)) {
         pageActions.push(
             {
                 label: t('Edit'),
@@ -244,8 +241,7 @@ export default function InvoiceShow() {
                 onClick: () => handleAction('copy-payment-link')
             }
         );
-        
-        if (emailNotificationsEnabled) {
+        if (invoice.status === 'draft' && emailNotificationsEnabled) {
             pageActions.push(
                 {
                     label: t('Send'),
@@ -279,17 +275,6 @@ export default function InvoiceShow() {
                 }
             );
         } else {
-            // Only add Copy Payment Link if not already added in draft section
-            if (invoice.status !== 'draft') {
-                pageActions.push(
-                    {
-                        label: t('Copy Payment Link'),
-                        icon: <Link className="h-4 w-4 mr-2" />,
-                        variant: 'outline',
-                        onClick: () => handleAction('copy-payment-link')
-                    }
-                );
-            }
             pageActions.push(
                 {
                     label: t('Mark as Paid'),
@@ -414,26 +399,10 @@ export default function InvoiceShow() {
                 <Card>
                     <CardContent className="pt-6">
                         <div className="flex justify-between items-start">
-                            {(invoice.crm_contact || invoice.client_details || invoice.client) && (
+                            {invoice.client && (
                                 <div>
                                     <h3 className="font-bold mb-2">{t('Bill To')}</h3>
-                                    {invoice.crm_contact && (
-                                        <>
-                                            <p>{invoice.crm_contact.company_name || invoice.crm_contact.name}</p>
-                                            {invoice.crm_contact.name && invoice.crm_contact.company_name && <p className="text-sm text-muted-foreground">{invoice.crm_contact.name}</p>}
-                                            {invoice.crm_contact.email && <p className="text-sm text-muted-foreground">{invoice.crm_contact.email}</p>}
-                                        </>
-                                    )}
-                                    {!invoice.crm_contact && invoice.client_details && (
-                                        <>
-                                            <p>{invoice.client_details.company_name || invoice.client_details.name}</p>
-                                            {invoice.client_details.name && invoice.client_details.company_name && <p className="text-sm text-muted-foreground">{invoice.client_details.name}</p>}
-                                            {invoice.client_details.email && <p className="text-sm text-muted-foreground">{invoice.client_details.email}</p>}
-                                        </>
-                                    )}
-                                    {!invoice.crm_contact && !invoice.client_details && invoice.client && (
-                                        <p>{invoice.client.name}</p>
-                                    )}
+                                    <p>{invoice.client.name}</p>
                                 </div>
                             )}
 
@@ -441,6 +410,9 @@ export default function InvoiceShow() {
                                 <div className="text-right">
                                     <h3 className="font-bold mb-2">{t('Project')}</h3>
                                     <p>{invoice.project.title}</p>
+                                    {invoice.task && (
+                                        <p className="text-sm text-muted-foreground mt-1">{t('Task')}: {invoice.task.title}</p>
+                                    )}
                                     {invoice.budget_category && (
                                         <p className="text-sm text-muted-foreground mt-1">{t('Category')}: {invoice.budget_category.name}</p>
                                     )}

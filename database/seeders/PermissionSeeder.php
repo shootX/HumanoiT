@@ -28,25 +28,25 @@ class PermissionSeeder extends Seeder
             ['name' => 'workspace_view_activity', 'module' => 'workspace', 'label' => 'View Workspace Activity', 'description' => 'View workspace activity log'],
             ['name' => 'workspace_invite_members', 'module' => 'workspace', 'label' => 'Invite Workspace Members', 'description' => 'Send workspace invitations'],
 
-            // Project Module
-            ['name' => 'project_view_any', 'module' => 'projects', 'label' => 'View All Projects', 'description' => 'View all projects in workspace'],
-            ['name' => 'project_view', 'module' => 'projects', 'label' => 'View Project', 'description' => 'View individual project information'],
-            ['name' => 'project_create', 'module' => 'projects', 'label' => 'Create Project', 'description' => 'Create new project'],
-            ['name' => 'project_update', 'module' => 'projects', 'label' => 'Update Project', 'description' => 'Modify project information'],
-            ['name' => 'project_delete', 'module' => 'projects', 'label' => 'Delete Project', 'description' => 'Remove project'],
-            ['name' => 'project_assign_members', 'module' => 'projects', 'label' => 'Assign Project Members', 'description' => 'Add/remove project team members'],
-            ['name' => 'project_assign_clients', 'module' => 'projects', 'label' => 'Assign Project Clients', 'description' => 'Add/remove project clients'],
-            ['name' => 'project_assign', 'module' => 'projects', 'label' => 'Assign Project', 'description' => 'Move project between workspaces'],
-            ['name' => 'project_manage_budget', 'module' => 'projects', 'label' => 'Manage Project Budget', 'description' => 'Create/edit project budget'],
-            ['name' => 'project_manage_milestones', 'module' => 'projects', 'label' => 'Manage Project Milestones', 'description' => 'Add/edit project milestones'],
-            ['name' => 'project_manage_attachments', 'module' => 'projects', 'label' => 'Manage Project Attachments', 'description' => 'Upload/delete project files'],
-            ['name' => 'project_generate_reports', 'module' => 'projects', 'label' => 'Generate Project Reports', 'description' => 'Create project analytics'],
-            ['name' => 'project_track_progress', 'module' => 'projects', 'label' => 'Track Project Progress', 'description' => 'Monitor project completion'],
-            ['name' => 'project_manage_notes', 'module' => 'projects', 'label' => 'Manage Project Notes', 'description' => 'Add/edit project notes'],
-            ['name' => 'project_view_activity', 'module' => 'projects', 'label' => 'View Project Activity', 'description' => 'View project activity log'],
-            ['name' => 'project_manage_shared_settings', 'module' => 'projects', 'label' => 'Manage Project Shared Settings', 'description' => 'Configure project sharing and password protection'],
-            ['name' => 'project_view_gantt', 'module' => 'projects', 'label' => 'View Gantt Chart', 'description' => 'Access project Gantt chart view'],
-            ['name' => 'project_manage_permissions', 'module' => 'projects', 'label' => 'Manage Project Permissions', 'description' => 'Manage individual user permissions for project'],
+            // Branch Module
+            ['name' => 'project_view_any', 'module' => 'projects', 'label' => 'View All Branches', 'description' => 'View all branches in workspace'],
+            ['name' => 'project_view', 'module' => 'projects', 'label' => 'View Branch', 'description' => 'View individual branch information'],
+            ['name' => 'project_create', 'module' => 'projects', 'label' => 'Create Branch', 'description' => 'Create new branch'],
+            ['name' => 'project_update', 'module' => 'projects', 'label' => 'Update Branch', 'description' => 'Modify branch information'],
+            ['name' => 'project_delete', 'module' => 'projects', 'label' => 'Delete Branch', 'description' => 'Remove branch'],
+            ['name' => 'project_assign_members', 'module' => 'projects', 'label' => 'Assign Branch Members', 'description' => 'Add/remove branch team members'],
+            ['name' => 'project_assign_clients', 'module' => 'projects', 'label' => 'Assign Branch Clients', 'description' => 'Add/remove branch clients'],
+            ['name' => 'project_assign', 'module' => 'projects', 'label' => 'Assign Branch', 'description' => 'Move branch between workspaces'],
+            ['name' => 'project_manage_budget', 'module' => 'projects', 'label' => 'Manage Branch Budget', 'description' => 'Create/edit branch budget'],
+            ['name' => 'project_manage_milestones', 'module' => 'projects', 'label' => 'Manage Branch Milestones', 'description' => 'Add/edit branch milestones'],
+            ['name' => 'project_manage_attachments', 'module' => 'projects', 'label' => 'Manage Branch Attachments', 'description' => 'Upload/delete branch files'],
+            ['name' => 'project_generate_reports', 'module' => 'projects', 'label' => 'Generate Branch Reports', 'description' => 'Create branch analytics'],
+            ['name' => 'project_track_progress', 'module' => 'projects', 'label' => 'Track Branch Progress', 'description' => 'Monitor branch completion'],
+            ['name' => 'project_manage_notes', 'module' => 'projects', 'label' => 'Manage Branch Notes', 'description' => 'Add/edit branch notes'],
+            ['name' => 'project_view_activity', 'module' => 'projects', 'label' => 'View Branch Activity', 'description' => 'View branch activity log'],
+            ['name' => 'project_manage_shared_settings', 'module' => 'projects', 'label' => 'Manage Branch Shared Settings', 'description' => 'Configure branch sharing and password protection'],
+            ['name' => 'project_view_gantt', 'module' => 'projects', 'label' => 'View Gantt Chart', 'description' => 'Access branch Gantt chart view'],
+            ['name' => 'project_manage_permissions', 'module' => 'projects', 'label' => 'Manage Branch Permissions', 'description' => 'Manage individual user permissions for branch'],
 
             // Task Module
             ['name' => 'task_view_any', 'module' => 'tasks', 'label' => 'View All Tasks', 'description' => 'View all tasks in workspace'],
@@ -71,7 +71,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'bug_update', 'module' => 'bugs', 'label' => 'Update Bug', 'description' => 'Modify bug information'],
             ['name' => 'bug_delete', 'module' => 'bugs', 'label' => 'Delete Bug', 'description' => 'Remove bug report'],
             ['name' => 'bug_assign', 'module' => 'bugs', 'label' => 'Assign Bug', 'description' => 'Assign bug to team member'],
-            ['name' => 'bug_assign_project', 'module' => 'bugs', 'label' => 'Assign Bug to Project', 'description' => 'Link bug to specific project'],
+            ['name' => 'bug_assign_project', 'module' => 'bugs', 'label' => 'Assign Bug to Branch', 'description' => 'Link bug to specific branch'],
             ['name' => 'bug_change_status', 'module' => 'bugs', 'label' => 'Change Bug Status', 'description' => 'Update bug resolution status'],
             ['name' => 'bug_add_comments', 'module' => 'bugs', 'label' => 'Add Bug Comments', 'description' => 'Add comments to bug'],
             ['name' => 'bug_add_attachments', 'module' => 'bugs', 'label' => 'Add Bug Attachments', 'description' => 'Upload files to bug report'],
@@ -360,7 +360,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'zoom_meeting_join', 'module' => 'zoom_meeting', 'label' => 'Join Zoom Meeting', 'description' => 'Join Zoom meeting as participant'],
             ['name' => 'zoom_meeting_start', 'module' => 'zoom_meeting', 'label' => 'Start Zoom Meeting', 'description' => 'Start Zoom meeting as host'],
             ['name' => 'zoom_meeting_manage_attendees', 'module' => 'zoom_meeting', 'label' => 'Manage Meeting Attendees', 'description' => 'Add/remove meeting attendees'],
-            ['name' => 'zoom_meeting_assign_project', 'module' => 'zoom_meeting', 'label' => 'Assign Meeting to Project', 'description' => 'Link meeting to project'],
+            ['name' => 'zoom_meeting_assign_project', 'module' => 'zoom_meeting', 'label' => 'Assign Meeting to Branch', 'description' => 'Link meeting to branch'],
             ['name' => 'zoom_meeting_view_calendar', 'module' => 'zoom_meeting', 'label' => 'View Meeting Calendar', 'description' => 'Access meeting calendar view'],
 
             // Google Meeting Module
@@ -372,7 +372,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'google_meeting_join', 'module' => 'google_meeting', 'label' => 'Join Google Meeting', 'description' => 'Join Google meeting as participant'],
             ['name' => 'google_meeting_start', 'module' => 'google_meeting', 'label' => 'Start Google Meeting', 'description' => 'Start Google meeting as host'],
             ['name' => 'google_meeting_manage_attendees', 'module' => 'google_meeting', 'label' => 'Manage Meeting Attendees', 'description' => 'Add/remove meeting attendees'],
-            ['name' => 'google_meeting_assign_project', 'module' => 'google_meeting', 'label' => 'Assign Meeting to Project', 'description' => 'Link meeting to project'],
+            ['name' => 'google_meeting_assign_project', 'module' => 'google_meeting', 'label' => 'Assign Meeting to Branch', 'description' => 'Link meeting to branch'],
             ['name' => 'google_meeting_view_calendar', 'module' => 'google_meeting', 'label' => 'View Meeting Calendar', 'description' => 'Access meeting calendar view'],
 
             // Tax Module
@@ -457,12 +457,12 @@ class PermissionSeeder extends Seeder
             ['name' => 'contract_attachment_delete', 'module' => 'contract_attachments', 'label' => 'Delete Contract Attachment', 'description' => 'Remove contract attachments'],
             ['name' => 'contract_attachment_download', 'module' => 'contract_attachments', 'label' => 'Download Contract Attachment', 'description' => 'Download contract files'],
 
-            // Project Report Module
-            ['name' => 'project_report_view_any', 'module' => 'project_report', 'label' => 'View All Project Reports', 'description' => 'View all project reports in workspace'],
-            ['name' => 'project_report_view', 'module' => 'project_report', 'label' => 'View Project Report', 'description' => 'View individual project report'],
-            ['name' => 'project_report_create', 'module' => 'project_report', 'label' => 'Create Project Report', 'description' => 'Generate project reports'],
-            ['name' => 'project_report_export', 'module' => 'project_report', 'label' => 'Export Project Report', 'description' => 'Export project reports to various formats'],
-            ['name' => 'project_report_dashboard', 'module' => 'project_report', 'label' => 'View Project Report Dashboard', 'description' => 'Access project report dashboard with analytics']
+            // Branch Report Module
+            ['name' => 'project_report_view_any', 'module' => 'project_report', 'label' => 'View All Branch Reports', 'description' => 'View all branch reports in workspace'],
+            ['name' => 'project_report_view', 'module' => 'project_report', 'label' => 'View Branch Report', 'description' => 'View individual branch report'],
+            ['name' => 'project_report_create', 'module' => 'project_report', 'label' => 'Create Branch Report', 'description' => 'Generate branch reports'],
+            ['name' => 'project_report_export', 'module' => 'project_report', 'label' => 'Export Branch Report', 'description' => 'Export branch reports to various formats'],
+            ['name' => 'project_report_dashboard', 'module' => 'project_report', 'label' => 'View Branch Report Dashboard', 'description' => 'Access branch report dashboard with analytics']
 
         ];
 

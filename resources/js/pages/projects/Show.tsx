@@ -519,7 +519,7 @@ export default function ProjectShow() {
             case 'project':
                 return {
                     fields: [
-                        { name: 'title', label: 'Project Title', type: 'text', required: true },
+                        { name: 'title', label: t('Project Title'), type: 'text', required: true },
                         { name: 'description', label: 'Description', type: 'textarea' },
                         { name: 'address', label: 'Address', type: 'text' },
                         { 
@@ -549,7 +549,7 @@ export default function ProjectShow() {
                         },
                         { name: 'start_date', label: 'Start Date', type: 'date' },
                         { name: 'deadline', label: 'Deadline', type: 'date' },
-                        { name: 'is_public', label: 'Make project public', type: 'checkbox' }
+                        { name: 'is_public', label: t('Make project public'), type: 'checkbox' }
                     ],
                     modalSize: 'xl'
                 };
@@ -574,7 +574,7 @@ export default function ProjectShow() {
                             label: 'Period Type', 
                             type: 'select',
                             options: [
-                                { value: 'project', label: 'Project Duration' },
+                                { value: 'project', label: t('Project Duration') },
                                 { value: 'monthly', label: 'Monthly' },
                                 { value: 'quarterly', label: 'Quarterly' }
                             ],
@@ -816,6 +816,38 @@ export default function ProjectShow() {
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Recent Updates */}
+                    {(hasPermission(permissions, 'project_view') || hasPermission(permissions, 'project_view_activity')) && project.activities?.data?.length > 0 && (
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <Clock className="h-4 w-4" />
+                                    {t('Recent Activity')}
+                                </CardTitle>
+                                <Button variant="ghost" size="sm" onClick={() => setActiveTab('activity')}>
+                                    {t('View all')}
+                                </Button>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-3">
+                                    {project.activities.data.slice(0, 5).map((activity: any) => (
+                                        <div key={activity.id} className="flex gap-3 text-sm">
+                                            <Avatar className="h-7 w-7 shrink-0">
+                                                <AvatarFallback className="text-xs">{activity.user?.name?.charAt(0) || '?'}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-gray-700">{activity.description}</p>
+                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                    {activity.user?.name} • {new Date(activity.created_at).toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             </div>
 
@@ -884,7 +916,7 @@ export default function ProjectShow() {
                                     {t('Attachments')}
                                 </TabsTrigger>
                             )}
-                            {hasPermission(permissions, 'project_view') && (
+                            {(hasPermission(permissions, 'project_view') || hasPermission(permissions, 'project_view_activity')) && (
                                 <TabsTrigger value="activity" className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg data-[state=active]:scale-105 hover:bg-primary/10 hover:text-primary text-gray-600">
                                     <Clock className="h-4 w-4 mr-2" />
                                     {t('Activity')}
@@ -1000,7 +1032,7 @@ export default function ProjectShow() {
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2">
                                             <BarChart3 className="h-5 w-5 text-purple-500" />
-                                            Project Reports
+                                            {t('Project Reports')}
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
@@ -1094,7 +1126,7 @@ export default function ProjectShow() {
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">Project Progress:</span>
+                                                <span className="text-sm text-gray-600">{t('Project Progress')}:</span>
                                                 <span className="font-semibold">{project.progress || 0}%</span>
                                             </div>
                                         </div>
@@ -1677,7 +1709,7 @@ export default function ProjectShow() {
 
                         <TabsContent value="expense" className="space-y-6 mt-0">
                             <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-semibold">Project Expenses</h3>
+                                <h3 className="text-lg font-semibold">{t('Project Expenses')}</h3>
                                 <Button size="sm" onClick={() => router.get(route('expenses.index', { project_id: project.id, project_name: project.title }))}>
                                     <Eye className="h-4 w-4 mr-2" />
                                     Manage Expenses
@@ -1853,7 +1885,7 @@ export default function ProjectShow() {
 
                         <TabsContent value="tasks" className="space-y-6 mt-0">
                             <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-semibold">Project Tasks</h3>
+                                <h3 className="text-lg font-semibold">{t('Project Tasks')}</h3>
                                 <div className="flex gap-2">
                                     <Button size="sm" onClick={() => router.get(route('tasks.index', { project_id: project.id, project_name: project.title }))}>
                                         <Eye className="h-4 w-4 mr-2" />
@@ -2043,7 +2075,7 @@ export default function ProjectShow() {
 
                         <TabsContent value="bugs" className="space-y-6 mt-0">
                             <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-semibold">Project Bugs</h3>
+                                <h3 className="text-lg font-semibold">{t('Project Bugs')}</h3>
                                 <div className="flex gap-2">
                                     <Button size="sm" onClick={() => router.get(route('bugs.index', { project_id: project.id, project_name: project.title }))}>
                                         <Eye className="h-4 w-4 mr-2" />
@@ -2462,7 +2494,7 @@ export default function ProjectShow() {
                         <TabsContent value="attachments" className="space-y-6 mt-0">
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center">
-                                    <h3 className="text-lg font-semibold">Project Attachments</h3>
+                                    <h3 className="text-lg font-semibold">{t('Project files and attachments')}</h3>
                                     {hasPermission(permissions, 'project_manage_attachments') && (
                                         <Button size="sm" onClick={() => handleAction('add-attachment')}>
                                             <Upload className="h-4 w-4 mr-2" />
@@ -2684,7 +2716,7 @@ export default function ProjectShow() {
                         <TabsContent value="activity" className="space-y-6 mt-0">
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center">
-                                    <h3 className="text-lg font-semibold">Project Activity</h3>
+                                    <h3 className="text-lg font-semibold">{t('Project Updates')}</h3>
                                 </div>
                                 
                                 {/* Search and Filter Bar */}
@@ -2818,7 +2850,7 @@ export default function ProjectShow() {
                                         {activitySearch ? 'No activity found' : 'No activity recorded yet'}
                                     </h3>
                                     <p className="text-gray-500 mb-6 max-w-sm mx-auto">
-                                        {activitySearch ? 'Try adjusting your search terms or ' : 'Project activities will appear here as they happen.'}
+                                        {activitySearch ? 'Try adjusting your search terms or ' : t('Project activities will appear here as they happen.')}
                                         {activitySearch && (
                                             <Button variant="link" className="p-0 h-auto" onClick={() => {
                                                 setActivitySearch('');
@@ -2846,7 +2878,7 @@ export default function ProjectShow() {
                 onSubmit={handleFormSubmit}
                 formConfig={getFormConfig()}
                 initialData={currentItem || (modalType === 'milestone' ? { status: 'pending' } : modalType === 'member' ? { role: 'member' } : modalType === 'project' ? { status: 'planning', priority: 'medium', is_public: false } : {})}
-                title={modalType === 'project' ? 'Edit Project' : `${formMode === 'create' ? 'Add' : 'Edit'} ${modalType.charAt(0).toUpperCase() + modalType.slice(1)}`}
+                title={modalType === 'project' ? t('Edit') + ' ' + t('Project') : `${formMode === 'create' ? 'Add' : 'Edit'} ${modalType.charAt(0).toUpperCase() + modalType.slice(1)}`}
                 mode={formMode}
             />
 
@@ -2865,16 +2897,16 @@ export default function ProjectShow() {
                 }
                 additionalInfo={
                     modalType === 'member' ? [
-                        'Access to project resources will be revoked',
+                        t('Access to project resources will be revoked'),
                         'Task assignments may need to be reassigned',
                         'Time tracking history will be preserved'
                     ] :
                     modalType === 'client' ? [
-                        'Client access to project will be removed',
-                        'Project visibility for this client will be revoked'
+                        t('Client access to project will be removed'),
+                        t('Project visibility for this client will be revoked')
                     ] :
                     modalType === 'attachment' ? [
-                        'File will be removed from all project references',
+                        t('File will be removed from all project references'),
                         'Download history will be preserved'
                     ] : []
                 }

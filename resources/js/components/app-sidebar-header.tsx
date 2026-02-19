@@ -18,20 +18,22 @@ export function AppSidebarHeader({ breadcrumbs = [] }: { breadcrumbs?: Breadcrum
 
     return (
         <>
-            <header className="border-sidebar-border/50 flex h-14 shrink-0 items-center gap-2 border-b px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-3">
-            <div className="flex w-full items-center justify-between">
-                <div className="flex items-center gap-2">
-                    {position === 'left' && <SidebarTrigger className="-ml-1" />}
+            <header className="border-sidebar-border/50 flex h-14 shrink-0 items-center gap-2 border-b px-3 sm:px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-3 overflow-x-auto">
+            <div className="flex w-full min-w-0 items-center justify-between gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                    {position === 'left' && <SidebarTrigger className="-ml-1 flex-shrink-0" />}
                     {auth?.user?.type === 'company' && (
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <div className="hidden flex-shrink-0 items-center gap-1 text-sm text-muted-foreground sm:flex">
                             <Building2 className="h-4 w-4" />
-                            <span>{currentWorkspace?.name || 'No Workspace'}</span>
+                            <span className="truncate">{currentWorkspace?.name || 'No Workspace'}</span>
                             {breadcrumbs.length > 0 && <span className="mx-1">/</span>}
                         </div>
                     )}
-                    <Breadcrumbs items={breadcrumbs.map(b => ({ label: b.title, href: b.href }))} />
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                        <Breadcrumbs items={breadcrumbs.map(b => ({ label: b.title, href: b.href }))} />
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
                     {(usePage().props as any).isImpersonating && (
                         <button 
                             onClick={() => router.post(route('impersonate.leave'))}

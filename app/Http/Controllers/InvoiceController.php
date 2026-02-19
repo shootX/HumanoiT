@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Asset;
 use App\Models\CrmContact;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -21,7 +22,7 @@ class InvoiceController extends Controller
         $workspace = $user->currentWorkspace;
         $userWorkspaceRole = $workspace->getMemberRole($user);
        
-        $query = Invoice::with(['project:id,title', 'client:id,name,avatar', 'crmContact:id,name,company_name,email', 'creator:id,name', 'payments'])
+        $query = Invoice::with(['project:id,title', 'task:id,title', 'client:id,name,avatar', 'crmContact:id,name,company_name,email', 'creator:id,name', 'payments'])
             ->where('workspace_id', $workspace->id);
 
         // Apply role-based filtering
@@ -140,7 +141,7 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice)
     {
-        $invoice->load(['project', 'budgetCategory', 'client', 'crmContact', 'creator', 'approver', 'items.task', 'items.expense', 'items.timesheetEntry', 'items.assetCategory', 'payments']);
+        $invoice->load(['project', 'task', 'budgetCategory', 'client', 'crmContact', 'creator', 'approver', 'items.task', 'items.expense', 'items.timesheetEntry', 'items.assetCategory', 'items.asset', 'payments']);
         $user = auth()->user();
         $workspace = $user->currentWorkspace;
         $userWorkspaceRole = $workspace->getMemberRole($user);
@@ -200,21 +201,16 @@ class InvoiceController extends Controller
             'items' => 'required|array|min:1',
             'items.*.type' => 'required|in:asset,service',
             'items.*.task_id' => 'nullable|exists:tasks,id',
+            'items.*.asset_id' => 'nullable|exists:assets,id',
             'items.*.asset_category_id' => 'nullable|exists:asset_categories,id',
             'items.*.asset_name' => 'nullable|string|max:255',
             'items.*.tax_id' => 'nullable|exists:taxes,id',
             'items.*.description' => 'required|string|max:500',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.rate' => 'required|numeric|min:0',
         ]);
 
         $project = Project::findOrFail($validated['project_id']);
-
-        foreach ($validated['items'] as $item) {
-            if ($item['type'] === 'asset' && empty($item['asset_category_id'])) {
-                throw \Illuminate\Validation\ValidationException::withMessages(['items' => [__('Asset items require an asset category.')]]);
-            }
-        }
 
         $validated['budget_category_id'] = $this->validateInvoiceBudgetCategory($validated['project_id'], $validated['budget_category_id'] ?? null);
 
@@ -264,6 +260,7 @@ class InvoiceController extends Controller
                 'rate' => $rate,
                 'amount' => $rate * $quantity,
                 'task_id' => $item['task_id'] ?? $validated['task_id'] ?? null,
+                'asset_id' => $item['asset_id'] ?? null,
                 'asset_category_id' => $item['asset_category_id'] ?? null,
                 'asset_name' => $item['asset_name'] ?? null,
                 'tax_id' => $item['tax_id'] ?? null,
@@ -300,19 +297,14 @@ class InvoiceController extends Controller
             'items' => 'required|array|min:1',
             'items.*.type' => 'required|in:asset,service',
             'items.*.description' => 'required|string|max:500',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.rate' => 'required|numeric|min:0',
             'items.*.task_id' => 'nullable|exists:tasks,id',
+            'items.*.asset_id' => 'nullable|exists:assets,id',
             'items.*.asset_category_id' => 'nullable|exists:asset_categories,id',
             'items.*.asset_name' => 'nullable|string|max:255',
             'items.*.tax_id' => 'nullable|exists:taxes,id',
         ]);
-
-        foreach ($validated['items'] as $item) {
-            if ($item['type'] === 'asset' && empty($item['asset_category_id'])) {
-                throw \Illuminate\Validation\ValidationException::withMessages(['items' => [__('Asset items require an asset category.')]]);
-            }
-        }
 
         $validated['budget_category_id'] = $this->validateInvoiceBudgetCategory($invoice->project_id, $validated['budget_category_id'] ?? null);
 
@@ -346,8 +338,9 @@ class InvoiceController extends Controller
 
         $invoice->items()->delete();
         foreach ($validated['items'] as $index => $item) {
-            $quantity = $item['quantity'] ?? 1;
+            $quantity = (float) ($item['quantity'] ?? 1);
             $rate = $item['rate'] ?? 0;
+            $assetId = $item['asset_id'] ?? null;
             InvoiceItem::create([
                 'invoice_id' => $invoice->id,
                 'type' => $item['type'],
@@ -356,11 +349,38 @@ class InvoiceController extends Controller
                 'rate' => $rate,
                 'amount' => $rate * $quantity,
                 'task_id' => $item['task_id'] ?? $validated['task_id'] ?? null,
+                'asset_id' => $assetId,
                 'asset_category_id' => $item['asset_category_id'] ?? null,
                 'asset_name' => $item['asset_name'] ?? null,
                 'tax_id' => $item['tax_id'] ?? null,
                 'sort_order' => $index + 1,
             ]);
+            if ($assetId) {
+                $asset = Asset::find($assetId);
+                if ($asset && (int) $asset->invoice_id === (int) $invoice->id) {
+                    $asset->update(['quantity' => (int) round($quantity)]);
+                }
+            }
+        }
+
+        $invoice->load('items');
+        $taskAssetMap = [];
+        foreach ($invoice->items()->where('type', 'asset')->whereNotNull('asset_id')->get() as $item) {
+            $taskId = $item->task_id ?? $invoice->task_id;
+            if (!$taskId) continue;
+            if (!isset($taskAssetMap[$taskId])) {
+                $taskAssetMap[$taskId] = [];
+            }
+            $taskAssetMap[$taskId][$item->asset_id] = ['quantity' => $item->quantity ?? 1];
+        }
+        foreach ($taskAssetMap as $taskId => $assetsData) {
+            $task = Task::find($taskId);
+            if (!$task || $task->project_id != $invoice->project_id) continue;
+            $current = $task->assets()->get()->mapWithKeys(fn ($a) => [$a->id => ['quantity' => $a->pivot->quantity]])->toArray();
+            foreach ($assetsData as $aid => $data) {
+                $current[$aid] = $data;
+            }
+            $task->assets()->sync($current);
         }
 
         $invoice->calculateTotals();
@@ -387,6 +407,8 @@ class InvoiceController extends Controller
             ->get(['id', 'name', 'color'])
             ->toArray();
 
+        $assets = Asset::forWorkspace($workspace->id)->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity']);
+
         $crmContacts = CrmContact::forWorkspace($workspace->id)
             ->orderBy('name')
             ->get(['id', 'name', 'company_name', 'type', 'email']);
@@ -397,6 +419,7 @@ class InvoiceController extends Controller
             'crmContacts' => $crmContacts,
             'taxes' => $taxes,
             'assetCategories' => $assetCategories,
+            'assets' => $assets,
         ]);
     }
 
@@ -488,6 +511,8 @@ class InvoiceController extends Controller
             ->get(['id', 'name', 'color'])
             ->toArray();
 
+        $assets = Asset::forWorkspace($workspaceId)->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity']);
+
         $crmContacts = CrmContact::forWorkspace($workspace->id)
             ->orderBy('name')
             ->get(['id', 'name', 'company_name', 'type', 'email']);
@@ -499,6 +524,7 @@ class InvoiceController extends Controller
             'crmContacts' => $crmContacts,
             'taxes' => $taxes,
             'assetCategories' => $assetCategories,
+            'assets' => $assets,
         ]);
     }
 

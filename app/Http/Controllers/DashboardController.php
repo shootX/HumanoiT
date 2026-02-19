@@ -73,38 +73,29 @@ class DashboardController extends Controller
             // Build cards based on workspace role and permissions
             $cards = [];
             
-            // Only show user count for company workspace role (owner)
-            if ($role === 'company' && $this->checkPermission('user_view_any')) {
+            // Only show branch count for company workspace role (owner)
+            if ($role === 'company' && $this->checkPermission('project_view_any')) {
                 $cards[] = [
-                    'title' => __('Total Users'),
-                    'value' => $this->getTotalUsers($user, $workspace, $role),
-                    'icon' => 'Users',
+                    'title' => __('Total Branches'),
+                    'value' => $this->getTotalBranches($workspace, $role),
+                    'icon' => 'Building2',
                 ];
             }
             
-            // Show projects if user has permission
-            if ($this->checkPermission('project_view_any')) {
-                $cards[] = [
-                    'title' => __('Active Projects'),
-                    'value' => $this->getActiveProjects($workspace, $user, $role),
-                    'icon' => 'Activity',
-                ];
-            }
-            
-            // Show tasks if user has permission
+            // Show completed tasks if user has permission
             if ($this->checkPermission('task_view_any')) {
                 $cards[] = [
                     'title' => __('Tasks Completed'),
                     'value' => $this->getCompletedTasks($workspace, $user, $role),
-                    'icon' => 'UserPlus',
+                    'icon' => 'CheckCircle',
                 ];
             }
             
-            // Show revenue only for company workspace role with invoice permission
-            if ($role === 'company' && $this->checkPermission('invoice_view_any')) {
+            // Show total expenses 2026 for company workspace role with expense permission
+            if ($role === 'company' && $this->checkPermission('expense_view_any')) {
                 $cards[] = [
-                    'title' => __('Revenue'),
-                    'value' => $this->getRevenue($user, $workspace, $role),
+                    'title' => __('Total Expenses 2026'),
+                    'value' => $this->getTotalExpenses2026($workspace, $user, $role),
                     'format' => 'currency',
                     'icon' => 'DollarSign',
                 ];
@@ -185,21 +176,13 @@ class DashboardController extends Controller
         }
     }
     
-    private function getTotalUsers($user, $workspace, $role)
+    private function getTotalBranches($workspace, $role)
     {
         try {
-            // Only company workspace role sees user count
-            if ($role !== 'company' || !$workspace) {
+            if ($role !== 'company' || !$workspace || !class_exists('\App\Models\Project')) {
                 return 0;
             }
-            
-            if (class_exists('\App\Models\WorkspaceMember')) {
-                return \App\Models\WorkspaceMember::where('workspace_id', $workspace->id)
-                    ->where('status', 'active')
-                    ->count();
-            }
-            
-            return 0;
+            return \App\Models\Project::where('workspace_id', $workspace->id)->count();
         } catch (\Exception $e) {
             return 0;
         }
@@ -294,6 +277,32 @@ class DashboardController extends Controller
             }
             
             return 0;
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+    
+    private function getTotalExpenses2026($workspace, $user, $role)
+    {
+        try {
+            if ($role !== 'company' || !$workspace || !class_exists('\App\Models\ProjectExpense')) {
+                return 0;
+            }
+            return (float) \App\Models\ProjectExpense::whereHas('project', function($q) use ($workspace, $user, $role) {
+                $q->where('workspace_id', $workspace->id);
+                if ($role === 'client') {
+                    $q->whereHas('clients', function($m) use ($user) {
+                        $m->where('user_id', $user->id);
+                    });
+                } elseif ($role !== 'company') {
+                    $q->whereHas('members', function($m) use ($user) {
+                        $m->where('user_id', $user->id);
+                    });
+                }
+            })
+            ->whereYear('expense_date', 2026)
+            ->where('status', 'approved')
+            ->sum('amount');
         } catch (\Exception $e) {
             return 0;
         }
@@ -703,7 +712,7 @@ class DashboardController extends Controller
             [
                 'id' => 3, 
                 'type' => 'expense', 
-                'description' => 'Travel expense of $450 approved for client meeting', 
+                'description' => 'Travel expense of ₾450 approved for client meeting', 
                 'user' => 'Mike Johnson', 
                 'time' => '4 hours ago'
             ],
@@ -717,7 +726,7 @@ class DashboardController extends Controller
             [
                 'id' => 5, 
                 'type' => 'invoice', 
-                'description' => 'Invoice #INV-2024-001 sent to client for $2,500', 
+                'description' => 'Invoice #INV-2024-001 sent to client for ₾2,500', 
                 'user' => 'David Brown', 
                 'time' => '6 hours ago'
             ],
@@ -745,7 +754,7 @@ class DashboardController extends Controller
             [
                 'id' => 9, 
                 'type' => 'expense', 
-                'description' => 'Software license renewal expense of $199 submitted', 
+                'description' => 'Software license renewal expense of ₾199 submitted', 
                 'user' => 'Tom Anderson', 
                 'time' => '1 day ago'
             ],

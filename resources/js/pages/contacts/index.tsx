@@ -321,11 +321,11 @@ export default function Contacts() {
     >
       {/* Search and filters section */}
       <div className="bg-white rounded-lg shadow mb-4">
-        <div className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+        <div className="p-3 sm:p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
               <form onSubmit={handleSearch} className="flex gap-2">
-                <div className="relative w-64">
+                <div className="relative w-full sm:w-64">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder={t("Search contacts...")}
@@ -334,17 +334,17 @@ export default function Contacts() {
                     className="w-full pl-9"
                   />
                 </div>
-                <Button type="submit" size="sm">
+                <Button type="submit" size="sm" className="min-h-[44px] sm:min-h-0 touch-manipulation">
                   <Search className="h-4 w-4 mr-1.5" />
                   {t("Search")}
                 </Button>
               </form>
 
-              <div className="ml-2">
+              <div>
                 <Button
                   variant={hasActiveFilters() ? "default" : "outline"}
                   size="sm"
-                  className="h-8 px-2 py-1"
+                  className="h-10 min-h-[44px] px-2 py-1 sm:h-8 sm:min-h-0 touch-manipulation"
                   onClick={() => setShowFilters(!showFilters)}
                 >
                   <Filter className="h-3.5 w-3.5 mr-1.5" />
@@ -358,7 +358,7 @@ export default function Contacts() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
               <Label className="text-xs text-muted-foreground">{t("Per Page:")}</Label>
               <Select
                 value={pageFilters.per_page?.toString() || "10"}
@@ -387,8 +387,8 @@ export default function Contacts() {
           </div>
 
           {showFilters && (
-            <div className="w-full mt-3 p-4 bg-gray-50 border rounded-md">
-              <div className="flex flex-wrap gap-4 items-end">
+            <div className="w-full mt-3 p-3 sm:p-4 bg-gray-50 border rounded-md">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4 sm:items-end">
                 <div className="space-y-2">
                   <Label>{t("Status")}</Label>
                   <Select value={selectedStatus} onValueChange={handleStatusFilter}>
@@ -453,7 +453,7 @@ export default function Contacts() {
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    className="px-4 py-3 text-left font-medium text-gray-500 cursor-pointer hover:bg-gray-100"
+                    className="px-3 py-3 text-left font-medium text-gray-500 cursor-pointer hover:bg-gray-100 sm:px-4"
                     onClick={() => column.sortable && handleSort(column.key)}
                   >
                     <div className="flex items-center">
@@ -468,7 +468,7 @@ export default function Contacts() {
                     </div>
                   </th>
                 ))}
-                <th className="px-4 py-3 text-right font-medium text-gray-500">
+                <th className="px-3 py-3 text-right font-medium text-gray-500 sm:px-4">
                   {t("Actions")}
                 </th>
               </tr>
@@ -477,12 +477,12 @@ export default function Contacts() {
               {contacts?.data?.map((contact: any) => (
                 <tr key={contact.id} className="border-b hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800">
                   {columns.map((column) => (
-                    <td key={`${contact.id}-${column.key}`} className="px-4 py-3">
+                    <td key={`${contact.id}-${column.key}`} className="px-3 py-3 sm:px-4">
                       {column.render ? column.render(contact[column.key], contact) : contact[column.key]}
                     </td>
                   ))}
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-1">
+                  <td className="px-3 py-3 text-right sm:px-4">
+                    <div className="flex justify-end gap-2">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
@@ -531,7 +531,7 @@ export default function Contacts() {
 
               {(!contacts?.data || contacts.data.length === 0) && (
                 <tr>
-                  <td colSpan={columns.length + 1} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={columns.length + 1} className="px-3 py-8 text-center text-gray-500 sm:px-4">
                     {t("No contacts found")}
                   </td>
                 </tr>
@@ -541,12 +541,12 @@ export default function Contacts() {
         </div>
 
         {/* Pagination section */}
-        <div className="p-4 border-t flex items-center justify-between">
+        <div className="p-3 sm:p-4 border-t flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm text-muted-foreground">
             {t("Showing")} <span className="font-medium">{contacts?.from || 0}</span> {t("to")} <span className="font-medium">{contacts?.to || 0}</span> {t("of")} <span className="font-medium">{contacts?.total || 0}</span> {t("contacts")}
           </div>
 
-          <div className="flex gap-1">
+          <div className="flex gap-2">
             {contacts?.links?.map((link: any, i: number) => {
               const isTextLink = link.label === "&laquo; Previous" || link.label === "Next &raquo;";
               const label = link.label.replace("&laquo; ", "").replace(" &raquo;", "");

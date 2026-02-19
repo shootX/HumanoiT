@@ -256,7 +256,7 @@ class GoogleMeetingController extends Controller
         $project = Project::find($projectId);
         
         if (!$project || $project->workspace_id != $workspace->id) {
-            return response()->json(['error' => 'Project not found'], 404);
+            return response()->json(['error' => __('Project not found in current workspace')], 404);
         }
 
         // Get all project users (members with roles) and clients

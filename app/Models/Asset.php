@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 class Asset extends Model
 {
     protected $fillable = [
-        'workspace_id', 'project_id', 'invoice_id', 'asset_category_id', 'name', 'asset_code', 'type',
+        'workspace_id', 'project_id', 'invoice_id', 'asset_category_id', 'name', 'quantity', 'asset_code', 'type',
         'location', 'purchase_date', 'warranty_until', 'status', 'value', 'notes'
     ];
 
@@ -44,14 +44,11 @@ class Asset extends Model
         return $this->hasMany(Task::class);
     }
 
-    public function attachments(): HasMany
+    public function taskAllocations(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
-        return $this->hasMany(AssetAttachment::class);
-    }
-
-    public function warrantyCases(): HasMany
-    {
-        return $this->hasMany(AssetWarrantyCase::class);
+        return $this->belongsToMany(Task::class, 'asset_task')
+            ->withPivot('quantity')
+            ->withTimestamps();
     }
 
     public function scopeForWorkspace(Builder $query, $workspaceId): Builder
@@ -82,5 +79,17 @@ class Asset extends Model
     public function isUnderWarranty(): bool
     {
         return $this->warranty_until && $this->warranty_until->isFuture();
+    }
+
+    public static function generateUniqueAssetCode(int $workspaceId): string
+    {
+        $prefix = 'HI-0901';
+        $last = static::forWorkspace($workspaceId)
+            ->where('asset_code', 'like', $prefix . '%')
+            ->get()
+            ->map(fn ($a) => (int) preg_replace('/^' . preg_quote($prefix, '/') . '/', '', $a->asset_code ?? '0'))
+            ->max() ?? 0;
+
+        return $prefix . str_pad((string) ($last + 1), 4, '0', STR_PAD_LEFT);
     }
 }

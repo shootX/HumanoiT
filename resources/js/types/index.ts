@@ -71,6 +71,7 @@ export interface Asset {
     project_id?: number;
     asset_category_id?: number;
     name: string;
+    quantity?: number;
     asset_code?: string;
     type?: string;
     location?: string;
