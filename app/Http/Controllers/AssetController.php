@@ -37,6 +37,8 @@ class AssetController extends Controller
 
         if ($request->filled('status') && $request->status !== 'all') {
             $query->byStatus($request->status);
+        } elseif (!$request->filled('status')) {
+            $query->byStatus('active');
         }
 
         if ($request->filled('project_id') && $request->project_id !== 'all') {
@@ -96,7 +98,7 @@ class AssetController extends Controller
             'project_id' => 'nullable|exists:projects,id',
             'purchase_date' => 'nullable|date',
             'warranty_until' => 'nullable|date',
-            'status' => 'required|in:active,maintenance,retired',
+            'status' => 'required|in:active,used,maintenance,retired',
             'notes' => 'nullable|string',
         ]);
 
@@ -149,7 +151,7 @@ class AssetController extends Controller
             'project_id' => 'nullable|exists:projects,id',
             'purchase_date' => 'nullable|date',
             'warranty_until' => 'nullable|date',
-            'status' => 'required|in:active,maintenance,retired',
+            'status' => 'required|in:active,used,maintenance,retired',
             'notes' => 'nullable|string',
         ]);
 

@@ -586,7 +586,7 @@ class ExportImportController extends Controller
                 $asset->quantity = !empty($data['quantity']) ? (int) $data['quantity'] : 1;
                 $asset->asset_code = !empty($data['asset_code']) ? trim($data['asset_code']) : \App\Models\Asset::generateUniqueAssetCode($workspaceId);
                 $asset->location = !empty($data['location']) ? trim($data['location']) : null;
-                $asset->status = in_array($data['status'] ?? '', ['active', 'maintenance', 'retired']) ? $data['status'] : 'active';
+                $asset->status = in_array($data['status'] ?? '', ['active', 'used', 'maintenance', 'retired']) ? $data['status'] : 'active';
                 $asset->notes = !empty($data['notes']) ? trim($data['notes']) : null;
                 if (!empty($data['purchase_date'])) {
                     try {

@@ -8,6 +8,7 @@ use App\Models\TaskStage;
 use App\Models\ProjectMilestone;
 use App\Models\User;
 use App\Models\Asset;
+use App\Services\AssetTaskAllocationService;
 use App\Services\GoogleCalendarService;
 use App\Traits\HasPermissionChecks;
 use Illuminate\Http\Request;
@@ -288,9 +289,8 @@ class TaskController extends Controller
         $task = Task::create($createData);
 
         if (!empty($assetItems)) {
-            $task->assets()->sync(
-                collect($assetItems)->mapWithKeys(fn ($i) => [$i['asset_id'] => ['quantity' => $i['quantity']]])->toArray()
-            );
+            $sync = AssetTaskAllocationService::processAssetItems($assetItems, $task, $workspace->id);
+            $task->assets()->sync($sync);
         }
 
         if (!empty($validated['assigned_user_ids'])) {
@@ -373,9 +373,8 @@ class TaskController extends Controller
         $task->update($updateData);
 
         if (array_key_exists('asset_items', $validated)) {
-            $task->assets()->sync(
-                collect($assetItems)->mapWithKeys(fn ($i) => [$i['asset_id'] => ['quantity' => $i['quantity']]])->toArray()
-            );
+            $sync = AssetTaskAllocationService::processAssetItems($assetItems, $task, $workspace->id);
+            $task->assets()->sync($sync);
         }
 
         if ($assigneesProvided) {

@@ -138,6 +138,7 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                 onSuccess: () => {
                     setIsSubmitting(false);
                     onClose();
+                    router.reload();
                 },
                 onError: (errors) => {
                     setIsSubmitting(false);
@@ -149,6 +150,7 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                 onSuccess: () => {
                     setIsSubmitting(false);
                     onClose();
+                    router.reload();
                 },
                 onError: (errors) => {
                     setIsSubmitting(false);

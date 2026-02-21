@@ -51,7 +51,7 @@ export default function AssetShow({ asset }: Props) {
                                 <Package className="h-5 w-5" />
                                 {asset.name}
                             </CardTitle>
-                            <Badge variant={asset.status === 'active' ? 'default' : asset.status === 'maintenance' ? 'secondary' : 'destructive'}>
+                            <Badge variant={asset.status === 'active' ? 'default' : asset.status === 'used' || asset.status === 'maintenance' ? 'secondary' : 'destructive'}>
                                 {getStatusLabel(asset.status)}
                             </Badge>
                         </div>

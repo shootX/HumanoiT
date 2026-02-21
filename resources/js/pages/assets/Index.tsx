@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { Asset, Project } from '@/types';
 
 const ASSET_TYPES = ['hvac', 'elevator', 'electrical', 'plumbing', 'generator', 'other'] as const;
-const ASSET_STATUSES = ['active', 'maintenance', 'retired'] as const;
+const ASSET_STATUSES = ['active', 'used', 'maintenance', 'retired'] as const;
 
 export default function AssetsIndex() {
     const { t } = useTranslation();
@@ -27,7 +27,7 @@ export default function AssetsIndex() {
 
     const [searchTerm, setSearchTerm] = useState(pageFilters.search || '');
     const [selectedType, setSelectedType] = useState(pageFilters.type || 'all');
-    const [selectedStatus, setSelectedStatus] = useState(pageFilters.status || 'all');
+    const [selectedStatus, setSelectedStatus] = useState(pageFilters.status ?? 'active');
     const [selectedProject, setSelectedProject] = useState(pageFilters.project_id || 'all');
     const [selectedCategory, setSelectedCategory] = useState(pageFilters.asset_category_id || 'all');
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -44,7 +44,7 @@ export default function AssetsIndex() {
         const params: Record<string, string> = { page: '1' };
         if (searchTerm) params.search = searchTerm;
         if (selectedType !== 'all') params.type = selectedType;
-        if (selectedStatus !== 'all') params.status = selectedStatus;
+        params.status = selectedStatus;
         if (selectedProject !== 'all') params.project_id = selectedProject;
         if (selectedCategory !== 'all') params.asset_category_id = selectedCategory;
         params.per_page = '30';
@@ -194,10 +194,10 @@ export default function AssetsIndex() {
                                     <SelectValue placeholder={t('Status')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">{t('All Status')}</SelectItem>
                                     {ASSET_STATUSES.map((s) => (
                                         <SelectItem key={s} value={s}>{getStatusLabel(s)}</SelectItem>
                                     ))}
+                                    <SelectItem value="all">{t('All Status')}</SelectItem>
                                 </SelectContent>
                             </Select>
                             <Select value={selectedProject} onValueChange={setSelectedProject}>
@@ -263,7 +263,7 @@ export default function AssetsIndex() {
                                             {asset.project?.title || '—'}
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant={asset.status === 'active' ? 'default' : asset.status === 'maintenance' ? 'secondary' : 'destructive'}>
+                                            <Badge variant={asset.status === 'active' ? 'default' : asset.status === 'used' || asset.status === 'maintenance' ? 'secondary' : 'destructive'}>
                                                 {getStatusLabel(asset.status)}
                                             </Badge>
                                         </TableCell>

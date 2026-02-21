@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useTranslation } from 'react-i18next';
 import { Asset, Project } from '@/types';
 
-const ASSET_STATUSES = ['active', 'maintenance', 'retired'] as const;
+const ASSET_STATUSES = ['active', 'used', 'maintenance', 'retired'] as const;
 
 interface AssetCategory {
     id: number;
