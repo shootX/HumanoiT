@@ -66,8 +66,9 @@ class CurrencySettingController extends Controller
             }
 
             // Update settings using helper function
-            foreach ($validated as $key => $value) { 
-                updateSetting($key, $value, $targetUserId, $workspaceId, $ignoreWorkspace);
+            foreach ($validated as $key => $value) {
+                $storedValue = is_bool($value) ? ($value ? '1' : '0') : (string) $value;
+                updateSetting($key, $storedValue, $targetUserId, $workspaceId);
             }
             
             return redirect()->back()->with('success', __('Currency settings updated successfully.'));

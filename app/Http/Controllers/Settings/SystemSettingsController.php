@@ -77,7 +77,11 @@ class SystemSettingsController extends Controller
                 'settings.titleText' => 'nullable|string|max:255',
                 'settings.footerText' => 'nullable|string|max:500',
                 'settings.themeColor' => 'nullable|string|in:blue,green,purple,orange,red,custom',
-                'settings.customColor' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+                'settings.customColor' => ['nullable', 'string', function ($attr, $value, $fail) {
+                    if ($value !== '' && $value !== null && !preg_match('/^#[0-9A-Fa-f]{6}$/', $value)) {
+                        $fail(__('Invalid color format'));
+                    }
+                }],
                 'settings.sidebarVariant' => 'nullable|string|in:inset,floating,minimal',
                 'settings.sidebarStyle' => 'nullable|string|in:plain,colored,gradient',
                 'settings.layoutDirection' => 'nullable|string|in:left,right',

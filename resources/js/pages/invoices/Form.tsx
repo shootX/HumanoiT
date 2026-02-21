@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { InvoiceTaskMultiSelect } from '@/components/invoices/InvoiceTaskMultiSelect';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2 } from 'lucide-react';
@@ -16,8 +17,8 @@ import { formatCurrency } from '@/utils/currency';
 interface InvoiceItem {
     type: 'service' | 'asset';
     description: string;
-    quantity: number;
-    rate: number;
+    quantity: number | string;
+    rate: number | string;
     amount: number;
     tax_id: number | null;
     asset_id: number | null;
@@ -36,13 +37,17 @@ interface Props {
     assets?: { id: number; name: string; asset_code?: string; quantity?: number }[];
 }
 
+const defaultVatTaxId = (taxes: any[]) => taxes?.find((x: any) => Math.abs(parseFloat(x.rate) - 18) < 0.01 && !!x.is_inclusive)?.id ?? null;
+
 export default function InvoiceForm({ invoice, projects, clients, crmContacts = [], currencies, taxes, assetCategories: initialAssetCategories = [], assets = [] }: Props) {
     const { t } = useTranslation();
     const isEdit = !!invoice;
-    
+    const defaultTaxId = defaultVatTaxId(taxes || []);
+
     const [formData, setFormData] = useState({
         project_id: invoice?.project_id?.toString() || '',
         task_id: invoice?.task_id?.toString() || '',
+        task_ids: invoice?.task_ids || (invoice?.task_id ? [invoice.task_id.toString()] : []),
         budget_category_id: invoice?.budget_category_id?.toString() || '',
         client_id: invoice?.client_id?.toString() || '',
         crm_contact_id: invoice?.crm_contact_id?.toString() || '',
@@ -56,7 +61,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
         terms: invoice?.terms || '',
     });
 
-    const mapItemType = (t: string) => (['asset', 'service'].includes(t) ? t : 'service') as 'service' | 'asset';
+    const mapItemType = (t: string) => (['asset', 'service'].includes(t) ? t : 'asset') as 'service' | 'asset';
     const [items, setItems] = useState<InvoiceItem[]>(
         invoice?.items?.map((item: any) => ({
             type: mapItemType(item.type),
@@ -69,12 +74,12 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             asset_category_id: item.asset_category_id ?? null,
             asset_name: item.asset_name || '',
         })) || [{
-            type: 'service',
+            type: 'asset',
             description: '',
             quantity: 1,
             rate: 0,
             amount: 0,
-            tax_id: null,
+            tax_id: defaultVatTaxId(taxes || []),
             asset_id: null,
             asset_category_id: null,
             asset_name: ''
@@ -129,14 +134,18 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             return updated;
         });
         
-        if (field === 'project_id' && value) {
-            loadProjectData(value);
-        } else if (field === 'project_id' && !value) {
-            setProjectTasks([]);
-            setBudgetCategories([]);
-            setAssetCategories([]);
-            setProjectClients([]);
-            setAvailableClients(clients || []);
+        if (field === 'project_id') {
+            if (value) {
+                loadProjectData(value);
+                setFormData(prev => ({ ...prev, task_ids: [], task_id: '' }));
+            } else {
+                setProjectTasks([]);
+                setFormData(prev => ({ ...prev, task_ids: [], task_id: '' }));
+                setBudgetCategories([]);
+                setAssetCategories([]);
+                setProjectClients([]);
+                setAvailableClients(clients || []);
+            }
         }
     };
     
@@ -182,8 +191,9 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
         }
     };
 
+    const parseItemNum = (v: any) => parseFloat(String(v).replace(',', '.')) || 0;
     const getItemTaxAmount = (item: InvoiceItem) => {
-        const amount = (item.quantity || 1) * (item.rate || 0);
+        const amount = (parseItemNum(item.quantity) || 1) * parseItemNum(item.rate);
         if (!item.tax_id) return 0;
         const tax = taxes?.find(t => t.id == item.tax_id);
         if (!tax) return 0;
@@ -192,7 +202,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
     };
 
     const getItemTotal = (item: InvoiceItem) => {
-        const amount = (item.quantity || 1) * (item.rate || 0);
+        const amount = (parseItemNum(item.quantity) || 1) * parseItemNum(item.rate);
         if (!item.tax_id) return amount;
         const tax = taxes?.find(t => t.id == item.tax_id);
         if (!tax) return amount;
@@ -211,8 +221,8 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             if (a) item.description = a.name;
         }
         if (field === 'quantity' || field === 'rate') {
-            const qty = field === 'quantity' ? (parseFloat(value) || 0) : (item.quantity ?? 0);
-            const rate = field === 'rate' ? (parseFloat(value) || 0) : (item.rate ?? 0);
+            const qty = field === 'quantity' ? parseItemNum(value) : parseItemNum(item.quantity);
+            const rate = field === 'rate' ? parseItemNum(value) : parseItemNum(item.rate);
             item.amount = qty * rate;
         }
         updatedItems[index] = item;
@@ -221,12 +231,12 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
 
     const addItem = () => {
         setItems([...items, {
-            type: 'service',
+            type: 'asset',
             description: '',
             quantity: 1,
             rate: 0,
             amount: 0,
-            tax_id: null,
+            tax_id: defaultTaxId,
             asset_id: null,
             asset_category_id: null,
             asset_name: ''
@@ -240,7 +250,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
     };
 
     const getItemBase = (item: InvoiceItem) => {
-        const amount = (item.quantity || 1) * (item.rate || 0);
+        const amount = (parseItemNum(item.quantity) || 1) * parseItemNum(item.rate);
         if (!item.tax_id) return amount;
         const tax = taxes?.find(t => t.id == item.tax_id);
         if (!tax) return amount;
@@ -271,20 +281,21 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
         const validItems = items.filter(item => !!item.description?.trim());
         const submitData = {
             ...formData,
-            task_id: formData.task_id && formData.task_id !== 'none' ? formData.task_id : null,
+            task_id: formData.task_ids?.[0] || (formData.task_id && formData.task_id !== 'none' ? formData.task_id : null),
+            task_ids: formData.task_ids || [],
             client_id: formData.client_id === 'none' ? null : formData.client_id,
             crm_contact_id: formData.crm_contact_id && formData.crm_contact_id !== 'none' ? formData.crm_contact_id : null,
             budget_category_id: formData.budget_category_id && formData.budget_category_id !== 'none' ? formData.budget_category_id : null,
             items: validItems.map(item => ({
                 type: item.type,
-                task_id: formData.task_id && formData.task_id !== 'none' ? parseInt(formData.task_id) : null,
+                task_id: formData.task_ids?.[0] ? parseInt(formData.task_ids[0]) : (formData.task_id && formData.task_id !== 'none' ? parseInt(formData.task_id) : null),
                 asset_id: null,
                 asset_category_id: item.type === 'asset' ? (item.asset_category_id ?? null) : null,
                 asset_name: item.type === 'asset' ? item.description : null,
                 tax_id: item.tax_id ?? null,
                 description: item.description,
-                quantity: item.quantity || 1,
-                rate: item.rate || 0,
+                quantity: parseItemNum(item.quantity) || 1,
+                rate: parseItemNum(item.rate) || 0,
             }))
         };
 
@@ -353,28 +364,14 @@ setErrors(errors);
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="task_id">{t('Task')} <span className="text-muted-foreground text-xs">({t('optional')})</span></Label>
-                        <Select
-                            value={formData.task_id || 'none'}
-                            onValueChange={(value) => handleInputChange('task_id', value === 'none' ? '' : value)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder={t('Select task')} />
-                            </SelectTrigger>
-                            <SelectContent className="z-[9999]">
-                                <SelectItem value="none">{t('—')}</SelectItem>
-                                {projectTasks.map((task: any) => (
-                                    <SelectItem key={task.id} value={task.id.toString()}>
-                                        {task.title}
-                                    </SelectItem>
-                                ))}
-                                {projectTasks.length === 0 && formData.project_id && (
-                                    <SelectItem value="no-tasks" disabled>
-                                        {t('No tasks found')}
-                                    </SelectItem>
-                                )}
-                            </SelectContent>
-                        </Select>
+                        <Label htmlFor="task_ids">{t('Task')} <span className="text-muted-foreground text-xs">({t('optional')})</span></Label>
+                        <InvoiceTaskMultiSelect
+                            projectId={formData.project_id}
+                            selected={formData.task_ids}
+                            onChange={(ids) => setFormData(prev => ({ ...prev, task_ids: ids, task_id: ids[0] || '' }))}
+                            placeholder={t('Select task')}
+                            disabled={!formData.project_id}
+                        />
                     </div>
 
                     <div className="space-y-2">
@@ -518,11 +515,11 @@ setErrors(errors);
                                             <Input
                                                 type="text"
                                                 inputMode="decimal"
-                                                value={item.quantity}
+                                                value={item.quantity ?? ''}
                                                 onChange={(e) => {
                                                     const v = e.target.value.replace(',', '.');
-                                                    const n = v === '' ? 0 : Math.max(0, parseFloat(v) || 0);
-                                                    handleItemChange(index, 'quantity', n);
+                                                    const valid = /^\d*\.?\d*$/.test(v) ? v : String(item.quantity ?? '');
+                                                    handleItemChange(index, 'quantity', valid);
                                                 }}
                                                 placeholder="1"
                                             />
@@ -532,10 +529,11 @@ setErrors(errors);
                                             <Input
                                                 type="text"
                                                 inputMode="decimal"
-                                                value={item.rate}
+                                                value={item.rate ?? ''}
                                                 onChange={(e) => {
                                                     const v = e.target.value.replace(',', '.');
-                                                    handleItemChange(index, 'rate', parseFloat(v) || 0);
+                                                    const valid = /^\d*\.?\d*$/.test(v) ? v : String(item.rate ?? '');
+                                                    handleItemChange(index, 'rate', valid);
                                                 }}
                                                 placeholder="0"
                                             />
