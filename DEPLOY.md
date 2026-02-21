@@ -31,7 +31,11 @@ ssh-keygen -t ed25519 -C "github-deploy" -f ~/.ssh/github_deploy -N ""
 ```
 პუბლიკური (`github_deploy.pub`) დაამატე სერვერის `~/.ssh/authorized_keys`-ში. პრივატული (`github_deploy`) — GitHub Secret `DEPLOY_SSH_KEY`-ში.
 
-## 3. ხელით Deploy
+## 3. ვერსიების ისტორია
+
+**GitHub-ზე push-ის წინ** განაახლე `CHANGELOG-crm.inexia.cc.md` – ჩაწერე ყველა ცვლილება (ახალი ფუნქციონალი, ცვლილებები, bugfix-ები).
+
+## 4. ხელით Deploy
 
 ```bash
 ./scripts/deploy.sh
