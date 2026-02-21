@@ -23,8 +23,8 @@ class DashboardController extends Controller
             return $this->renderSuperAdminDashboard();
         }
         
-        // Check if user has dashboard permission or is a company user
-        if ($this->checkPermission('dashboard_view') || $user->type === 'company') {
+        // Check if user has dashboard permission or is a company/client user
+        if ($this->checkPermission('dashboard_view') || in_array($user->type, ['company', 'client'])) {
             return $this->renderDashboard();
         }
         

@@ -1,4 +1,5 @@
 import { useForm, router, usePage } from '@inertiajs/react';
+import { route } from 'ziggy-js';
 import { Mail, Lock } from 'lucide-react';
 import { FormEventHandler, useState, useEffect } from 'react';
 
@@ -29,6 +30,9 @@ interface LoginProps {
 }
 
 export default function Login({ status, canResetPassword }: LoginProps) {
+    const pageProps = usePage().props as any;
+    const displayStatus = pageProps?.flash?.error || status;
+    const statusType = pageProps?.flash?.error ? 'error' : 'success';
     const { t } = useTranslation();
     const { themeColor, customColor } = useBrand();
 
@@ -37,8 +41,6 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     const [recaptchaToken, setRecaptchaToken] = useState<string>('');
     
 
-    const pageProps = usePage().props as any;
-    
     const { data, setData, post, processing, errors, reset } = useForm<LoginForm>({
         email: '',
         password: '',
@@ -61,25 +63,14 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        
-        // Check if ReCaptcha is enabled and token is required
-        const { settings = {} } = pageProps;
-        const recaptchaEnabled = settings.recaptchaEnabled === 1 || settings.recaptchaEnabled === '1';
+        const settings = pageProps?.settings || {};
+        const recaptchaEnabled = settings.recaptchaEnabled === 1 || settings.recaptchaEnabled === '1' || settings.recaptchaEnabled === true || settings.recaptchaEnabled === 'true';
         const recaptchaVersion = settings.recaptchaVersion || 'v2';
-        
-        // Only check for token if ReCaptcha v2 is enabled (v3 generates token automatically)
         if (recaptchaEnabled && recaptchaVersion === 'v2' && !recaptchaToken) {
-            alert('Please complete the ReCaptcha verification.');
+            alert(t('Please complete the ReCaptcha verification.'));
             return;
         }
-        
-        // Update the form data with the token
-        const updatedData = {
-            ...data,
-            recaptcha_token: recaptchaToken
-        };
-        
-        post(route('login'), updatedData, {
+        post(route('login'), {
             onFinish: () => reset('password'),
         });
     };
@@ -88,7 +79,8 @@ export default function Login({ status, canResetPassword }: LoginProps) {
         <AuthLayout
             title={t("Log in to your account")}
             description={t("Enter your credentials to access your account")}
-            status={status}
+            status={displayStatus}
+            statusType={statusType}
         >
             <form className="space-y-5" onSubmit={submit}>
                 <div className="space-y-4">

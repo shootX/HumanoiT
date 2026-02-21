@@ -1141,6 +1141,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('project-reports/{project}', [\App\Http\Controllers\ProjectReportController::class, 'show'])->middleware('permission:project_report_view')->name('project-reports.show');
         Route::post('project-reports/{project}/tasks', [\App\Http\Controllers\ProjectReportController::class, 'getTasksData'])->middleware('permission:project_report_view')->name('project-reports.tasks');
         Route::get('project-reports/{project}/export', [\App\Http\Controllers\ProjectReportController::class, 'export'])->middleware('permission:project_report_export')->name('project-reports.export');
+
+        // Task Report routes
+        Route::get('task-reports', [\App\Http\Controllers\TaskReportController::class, 'index'])->middleware('permission:project_report_view_any')->name('task-reports.index');
+        Route::post('task-reports/tasks', [\App\Http\Controllers\TaskReportController::class, 'getTasksData'])->middleware('permission:project_report_view_any')->name('task-reports.tasks');
+        Route::get('task-reports/export', [\App\Http\Controllers\TaskReportController::class, 'export'])->middleware('permission:project_report_export')->name('task-reports.export');
     }); // End plan.access middleware group
 });
 

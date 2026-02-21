@@ -9,22 +9,24 @@ trait HasPermissionChecks
      */
     protected function checkPermission(string $permission): bool
     {       
-
         $user = auth()->user();
         if (!$user) {
             return false;
         }
         
-        // Super admin has all permissions
         if ($user->type === 'superadmin' || $user->type === 'super admin') {
             return true;
         }
         
-        // Company users have broad access
         if ($user->type === 'company') {
             return true;
         }
-        return $user->hasPermissionTo($permission);
+
+        try {
+            return $user->hasPermissionTo($permission);
+        } catch (\Exception $e) {
+            return false;
+        }
     }
     
     /**
@@ -48,19 +50,21 @@ trait HasPermissionChecks
             return false;
         }
         
-        // Super admin has all permissions
         if ($user->type === 'superadmin' || $user->type === 'super admin') {
             return true;
         }
         
-        // Company users have broad access
         if ($user->type === 'company') {
             return true;
         }
         
         foreach ($permissions as $permission) {
-            if ($user->hasPermissionTo($permission)) {
-                return true;
+            try {
+                if ($user->hasPermissionTo($permission)) {
+                    return true;
+                }
+            } catch (\Exception $e) {
+                continue;
             }
         }
         

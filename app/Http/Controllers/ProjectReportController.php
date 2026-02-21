@@ -9,10 +9,12 @@ use App\Models\User;
 use App\Models\ProjectMilestone;
 use App\Models\TimesheetEntry;
 use App\Models\Workspace;
+use App\Exports\ProjectTaskReportExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ProjectReportController extends Controller
 {
@@ -107,7 +109,7 @@ class ProjectReportController extends Controller
 
         // Get initial tasks data
         $initialTasksQuery = Task::where('project_id', $project->id)
-            ->with(['taskStage', 'members.user', 'milestone', 'assignedUser'])
+            ->with(['taskStage', 'members', 'milestone', 'assignedUser'])
             ->limit(10);
         
         $initialTasks = $initialTasksQuery->get()->map(function ($task) {
@@ -119,7 +121,7 @@ class ProjectReportController extends Controller
                 $assignedUsers->push($task->assignedUser);
             }
             if ($task->members && $task->members->count() > 0) {
-                $assignedUsers = $assignedUsers->merge($task->members->pluck('user')->filter());
+                $assignedUsers = $assignedUsers->merge($task->members);
             }
             $assignedUsers = $assignedUsers->unique('id');
             
@@ -183,7 +185,7 @@ class ProjectReportController extends Controller
         }
 
         $tasksQuery = Task::where('project_id', $project->id)
-            ->with(['taskStage', 'members.user', 'milestone', 'assignedUser']);
+            ->with(['taskStage', 'members', 'milestone', 'assignedUser']);
 
         // Apply search filter
         if ($request->filled('search')) {
@@ -231,7 +233,7 @@ class ProjectReportController extends Controller
                 $assignedUsers->push($task->assignedUser);
             }
             if ($task->members && $task->members->count() > 0) {
-                $assignedUsers = $assignedUsers->merge($task->members->pluck('user')->filter());
+                $assignedUsers = $assignedUsers->merge($task->members);
             }
             $assignedUsers = $assignedUsers->unique('id');
             
@@ -290,12 +292,21 @@ class ProjectReportController extends Controller
         ]);
     }
 
-    public function export(Project $project)
+    public function export(Request $request, Project $project)
     {
         $user = Auth::user();
         
         if (!$this->userHasProjectAccess($user, $project)) {
             return response()->json(['error' => 'Access denied'], 403);
+        }
+
+        $format = $request->query('format', 'pdf');
+
+        if ($format === 'xlsx') {
+            $filters = $request->only(['search', 'user_id', 'status', 'priority', 'milestone_id']);
+            $export = new ProjectTaskReportExport($project, $filters);
+            $filename = 'task_report_' . ($project->title ?? $project->name) . '_' . date('Y-m-d') . '.xlsx';
+            return Excel::download($export, $filename);
         }
 
         $project->load(['members', 'clients', 'milestones', 'tasks.taskStage', 'tasks.members']);
@@ -329,7 +340,7 @@ class ProjectReportController extends Controller
             $loggedHours = TimesheetEntry::where('task_id', $task->id)->sum('hours');
             $assignedUsers = collect();
             if ($task->assignedUser) $assignedUsers->push($task->assignedUser);
-            if ($task->members) $assignedUsers = $assignedUsers->merge($task->members->pluck('user')->filter());
+            if ($task->members) $assignedUsers = $assignedUsers->merge($task->members);
             $assignedUsers = $assignedUsers->unique('id');
             
             $html .= '<tr><td>' . $task->title . '</td><td>' . ($task->milestone ? $task->milestone->title : '-') . '</td><td>' . ($task->start_date ? \Carbon\Carbon::parse($task->start_date)->format('M j, Y') : '-') . '</td><td>' . (($task->due_date ?? $task->end_date) ? \Carbon\Carbon::parse($task->due_date ?? $task->end_date)->format('M j, Y') : '-') . '</td><td>' . ($assignedUsers->pluck('name')->join(', ') ?: '-') . '</td><td>' . round($loggedHours, 2) . 'h</td><td><span class="priority-' . ($task->priority ?? 'medium') . '">' . ucfirst($task->priority ?? 'medium') . '</span></td><td>' . ($task->taskStage ? $task->taskStage->name : 'To Do') . '</td></tr>';

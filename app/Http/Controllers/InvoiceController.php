@@ -51,8 +51,14 @@ class InvoiceController extends Controller
                 }
             });
         } elseif ($userWorkspaceRole === 'client') {
-            // Clients see all invoices assigned to them (including drafts)
-            $query->where('client_id', $user->id);
+            $query->where(function ($q) use ($user) {
+                $q->where('client_id', $user->id)
+                    ->orWhereHas('project', function ($projQ) use ($user) {
+                        $projQ->whereHas('clients', function ($clientQ) use ($user) {
+                            $clientQ->where('user_id', $user->id);
+                        });
+                    });
+            });
         }
         // Owners see all invoices (no additional filtering needed)
 

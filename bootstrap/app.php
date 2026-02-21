@@ -85,5 +85,17 @@ return Application::configure(basePath: dirname(__DIR__))
 
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {
+            if ($request->expectsJson() || $request->header('X-Inertia')) {
+                return redirect()->route('login')->with('error', __('Session expired. Please try again.'));
+            }
+            return redirect()->back()->withInput($request->except('password'))
+                ->with('error', __('Session expired. Please try again.'));
+        });
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, $request) {
+            if ($e->getStatusCode() === 419) {
+                return redirect()->route('login')->with('error', __('Session expired. Please try again.'));
+            }
+            return null;
+        });
     })->create();

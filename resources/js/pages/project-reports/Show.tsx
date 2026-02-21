@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Fragment, useRef } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
-import { Download, Search, Filter } from 'lucide-react';
+import { Download, Search, Filter, FileSpreadsheet } from 'lucide-react';
 import { usePdfDownload } from '@/hooks/usePdfDownload';
 import { PageTemplate } from '@/components/page-template';
 import { Button } from '@/components/ui/button';
@@ -165,6 +165,16 @@ export default function Show({ project, stats, userStats, users, stages, workspa
         window.open(route('project-reports.export', project.id), '_blank');
     };
 
+    const handleExportExcel = () => {
+        const params = new URLSearchParams({ format: 'xlsx' });
+        if (searchTerm) params.set('search', searchTerm);
+        if (selectedUser !== 'all') params.set('user_id', selectedUser);
+        if (selectedStatus !== 'all') params.set('status', selectedStatus);
+        if (selectedPriority !== 'all') params.set('priority', selectedPriority);
+        if (selectedMilestone !== 'all') params.set('milestone_id', selectedMilestone);
+        window.open(route('project-reports.export', project.id) + '?' + params.toString(), '_blank');
+    };
+
     const formatDate = (dateString: string) => {
         if (!dateString) return '-';
         return new Date(dateString).toLocaleDateString();
@@ -297,6 +307,12 @@ export default function Show({ project, stats, userStats, users, stages, workspa
             icon: <Download className="h-4 w-4 mr-2" />,
             variant: 'default' as const,
             onClick: handleExport
+        },
+        {
+            label: t('Export Excel'),
+            icon: <FileSpreadsheet className="h-4 w-4 mr-2" />,
+            variant: 'outline' as const,
+            onClick: handleExportExcel
         }
     ];
 

@@ -36,11 +36,18 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        $user = $request->user();
+        if (!$user->current_workspace_id) {
+            $firstWorkspaceId = $user->workspaces()->first()?->id;
+            if ($firstWorkspaceId) {
+                $user->update(['current_workspace_id' => $firstWorkspaceId]);
+            }
+        }
+
         $this->logLoginHistory($request);
 
-        // Check if email verification is enabled and user is not verified
         $emailVerificationEnabled = getSetting('emailVerification', false);
-        if ($emailVerificationEnabled && !$request->user()->hasVerifiedEmail()) {
+        if ($emailVerificationEnabled && !$user->hasVerifiedEmail()) {
             return redirect()->route('verification.notice');
         }
         return redirect()->intended(route('dashboard', absolute: false));

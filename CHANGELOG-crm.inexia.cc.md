@@ -4,6 +4,31 @@
 
 ---
 
+## v1.5.0 – 2026-02-21
+
+### დამატებული
+- **კლიენტის ავტორიზაცია** – კლიენტ-ტიპის მომხმარებლის ლოგინი `/login`-დან, `current_workspace_id` ავტომატური მინიჭება
+- **კლიენტის Dashboard წვდომა** – კლიენტებს შეუძლიათ Dashboard-ის ნახვა
+- **კლიენტის ინვოისების ნახვა** – კლიენტს ჩანს ინვოისები იმ პროექტებიდან, რომლებშიც არის მინიჭებული
+- **Task Report მოდული** – ახალი გვერდი ამოცანების ანგარიშით, ფილტრებით და Excel ექსპორტით
+- **Project Report Excel ექსპორტი** – პროექტის ანგარიშის Excel ფორმატში ჩამოტვირთვა ფილტრებით
+- **დემო კლიენტის Artisan ბრძანება** – `AddDemoClientToProjects` ყველა პროექტში დამატება + Spatie role მინიჭება
+- **სესიის ვადაგასვლის დამუშავება** – 419 Page Expired → ავტომატური გადამისამართება login-ზე
+
+### ცვლილებები
+- **Login ფორმა** – `useForm.post()` API-ის სწორი გამოყენება, ReCaptcha-ს გაუმჯობესებული შემოწმება
+- **HasPermissionChecks** – `try/catch` Spatie permission შემოწმებებში, exception-ების თავიდან აცილება
+- **Sidebar ნავიგაცია** – ანგარიშების სექცია ჯგუფურ მენიუში (Reports): Budget & Expenses, Project Reports, Task Report
+- **ProjectReportController** – `members.user` → `members` relation-ის გასწორება, Excel ექსპორტის დამატება
+- **ენობრივი ფაილები** – en.json, ka.json, ru.json: ახალი თარგმანები Task Report, Export Excel
+
+### Bugfix-ები
+- **419 CSRF შეცდომა** – ლოგინის დროს TokenMismatchException-ის სწორი დამუშავება
+- **403 Permission შეცდომა** – კლიენტ მომხმარებლისთვის dashboard-ზე წვდომის გახსნა
+- **timer/status 403** – `timesheet_use_timer` permission კლიენტის როლზე
+
+---
+
 ## v1.3.0 – 2026-02-21
 
 ### დამატებული

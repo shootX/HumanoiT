@@ -227,7 +227,9 @@ export function AppSidebar() {
             });
         }
 
-        // Budget & Expenses
+        // Reports (Budget & Expenses, Project Reports)
+        const reportsChildren: NavItem[] = [];
+
         if (hasPermission(permissions, 'budget_view_any') || hasPermission(permissions, 'expense_view_any')) {
             const budgetChildren = [];
 
@@ -259,7 +261,7 @@ export function AppSidebar() {
                 });
             }
 
-            items.push({
+            reportsChildren.push({
                 title: t('Budget & Expenses'),
                 icon: Receipt,
                 children: budgetChildren.length > 0 ? budgetChildren : undefined,
@@ -267,12 +269,32 @@ export function AppSidebar() {
             });
         }
 
-        // Project Reports
         if (hasPermission(permissions, 'project_report_view_any')) {
-            items.push({
+            reportsChildren.push({
                 title: t('Project Reports'),
                 href: route('project-reports.index'),
                 icon: TrendingUp,
+            });
+            reportsChildren.push({
+                title: t('Task Report'),
+                href: route('task-reports.index'),
+                icon: CheckSquare,
+            });
+        }
+
+        if (hasPermission(permissions, 'report_timesheet')) {
+            reportsChildren.push({
+                title: t('Task Reports'),
+                href: route('timesheet-reports.index'),
+                icon: CheckSquare,
+            });
+        }
+
+        if (reportsChildren.length > 0) {
+            items.push({
+                title: t('Reports'),
+                icon: BarChart,
+                children: reportsChildren,
             });
         }
 

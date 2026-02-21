@@ -55,7 +55,7 @@ class LoginRequest extends FormRequest
             Auth::logout();
             
             throw ValidationException::withMessages([
-                'email' => __('Only company users can log in directly. Please use an invitation link to access the workspace.'),
+                'email' => __('Access denied. Please contact administrator.'),
             ]);
         }
         
@@ -76,8 +76,8 @@ class LoginRequest extends FormRequest
      */
     private function canUserLogin($user): bool
     {
-        // Allow superadmin and company users to login
-        if (in_array($user->type, ['superadmin', 'company'])) {
+        // Allow superadmin, company and client users to login
+        if (in_array($user->type, ['superadmin', 'company', 'client'])) {
             return true;
         }
         
