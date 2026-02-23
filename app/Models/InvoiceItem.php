@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class InvoiceItem extends Model
 {
@@ -14,7 +15,6 @@ class InvoiceItem extends Model
         'invoice_id',
         'task_id',
         'expense_id',
-        'timesheet_entry_id',
         'asset_id',
         'asset_category_id',
         'asset_name',
@@ -49,11 +49,6 @@ class InvoiceItem extends Model
         return $this->belongsTo(ProjectExpense::class, 'expense_id');
     }
 
-    public function timesheetEntry(): BelongsTo
-    {
-        return $this->belongsTo(TimesheetEntry::class);
-    }
-
     public function asset(): BelongsTo
     {
         return $this->belongsTo(Asset::class);
@@ -67,6 +62,13 @@ class InvoiceItem extends Model
     public function tax(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Tax::class);
+    }
+
+    public function taskAllocations(): BelongsToMany
+    {
+        return $this->belongsToMany(Task::class, 'invoice_item_task')
+            ->withPivot('quantity')
+            ->withTimestamps();
     }
 
     protected static function booted()

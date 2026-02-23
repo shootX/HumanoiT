@@ -87,6 +87,11 @@ class Invoice extends Model
         return $this->belongsToMany(Task::class, 'invoice_task');
     }
 
+    public function projects(): BelongsToMany
+    {
+        return $this->belongsToMany(Project::class, 'invoice_project');
+    }
+
     public function budgetCategory(): BelongsTo
     {
         return $this->belongsTo(\App\Models\BudgetCategory::class);
@@ -401,36 +406,90 @@ class Invoice extends Model
     }
 
     /**
-     * When invoice is paid and has a project, create a ProjectExpense so it appears in project expenses.
+     * When invoice is paid and has projects, create ProjectExpense(s) - one per project with distributed amount.
+     * Cost is distributed by asset item task allocations (quantity per task). Items without allocations go to primary project.
      */
-    public function createProjectExpenseIfPaid(): ?ProjectExpense
+    public function createProjectExpenseIfPaid(): array
     {
-        if ($this->status !== 'paid' || !$this->project_id) {
-            return null;
+        if ($this->status !== 'paid') {
+            return [];
+        }
+        $projectIds = $this->projects->isNotEmpty()
+            ? $this->projects->pluck('id')->filter()->all()
+            : ($this->project_id ? [$this->project_id] : []);
+        $projectIds = array_values(array_filter(array_map('intval', $projectIds)));
+        if (empty($projectIds)) {
+            return [];
         }
         if (ProjectExpense::where('invoice_id', $this->id)->exists()) {
-            return null;
+            return [];
         }
-        $taskId = $this->items()->whereNotNull('task_id')->value('task_id');
-        $project = $this->project;
-        $currency = ($project && $project->budget && isset($project->budget->currency)) ? $project->budget->currency : 'GEL';
-        return ProjectExpense::create([
-            'project_id' => $this->project_id,
-            'budget_category_id' => $this->budget_category_id,
-            'task_id' => $taskId,
-            'invoice_id' => $this->id,
-            'submitted_by' => $this->created_by,
-            'amount' => $this->total_amount,
-            'currency' => $currency,
-            'expense_date' => $this->paid_at ?? $this->invoice_date ?? now(),
-            'title' => $this->title ?: __('Invoice :number', ['number' => $this->invoice_number]),
-            'description' => __('From invoice :number', ['number' => $this->invoice_number]),
-            'vendor' => $this->client?->name,
-            'status' => 'approved',
-            'approved_at' => now(),
-            'approved_by' => $this->created_by,
-            'approved_amount' => $this->total_amount,
-        ]);
+
+        $amountsByProject = array_fill_keys($projectIds, 0.0);
+        $primaryProjectId = $this->project_id ?? $projectIds[0];
+        $tasksByProject = $this->tasks->groupBy('project_id');
+
+        $ourTaskIds = $this->tasks->pluck('id')->all();
+
+        foreach ($this->items()->get() as $item) {
+            $itemAmount = (float) ($item->amount ?? ($item->rate * ($item->quantity ?: 1)));
+            $assetId = $item->asset_id;
+
+            if ($assetId && !empty($ourTaskIds)) {
+                $allocations = \DB::table('asset_task')
+                    ->where('asset_id', $assetId)
+                    ->whereIn('task_id', $ourTaskIds)
+                    ->get();
+                if ($allocations->isNotEmpty()) {
+                    $totalQty = (float) $allocations->sum('quantity');
+                    if ($totalQty > 0) {
+                        foreach ($allocations as $row) {
+                            $task = \App\Models\Task::find($row->task_id);
+                            if ($task && isset($amountsByProject[$task->project_id])) {
+                                $qty = (float) ($row->quantity ?? 0);
+                                $amountsByProject[$task->project_id] += ($qty / $totalQty) * $itemAmount;
+                            }
+                        }
+                        continue;
+                    }
+                }
+            }
+
+            $taskId = $item->task_id ?? $this->task_id;
+            $projectId = $taskId ? (\App\Models\Task::find($taskId)?->project_id ?? $primaryProjectId) : $primaryProjectId;
+            $projectId = isset($amountsByProject[$projectId]) ? $projectId : $primaryProjectId;
+            $amountsByProject[$projectId] += $itemAmount;
+        }
+
+        $created = [];
+        foreach ($projectIds as $projectId) {
+            $amount = round($amountsByProject[$projectId] ?? 0, 2);
+            if ($amount <= 0) {
+                continue;
+            }
+            $project = Project::find($projectId);
+            $currency = ($project && $project->budget && isset($project->budget->currency)) ? $project->budget->currency : 'GEL';
+            $taskId = $tasksByProject->get($projectId)?->first()?->id ?? null;
+            $expense = ProjectExpense::create([
+                'project_id' => $projectId,
+                'budget_category_id' => $this->budget_category_id,
+                'task_id' => $taskId,
+                'invoice_id' => $this->id,
+                'submitted_by' => $this->created_by,
+                'amount' => $amount,
+                'currency' => $currency,
+                'expense_date' => $this->paid_at ?? $this->invoice_date ?? now(),
+                'title' => $this->title ?: __('Invoice :number', ['number' => $this->invoice_number]),
+                'description' => __('From invoice :number', ['number' => $this->invoice_number]),
+                'vendor' => $this->client?->name,
+                'status' => 'approved',
+                'approved_at' => now(),
+                'approved_by' => $this->created_by,
+                'approved_amount' => $amount,
+            ]);
+            $created[] = $expense;
+        }
+        return $created;
     }
 
     /**

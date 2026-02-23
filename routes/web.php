@@ -533,9 +533,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('api/media/{id}/download', [MediaController::class, 'download'])->middleware('permission:media_download')->name('api.media.download');
         Route::delete('api/media/{id}', [MediaController::class, 'destroy'])->middleware('permission:media_delete')->name('api.media.destroy');
 
-        // Bug API routes
-        Route::get('api/bugs/project-data', [\App\Http\Controllers\BugController::class, 'getProjectData'])->middleware('permission:bug_view_any')->name('api.bugs.project-data');
-
         // Roles routes
         Route::get('roles', [RoleController::class, 'index'])->middleware('permission:role_view_any')->name('roles.index');
         Route::post('roles', [RoleController::class, 'store'])->middleware('permission:role_create')->name('roles.store');
@@ -837,90 +834,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('task-attachments/{taskAttachment}', [\App\Http\Controllers\TaskAttachmentController::class, 'destroy'])->middleware('permission:task_add_attachments')->name('task-attachments.destroy');
         Route::get('task-attachments/{taskAttachment}/download', [\App\Http\Controllers\TaskAttachmentController::class, 'download'])->middleware('permission:task_add_attachments')->name('task-attachments.download');
 
-        // Bug routes
-        Route::get('bugs', [\App\Http\Controllers\BugController::class, 'index'])->middleware('permission:bug_view_any')->name('bugs.index');
-        Route::get('bugs/create', [\App\Http\Controllers\BugController::class, 'create'])->middleware('permission:bug_create')->name('bugs.create');
-        Route::post('bugs', [\App\Http\Controllers\BugController::class, 'store'])->middleware('permission:bug_create')->name('bugs.store');
-        Route::get('bugs/{bug}', [\App\Http\Controllers\BugController::class, 'show'])->middleware('permission:bug_view')->name('bugs.show');
-        Route::get('bugs/{bug}/edit', [\App\Http\Controllers\BugController::class, 'edit'])->middleware('permission:bug_update')->name('bugs.edit');
-        Route::put('bugs/{bug}', [\App\Http\Controllers\BugController::class, 'update'])->middleware('permission:bug_update')->name('bugs.update');
-        Route::patch('bugs/{bug}', [\App\Http\Controllers\BugController::class, 'update'])->middleware('permission:bug_update');
-        Route::delete('bugs/{bug}', [\App\Http\Controllers\BugController::class, 'destroy'])->middleware('permission:bug_delete')->name('bugs.destroy');
-
-        Route::put('bugs/{bug}/status', [\App\Http\Controllers\BugController::class, 'changeStatus'])->middleware('permission:bug_change_status')->name('bugs.change-status');
-
-        // Bug statuses
-        Route::get('bug-statuses', [\App\Http\Controllers\BugStatusController::class, 'index'])->middleware('permission:bug_manage_statuses')->name('bug-statuses.index');
-        Route::post('bug-statuses', [\App\Http\Controllers\BugStatusController::class, 'store'])->middleware('permission:bug_manage_statuses')->name('bug-statuses.store');
-        Route::put('bug-statuses/{bugStatus}', [\App\Http\Controllers\BugStatusController::class, 'update'])->middleware('permission:bug_manage_statuses')->name('bug-statuses.update');
-        Route::patch('bug-statuses/{bugStatus}', [\App\Http\Controllers\BugStatusController::class, 'update'])->middleware('permission:bug_manage_statuses');
-        Route::delete('bug-statuses/{bugStatus}', [\App\Http\Controllers\BugStatusController::class, 'destroy'])->middleware('permission:bug_manage_statuses')->name('bug-statuses.destroy');
-        Route::post('bug-statuses/reorder', [\App\Http\Controllers\BugStatusController::class, 'reorder'])->middleware('permission:bug_manage_statuses')->name('bug-statuses.reorder');
-        Route::put('bug-statuses/{bugStatus}/set-default', [\App\Http\Controllers\BugStatusController::class, 'setDefault'])->middleware('permission:bug_manage_statuses')->name('bug-statuses.set-default');
-
-        // Bug comments
-        Route::post('bugs/{bug}/comments', [\App\Http\Controllers\BugCommentController::class, 'store'])->middleware('permission:bug_add_comments')->name('bug-comments.store');
-        Route::put('bug-comments/{bugComment}', [\App\Http\Controllers\BugCommentController::class, 'update'])->middleware('permission:bug_add_comments')->name('bug-comments.update');
-        Route::delete('bug-comments/{bugComment}', [\App\Http\Controllers\BugCommentController::class, 'destroy'])->middleware('permission:bug_add_comments')->name('bug-comments.destroy');
-
-        // Bug attachments
-        Route::post('bugs/{bug}/attachments', [\App\Http\Controllers\BugAttachmentController::class, 'store'])->middleware('permission:bug_add_attachments')->name('bug-attachments.store');
-        Route::delete('bug-attachments/{bugAttachment}', [\App\Http\Controllers\BugAttachmentController::class, 'destroy'])->middleware('permission:bug_add_attachments')->name('bug-attachments.destroy');
-        Route::get('bug-attachments/{bugAttachment}/download', [\App\Http\Controllers\BugAttachmentController::class, 'download'])->middleware('permission:bug_add_attachments')->name('bug-attachments.download');
-
-        // Timesheet routes
-        Route::get('timesheets/daily-view', [\App\Http\Controllers\TimesheetController::class, 'dailyView'])->middleware('permission:timesheet_view_any')->name('timesheets.daily-view');
-        Route::get('timesheets/weekly-view', [\App\Http\Controllers\TimesheetController::class, 'weeklyView'])->middleware('permission:timesheet_view_any')->name('timesheets.weekly-view');
-        Route::get('timesheets/monthly-view', [\App\Http\Controllers\TimesheetController::class, 'monthlyView'])->middleware('permission:timesheet_view_any')->name('timesheets.monthly-view');
-        Route::get('timesheets/calendar-view', [\App\Http\Controllers\TimesheetController::class, 'calendarView'])->middleware('permission:timesheet_view_any')->name('timesheets.calendar-view');
-        Route::get('timesheets/approvals', [\App\Http\Controllers\TimesheetController::class, 'approvals'])->middleware('permission:timesheet_approve')->name('timesheets.approvals');
-        Route::get('timesheets/reports', [\App\Http\Controllers\TimesheetController::class, 'reports'])->middleware('permission:report_timesheet')->name('timesheets.reports');
-
-        Route::get('timesheets', [\App\Http\Controllers\TimesheetController::class, 'index'])->middleware('permission:timesheet_view_any')->name('timesheets.index');
-        Route::get('timesheets/create', [\App\Http\Controllers\TimesheetController::class, 'create'])->middleware('permission:timesheet_create')->name('timesheets.create');
-        Route::post('timesheets', [\App\Http\Controllers\TimesheetController::class, 'store'])->middleware('permission:timesheet_create')->name('timesheets.store');
-        Route::get('timesheets/{timesheet}', [\App\Http\Controllers\TimesheetController::class, 'show'])->middleware('permission:timesheet_view')->name('timesheets.show');
-        Route::get('timesheets/{timesheet}/edit', [\App\Http\Controllers\TimesheetController::class, 'edit'])->middleware('permission:timesheet_update')->name('timesheets.edit');
-        Route::put('timesheets/{timesheet}', [\App\Http\Controllers\TimesheetController::class, 'update'])->middleware('permission:timesheet_update')->name('timesheets.update');
-        Route::patch('timesheets/{timesheet}', [\App\Http\Controllers\TimesheetController::class, 'update'])->middleware('permission:timesheet_update');
-        Route::delete('timesheets/{timesheet}', [\App\Http\Controllers\TimesheetController::class, 'destroy'])->middleware('permission:timesheet_delete')->name('timesheets.destroy');
-
-        Route::post('timesheets/{timesheet}/submit', [\App\Http\Controllers\TimesheetController::class, 'submit'])->middleware('permission:timesheet_submit')->name('timesheets.submit');
-        Route::post('timesheets/{timesheet}/approve', [\App\Http\Controllers\TimesheetController::class, 'approve'])->middleware('permission:timesheet_approve')->name('timesheets.approve');
-        Route::post('timesheets/{timesheet}/reject', [\App\Http\Controllers\TimesheetController::class, 'reject'])->middleware('permission:timesheet_approve')->name('timesheets.reject');
-
-        // Timesheet entries
-        Route::get('timesheet-entries', [\App\Http\Controllers\TimesheetEntryController::class, 'index'])->middleware('permission:timesheet_view_any')->name('timesheet-entries.index');
-        Route::post('timesheet-entries', [\App\Http\Controllers\TimesheetEntryController::class, 'store'])->middleware('permission:timesheet_create')->name('timesheet-entries.store');
-        Route::put('timesheet-entries/{timesheetEntry}', [\App\Http\Controllers\TimesheetEntryController::class, 'update'])->middleware('permission:timesheet_update')->name('timesheet-entries.update');
-        Route::patch('timesheet-entries/{timesheetEntry}', [\App\Http\Controllers\TimesheetEntryController::class, 'update'])->middleware('permission:timesheet_update');
-        Route::delete('timesheet-entries/{timesheetEntry}', [\App\Http\Controllers\TimesheetEntryController::class, 'destroy'])->middleware('permission:timesheet_delete')->name('timesheet-entries.destroy');
-        Route::post('timesheet-entries/bulk-update', [\App\Http\Controllers\TimesheetEntryController::class, 'bulkUpdate'])->middleware('permission:timesheet_bulk_operations')->name('timesheet-entries.bulk-update');
-        Route::delete('timesheet-entries/bulk-delete', [\App\Http\Controllers\TimesheetEntryController::class, 'bulkDelete'])->middleware('permission:timesheet_bulk_operations')->name('timesheet-entries.bulk-delete');
-
-        // Timer functionality
-        Route::post('timer/start', [\App\Http\Controllers\TimerController::class, 'start'])->middleware('permission:timesheet_use_timer')->name('timer.start');
-        Route::post('timer/stop', [\App\Http\Controllers\TimerController::class, 'stop'])->middleware('permission:timesheet_use_timer')->name('timer.stop');
-        Route::post('timer/pause', [\App\Http\Controllers\TimerController::class, 'pause'])->middleware('permission:timesheet_use_timer')->name('timer.pause');
-        Route::post('timer/resume', [\App\Http\Controllers\TimerController::class, 'resume'])->middleware('permission:timesheet_use_timer')->name('timer.resume');
-        Route::get('timer/status', [\App\Http\Controllers\TimerController::class, 'status'])->middleware('permission:timesheet_use_timer')->name('timer.status');
-
-        // Timesheet approvals
-        Route::get('timesheet-approvals', [\App\Http\Controllers\TimesheetApprovalController::class, 'index'])->middleware('permission:timesheet_approve')->name('timesheet-approvals.index');
-        Route::post('timesheet-approvals/{approval}/approve', [\App\Http\Controllers\TimesheetApprovalController::class, 'approve'])->middleware('permission:timesheet_approve')->name('timesheet-approvals.approve');
-        Route::post('timesheet-approvals/{approval}/reject', [\App\Http\Controllers\TimesheetApprovalController::class, 'reject'])->middleware('permission:timesheet_approve')->name('timesheet-approvals.reject');
-        Route::post('timesheet-approvals/bulk-approve', [\App\Http\Controllers\TimesheetApprovalController::class, 'bulkApprove'])->middleware('permission:timesheet_approve')->name('timesheet-approvals.bulk-approve');
-        Route::post('timesheet-approvals/bulk-reject', [\App\Http\Controllers\TimesheetApprovalController::class, 'bulkReject'])->middleware('permission:timesheet_approve')->name('timesheet-approvals.bulk-reject');
-
-        // Timesheet reports
-        Route::get('timesheet-reports', [\App\Http\Controllers\TimesheetReportController::class, 'index'])->middleware('permission:report_timesheet')->name('timesheet-reports.index');
-        Route::post('timesheet-reports/generate', [\App\Http\Controllers\TimesheetReportController::class, 'generate'])->middleware('permission:report_timesheet')->name('timesheet-reports.generate');
-        Route::get('timesheet-reports/dashboard-widgets', [\App\Http\Controllers\TimesheetReportController::class, 'dashboardWidgets'])->middleware('permission:report_dashboard_widgets')->name('timesheet-reports.dashboard-widgets');
-
-        // Customer reports
-        Route::get('customer-reports', [\App\Http\Controllers\CustomerReportController::class, 'index'])->middleware('permission:report_customer')->name('customer-reports.index');
-        Route::post('customer-reports/generate', [\App\Http\Controllers\CustomerReportController::class, 'generate'])->middleware('permission:report_customer')->name('customer-reports.generate');
-
         // Budget & Expense routes
         Route::get('budgets/dashboard', [\App\Http\Controllers\BudgetDashboardController::class, 'index'])->middleware('permission:budget_dashboard_view')->name('budgets.dashboard');
         Route::get('budgets', [\App\Http\Controllers\ProjectBudgetController::class, 'index'])->middleware('permission:budget_view_any')->name('budgets.index');
@@ -1015,6 +928,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('invoices/{invoice}/approve', [\App\Http\Controllers\InvoiceController::class, 'approve'])->middleware('permission:invoice_approve')->name('invoices.approve');
         Route::post('invoices/{invoice}/send', [\App\Http\Controllers\InvoiceController::class, 'send'])->middleware(['permission:invoice_send', 'throttle:20,1'])->name('invoices.send');
         Route::get('api/projects/{project}/invoice-data', [\App\Http\Controllers\InvoiceController::class, 'getProjectInvoiceData'])->middleware('permission:invoice_view_any')->name('api.projects.invoice-data');
+        Route::get('api/invoices/projects-tasks', [\App\Http\Controllers\InvoiceController::class, 'getMultiProjectTasks'])->middleware('permission:invoice_view_any')->name('api.invoices.projects-tasks');
 
         // Payment gateway specific routes
         Route::post('razorpay/create-order', [RazorpayController::class, 'createOrder'])->name('razorpay.create-order');
@@ -1146,6 +1060,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('task-reports', [\App\Http\Controllers\TaskReportController::class, 'index'])->middleware('permission:project_report_view_any')->name('task-reports.index');
         Route::post('task-reports/tasks', [\App\Http\Controllers\TaskReportController::class, 'getTasksData'])->middleware('permission:project_report_view_any')->name('task-reports.tasks');
         Route::get('task-reports/export', [\App\Http\Controllers\TaskReportController::class, 'export'])->middleware('permission:project_report_export')->name('task-reports.export');
+
+        // Purchases Report routes
+        Route::get('purchases-reports', [\App\Http\Controllers\PurchasesReportController::class, 'index'])->middleware('permission:project_report_view_any')->name('purchases-reports.index');
+        Route::post('purchases-reports/data', [\App\Http\Controllers\PurchasesReportController::class, 'getPurchasesData'])->middleware('permission:project_report_view_any')->name('purchases-reports.data');
+        Route::get('purchases-reports/export', [\App\Http\Controllers\PurchasesReportController::class, 'export'])->middleware('permission:project_report_export')->name('purchases-reports.export');
     }); // End plan.access middleware group
 });
 

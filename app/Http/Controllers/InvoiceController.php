@@ -9,7 +9,6 @@ use App\Models\InvoiceItem;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\ProjectExpense;
-use App\Models\TimesheetEntry;
 use App\Events\InvoiceCreated;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -147,7 +146,7 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice)
     {
-        $invoice->load(['project', 'task', 'budgetCategory', 'client', 'crmContact', 'creator', 'approver', 'items.task', 'items.expense', 'items.timesheetEntry', 'items.assetCategory', 'items.asset', 'payments']);
+        $invoice->load(['project', 'task', 'budgetCategory', 'client', 'crmContact', 'creator', 'approver', 'items.task', 'items.expense', 'items.assetCategory', 'items.asset', 'payments']);
         $user = auth()->user();
         $workspace = $user->currentWorkspace;
         $userWorkspaceRole = $workspace->getMemberRole($user);
@@ -195,6 +194,8 @@ class InvoiceController extends Controller
 
         $validated = $request->validate([
             'project_id' => 'required|exists:projects,id',
+            'project_ids' => 'nullable|array',
+            'project_ids.*' => 'exists:projects,id',
             'task_id' => 'nullable|exists:tasks,id',
             'task_ids' => 'nullable|array',
             'task_ids.*' => 'exists:tasks,id',
@@ -218,16 +219,23 @@ class InvoiceController extends Controller
             'items.*.rate' => 'required|numeric|min:0',
         ]);
 
-        $project = Project::findOrFail($validated['project_id']);
+        $projectIds = collect($validated['project_ids'] ?? [])->filter()->unique()->map('intval')->values()->all();
+        if (empty($projectIds)) {
+            $projectIds = $validated['project_id'] ? [$validated['project_id']] : [];
+        }
+        $project = Project::findOrFail($projectIds[0] ?? $validated['project_id']);
 
+        $validProjectIds = Project::whereIn('id', $projectIds)->where('workspace_id', $project->workspace_id)->pluck('id')->all();
         $taskIds = collect($validated['task_ids'] ?? [])->filter()->unique()->values()->all();
         $taskIds = array_values(array_filter(array_map('intval', $taskIds)));
         if (!empty($taskIds)) {
-            $validTaskIds = Task::where('project_id', $project->id)->whereIn('id', $taskIds)->pluck('id')->all();
+            $validTaskIds = Task::whereIn('project_id', $validProjectIds)->whereIn('id', $taskIds)->pluck('id')->all();
             $taskIds = $validTaskIds;
+            $projectIdsFromTasks = Task::whereIn('id', $taskIds)->pluck('project_id')->unique()->filter()->all();
+            $validProjectIds = array_unique(array_merge($validProjectIds, $projectIdsFromTasks));
         }
 
-        $validated['budget_category_id'] = $this->validateInvoiceBudgetCategory($validated['project_id'], $validated['budget_category_id'] ?? null);
+        $validated['budget_category_id'] = $this->validateInvoiceBudgetCategory($project->id, $validated['budget_category_id'] ?? null);
 
         $clientDetails = null;
         if (!empty($validated['crm_contact_id'])) {
@@ -246,7 +254,7 @@ class InvoiceController extends Controller
         $primaryTaskId = !empty($taskIds) ? (int) $taskIds[0] : ($validated['task_id'] ?? null);
 
         $invoice = Invoice::create([
-            'project_id' => $validated['project_id'],
+            'project_id' => $project->id,
             'task_id' => $primaryTaskId,
             'budget_category_id' => $validated['budget_category_id'],
             'workspace_id' => $project->workspace_id,
@@ -267,11 +275,12 @@ class InvoiceController extends Controller
         ]);
 
         $invoice->tasks()->sync($taskIds);
+        $invoice->projects()->sync($validProjectIds);
 
         foreach ($validated['items'] as $index => $item) {
             $quantity = $item['quantity'] ?? 1;
             $rate = $item['rate'] ?? 0;
-            InvoiceItem::create([
+            $invoiceItem = InvoiceItem::create([
                 'invoice_id' => $invoice->id,
                 'type' => $item['type'],
                 'description' => $item['description'],
@@ -303,6 +312,8 @@ class InvoiceController extends Controller
     public function update(Request $request, Invoice $invoice)
     {
         $validated = $request->validate([
+            'project_ids' => 'nullable|array',
+            'project_ids.*' => 'exists:projects,id',
             'task_id' => 'nullable|exists:tasks,id',
             'task_ids' => 'nullable|array',
             'task_ids.*' => 'exists:tasks,id',
@@ -329,13 +340,23 @@ class InvoiceController extends Controller
 
         $validated['budget_category_id'] = $this->validateInvoiceBudgetCategory($invoice->project_id, $validated['budget_category_id'] ?? null);
 
+        $projectIds = collect($validated['project_ids'] ?? [])->filter()->unique()->map('intval')->values()->all();
+        if (empty($projectIds)) {
+            $projectIds = $invoice->project_id ? [$invoice->project_id] : [];
+        }
+        $validProjectIds = Project::whereIn('id', $projectIds)->where('workspace_id', $invoice->workspace_id)->pluck('id')->all();
+
         $taskIds = collect($validated['task_ids'] ?? [])->filter()->unique()->values()->all();
         $taskIds = array_values(array_filter(array_map('intval', $taskIds)));
         if (!empty($taskIds)) {
-            $taskIds = Task::where('project_id', $invoice->project_id)->whereIn('id', $taskIds)->pluck('id')->all();
+            $validTaskIds = Task::whereIn('project_id', $validProjectIds)->whereIn('id', $taskIds)->pluck('id')->all();
+            $taskIds = $validTaskIds;
+            $projectIdsFromTasks = Task::whereIn('id', $taskIds)->pluck('project_id')->unique()->filter()->all();
+            $validProjectIds = array_unique(array_merge($validProjectIds, $projectIdsFromTasks));
         }
         $primaryTaskId = !empty($taskIds) ? (int) $taskIds[0] : ($validated['task_id'] ?? null);
         $invoice->tasks()->sync($taskIds);
+        $invoice->projects()->sync($validProjectIds);
 
         $clientDetails = null;
         if (!empty($validated['crm_contact_id'])) {
@@ -370,7 +391,7 @@ class InvoiceController extends Controller
             $quantity = (float) ($item['quantity'] ?? 1);
             $rate = $item['rate'] ?? 0;
             $assetId = $item['asset_id'] ?? null;
-            InvoiceItem::create([
+            $invoiceItem = InvoiceItem::create([
                 'invoice_id' => $invoice->id,
                 'type' => $item['type'],
                 'description' => $item['description'],
@@ -394,6 +415,7 @@ class InvoiceController extends Controller
 
         $invoice->load('items');
         $taskAssetMap = [];
+        $invoiceProjectIds = !empty($validProjectIds) ? $validProjectIds : [$invoice->project_id];
         foreach ($invoice->items()->where('type', 'asset')->whereNotNull('asset_id')->get() as $item) {
             $taskId = $item->task_id ?? $invoice->task_id;
             if (!$taskId) continue;
@@ -404,7 +426,7 @@ class InvoiceController extends Controller
         }
         foreach ($taskAssetMap as $taskId => $assetsData) {
             $task = Task::find($taskId);
-            if (!$task || $task->project_id != $invoice->project_id) continue;
+            if (!$task || !in_array($task->project_id, $invoiceProjectIds)) continue;
             $current = $task->assets()->get()->mapWithKeys(fn ($a) => [$a->id => ['quantity' => $a->pivot->quantity]])->toArray();
             foreach ($assetsData as $aid => $data) {
                 $current[$aid] = $data;
@@ -450,6 +472,59 @@ class InvoiceController extends Controller
             'assetCategories' => $assetCategories,
             'assets' => $assets,
         ]);
+    }
+
+    public function getMultiProjectTasks(Request $request)
+    {
+        try {
+            $projectIds = array_filter(array_map('intval', (array) $request->get('project_ids', [])));
+            if (empty($projectIds)) {
+                return response()->json(['tasks' => []]);
+            }
+            $user = auth()->user();
+            $workspace = $user->currentWorkspace;
+            $projects = Project::whereIn('id', $projectIds)->where('workspace_id', $workspace->id)->pluck('id')->all();
+            if (empty($projects)) {
+                return response()->json(['tasks' => []]);
+            }
+            $search = trim($request->get('search', ''));
+            $forceIncludeIds = array_filter(array_map('intval', (array) $request->get('task_ids', [])));
+            $includeDone = strlen($search) >= 3;
+            $doneStageIds = \App\Models\TaskStage::where('workspace_id', $workspace->id)
+                ->where(function ($q) {
+                    $q->where('name', 'like', '%done%')
+                        ->orWhere('name', 'like', '%completed%')
+                        ->orWhere('name', 'like', '%finished%');
+                })
+                ->pluck('id');
+
+            $tasksQuery = Task::whereIn('project_id', $projects)->with(['taskStage:id,name', 'project:id,title']);
+            if (!$includeDone && empty($forceIncludeIds)) {
+                $tasksQuery->whereNotIn('task_stage_id', $doneStageIds);
+            } elseif (!$includeDone && !empty($forceIncludeIds)) {
+                $tasksQuery->where(function ($q) use ($forceIncludeIds, $doneStageIds) {
+                    $q->whereNotIn('task_stage_id', $doneStageIds)
+                        ->orWhereIn('tasks.id', $forceIncludeIds);
+                });
+            }
+            if ($search !== '') {
+                $tasksQuery->where(function ($q) use ($search) {
+                    $q->where('tasks.title', 'like', '%' . $search . '%')
+                        ->orWhereRaw('CAST(tasks.id AS CHAR) LIKE ?', [$search . '%']);
+                });
+            }
+            $tasks = $tasksQuery->get()->map(fn ($t) => [
+                'id' => $t->id,
+                'title' => $t->title,
+                'project_id' => $t->project_id,
+                'project_title' => $t->project?->title,
+                'task_stage' => $t->taskStage ? ['name' => $t->taskStage->name] : null,
+            ]);
+            return response()->json(['tasks' => $tasks]);
+        } catch (\Exception $e) {
+            \Log::error('Error loading multi-project tasks: ' . $e->getMessage());
+            return response()->json(['tasks' => []], 500);
+        }
     }
 
     public function getProjectInvoiceData($projectId, Request $request)
@@ -526,7 +601,7 @@ class InvoiceController extends Controller
 
     public function edit(Invoice $invoice)
     {
-        $invoice->load(['items', 'project', 'tasks']);
+        $invoice->load(['items', 'project', 'tasks', 'projects']);
 
         $user = auth()->user();
         $workspace = $user->currentWorkspace;
@@ -573,6 +648,9 @@ class InvoiceController extends Controller
             $invoice->tasks()->syncWithoutDetaching([$invoice->task_id]);
         }
         $invoiceData['task_ids'] = $taskIds;
+        $invoiceData['project_ids'] = $invoice->projects->isNotEmpty()
+            ? $invoice->projects->pluck('id')->map(fn ($id) => (string) $id)->toArray()
+            : ($invoice->project_id ? [(string) $invoice->project_id] : []);
 
         $workspaceId = $invoice->project_id && $invoice->project
             ? $invoice->project->workspace_id
@@ -694,17 +772,11 @@ class InvoiceController extends Controller
                 ->toArray();
         }
 
-        $timesheetEntries = TimesheetEntry::whereHas('timesheet', function ($q) use ($project) {
-            $q->where('project_id', $project->id);
-        })
-            ->with(['task', 'user'])
-            ->get(['id', 'task_id', 'user_id', 'hours', 'description']);
-
         return response()->json([
             'tasks' => $tasks,
             'expenses' => $expenses,
             'budget_categories' => $budgetCategories,
-            'timesheet_entries' => $timesheetEntries
+            'timesheet_entries' => []
         ]);
     }
 

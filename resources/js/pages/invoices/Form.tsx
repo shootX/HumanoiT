@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InvoiceTaskMultiSelect } from '@/components/invoices/InvoiceTaskMultiSelect';
+import { InvoiceProjectMultiSelect } from '@/components/invoices/InvoiceProjectMultiSelect';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2 } from 'lucide-react';
@@ -46,6 +47,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
 
     const [formData, setFormData] = useState({
         project_id: invoice?.project_id?.toString() || '',
+        project_ids: invoice?.project_ids || (invoice?.project_id ? [invoice.project_id.toString()] : []),
         task_id: invoice?.task_id?.toString() || '',
         task_ids: invoice?.task_ids || (invoice?.task_id ? [invoice.task_id.toString()] : []),
         budget_category_id: invoice?.budget_category_id?.toString() || '',
@@ -102,10 +104,11 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
     ];
 
     useEffect(() => {
-        if (formData.project_id) {
-            loadProjectData(formData.project_id);
+        const pid = formData.project_ids?.[0] || formData.project_id;
+        if (pid) {
+            loadProjectData(pid);
+            if (!formData.project_id) setFormData(prev => ({ ...prev, project_id: pid }));
         }
-        // Set initial available clients
         setAvailableClients(clients || []);
     }, []);
 
@@ -123,8 +126,9 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             const updated = { ...prev, [field]: value };
 
             // Auto-fill title when project or invoice_date changes (only if not manually edited)
-            if ((field === 'project_id' || field === 'invoice_date') && !titleManuallyEdited) {
-                const pid = field === 'project_id' ? value : prev.project_id;
+            if ((field === 'project_id' || field === 'project_ids' || field === 'invoice_date') && !titleManuallyEdited) {
+                const pids = field === 'project_ids' ? value : prev.project_ids;
+                const pid = (Array.isArray(pids) ? pids[0] : prev.project_id) || (field === 'project_id' ? value : prev.project_id);
                 const idate = field === 'invoice_date' ? value : prev.invoice_date;
                 if (pid && idate) {
                     updated.title = generateAutoTitle(pid, idate);
@@ -134,13 +138,15 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             return updated;
         });
         
-        if (field === 'project_id') {
-            if (value) {
-                loadProjectData(value);
-                setFormData(prev => ({ ...prev, task_ids: [], task_id: '' }));
+        if (field === 'project_id' || field === 'project_ids') {
+            const ids = field === 'project_ids' ? (Array.isArray(value) ? value : []) : (value ? [value] : []);
+            const firstId = ids[0] || '';
+            if (firstId) {
+                loadProjectData(firstId);
+                setFormData(prev => ({ ...prev, project_id: firstId, project_ids: ids, task_ids: [], task_id: '' }));
             } else {
                 setProjectTasks([]);
-                setFormData(prev => ({ ...prev, task_ids: [], task_id: '' }));
+                setFormData(prev => ({ ...prev, project_id: '', project_ids: [], task_ids: [], task_id: '' }));
                 setBudgetCategories([]);
                 setAssetCategories([]);
                 setProjectClients([]);
@@ -149,8 +155,10 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
         }
     };
     
-    const loadProjectData = async (projectId: string) => {
+    const loadProjectData = async (projectId: string, allProjectIds?: string[]) => {
         try {
+            const projectIds = allProjectIds || [projectId];
+            let tasksToSet: any[] = [];
             const response = await fetch(route('api.projects.invoice-data', projectId), {
                 method: 'GET',
                 headers: {
@@ -160,26 +168,32 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
                 },
                 credentials: 'same-origin'
             });
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
-            setProjectTasks(data.tasks || []);
+            tasksToSet = data.tasks || [];
+            if (projectIds.length > 1) {
+                const u = new URL(route('api.invoices.projects-tasks'), window.location.origin);
+                projectIds.forEach((id: string) => u.searchParams.append('project_ids[]', id));
+                (formData.task_ids || []).forEach((id: string) => u.searchParams.append('task_ids[]', id));
+                try {
+                    const r = await fetch(u.toString(), {
+                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '', 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin'
+                    });
+                    if (r.ok) {
+                        const d = await r.json();
+                        tasksToSet = d.tasks?.length ? d.tasks : tasksToSet;
+                    }
+                } catch { /* keep single project tasks */ }
+            }
+            setProjectTasks(tasksToSet);
             setProjectClients(data.clients || []);
             setBudgetCategories(data.budget_categories || []);
-            setAssetCategories(data.asset_categories || []);
-            
-            // Merge project clients with all clients, ensuring current client is included
+            setAssetCategories(data.asset_categories || initialAssetCategories || []);
             const mergedClients = [...(data.clients || [])];
-            const allClientIds = mergedClients.map(c => c.id);
-            
-            // Add clients that aren't in project clients but are in workspace
-            clients.forEach(client => {
-                if (!allClientIds.includes(client.id)) {
-                    mergedClients.push(client);
-                }
+            clients?.forEach((client: any) => {
+                if (!mergedClients.some((c: any) => c.id === client.id)) mergedClients.push(client);
             });
-            
             setAvailableClients(mergedClients);
         } catch (error) {
             console.error('Failed to load project data:', error);
@@ -281,6 +295,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
         const validItems = items.filter(item => !!item.description?.trim());
         const submitData = {
             ...formData,
+            project_ids: formData.project_ids || (formData.project_id ? [formData.project_id] : []),
             task_id: formData.task_ids?.[0] || (formData.task_id && formData.task_id !== 'none' ? formData.task_id : null),
             task_ids: formData.task_ids || [],
             client_id: formData.client_id === 'none' ? null : formData.client_id,
@@ -345,32 +360,37 @@ setErrors(errors);
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="project_id">{t('Project')} <span className="text-red-500">*</span></Label>
-                        <Select 
-                            value={formData.project_id} 
-                            onValueChange={(value) => handleInputChange('project_id', value)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder={t('Select project')} />
-                            </SelectTrigger>
-                            <SelectContent className="z-[9999]">
-                                {projects?.map((project: any) => (
-                                    <SelectItem key={project.id} value={project.id.toString()}>
-                                        {project.title}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <Label>{t('Projects')} <span className="text-red-500">*</span></Label>
+                        <InvoiceProjectMultiSelect
+                            projects={projects || []}
+                            selected={formData.project_ids}
+                            onChange={(ids) => {
+                                const firstId = ids[0] || '';
+                                if (firstId) {
+                                    loadProjectData(firstId, ids);
+                                    setFormData(prev => ({ ...prev, project_id: firstId, project_ids: ids, task_ids: [], task_id: '' }));
+                                } else {
+                                    setProjectTasks([]);
+                                    setFormData(prev => ({ ...prev, project_id: '', project_ids: [], task_ids: [], task_id: '' }));
+                                    setBudgetCategories([]);
+                                    setAssetCategories([]);
+                                    setProjectClients([]);
+                                    setAvailableClients(clients || []);
+                                }
+                            }}
+                            placeholder={t('Select projects')}
+                        />
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="task_ids">{t('Task')} <span className="text-muted-foreground text-xs">({t('optional')})</span></Label>
+                        <Label htmlFor="task_ids">{t('Tasks')} <span className="text-muted-foreground text-xs">({t('optional')})</span></Label>
                         <InvoiceTaskMultiSelect
+                            projectIds={formData.project_ids}
                             projectId={formData.project_id}
                             selected={formData.task_ids}
                             onChange={(ids) => setFormData(prev => ({ ...prev, task_ids: ids, task_id: ids[0] || '' }))}
-                            placeholder={t('Select task')}
-                            disabled={!formData.project_id}
+                            placeholder={t('Select tasks')}
+                            disabled={!formData.project_ids?.length}
                         />
                     </div>
 

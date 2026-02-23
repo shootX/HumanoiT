@@ -7,10 +7,13 @@ type TaskOption = {
   id: number;
   title: string;
   task_stage?: { name: string } | null;
+  project_id?: number;
+  project_title?: string;
 };
 
 type Props = {
-  projectId: string;
+  projectId?: string;
+  projectIds?: string[];
   selected: string[];
   onChange: (selected: string[]) => void;
   placeholder?: string;
@@ -20,6 +23,7 @@ type Props = {
 
 export function InvoiceTaskMultiSelect({
   projectId,
+  projectIds = [],
   selected,
   onChange,
   placeholder = 'Select task',
@@ -35,15 +39,29 @@ export function InvoiceTaskMultiSelect({
   const containerRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const effectiveProjectIds = projectIds?.length > 0 ? projectIds : (projectId ? [projectId] : []);
+
   const fetchTasks = useCallback(
     async (search: string, forceIncludeIds: string[] = []) => {
-      if (!projectId) return;
+      if (effectiveProjectIds.length === 0) return;
       setLoading(true);
       try {
-        const url = new URL(route('api.projects.invoice-data', projectId).toString());
-        if (search.trim()) url.searchParams.set('search', search.trim());
-        forceIncludeIds.forEach((id) => url.searchParams.append('task_ids[]', id));
-        const response = await fetch(url.toString(), {
+        let url: string;
+        if (effectiveProjectIds.length > 1) {
+          url = route('api.invoices.projects-tasks');
+          const u = new URL(url, window.location.origin);
+          effectiveProjectIds.forEach((id) => u.searchParams.append('project_ids[]', id));
+          if (search.trim()) u.searchParams.set('search', search.trim());
+          forceIncludeIds.forEach((id) => u.searchParams.append('task_ids[]', id));
+          url = u.toString();
+        } else {
+          url = route('api.projects.invoice-data', effectiveProjectIds[0]).toString();
+          const u = new URL(url);
+          if (search.trim()) u.searchParams.set('search', search.trim());
+          forceIncludeIds.forEach((id) => u.searchParams.append('task_ids[]', id));
+          url = u.toString();
+        }
+        const response = await fetch(url, {
           headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
@@ -69,23 +87,23 @@ export function InvoiceTaskMultiSelect({
         setLoading(false);
       }
     },
-    [projectId]
+    [effectiveProjectIds.join(',')]
   );
 
   useEffect(() => {
-    if (isOpen && projectId) {
+    if (isOpen && effectiveProjectIds.length > 0) {
       fetchTasks(searchTerm, selected);
     }
-  }, [isOpen, projectId, searchTerm, selected, fetchTasks]);
+  }, [isOpen, effectiveProjectIds.length, searchTerm, selected, fetchTasks]);
 
   useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    if (!isOpen || !projectId) return;
+    if (!isOpen || effectiveProjectIds.length === 0) return;
     searchTimeoutRef.current = setTimeout(() => fetchTasks(searchTerm, selected), 200);
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
-  }, [searchTerm, isOpen, projectId, selected, fetchTasks]);
+  }, [searchTerm, isOpen, effectiveProjectIds.length, selected, fetchTasks]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -124,7 +142,7 @@ export function InvoiceTaskMultiSelect({
     <div ref={containerRef} className={`relative ${className}`}>
       <div
         className={`flex flex-wrap gap-1.5 p-2 border rounded-md min-h-[40px] bg-background ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
-        onClick={() => !disabled && projectId && setIsOpen(!isOpen)}
+        onClick={() => !disabled && effectiveProjectIds.length > 0 && setIsOpen(!isOpen)}
       >
         {selected.length === 0 ? (
           <span className="text-muted-foreground text-sm py-1">{placeholder}</span>
@@ -148,7 +166,7 @@ export function InvoiceTaskMultiSelect({
         )}
       </div>
 
-      {isOpen && projectId && (
+      {isOpen && effectiveProjectIds.length > 0 && (
         <div className="absolute z-[9999] w-full mt-1 bg-popover border rounded-md shadow-lg max-h-[280px] overflow-hidden flex flex-col">
           <input
             type="text"

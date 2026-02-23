@@ -8,7 +8,7 @@ import { useBrand } from '@/contexts/BrandContext';
 
 import { type NavItem } from '@/types';
 import { Link, usePage, router } from '@inertiajs/react';
-import { BookOpen, Contact, Folder, LayoutGrid, ShoppingBag, Users, Tag, FileIcon, Settings, BarChart, Barcode, FileText, Briefcase, CheckSquare, Calendar, CreditCard, Nfc, Ticket, Gift, DollarSign, MessageSquare, CalendarDays, Palette, Image, Mail, Mail as VCard, ChevronDown, Building2, Globe, FolderOpen, Clock, Bug, Receipt, TrendingUp, Bot, Video, Bell, HelpCircle, Workflow, Activity, Archive, Package } from 'lucide-react';
+import { BookOpen, Contact, Folder, LayoutGrid, ShoppingBag, Users, Tag, FileIcon, Settings, BarChart, Barcode, FileText, Briefcase, CheckSquare, Calendar, CreditCard, Nfc, Ticket, Gift, DollarSign, MessageSquare, CalendarDays, Palette, Image, Mail, Mail as VCard, ChevronDown, Building2, Globe, FolderOpen, Receipt, TrendingUp, Bot, Video, Bell, HelpCircle, Workflow, Activity, Archive, Package } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import AppLogo from './app-logo';
@@ -138,77 +138,6 @@ export function AppSidebar() {
             });
         }
 
-        // Bugs
-        if (hasPermission(permissions, 'bug_view_any')) {
-            const bugChildren = [];
-
-            bugChildren.push({
-                title: t('All Bugs'),
-                href: route('bugs.index')
-            });
-
-            if (hasPermission(permissions, 'bug_manage_statuses')) {
-                bugChildren.push({
-                    title: t('Bug Statuses'),
-                    href: route('bug-statuses.index')
-                });
-            }
-
-            items.push({
-                title: t('Bugs'),
-                icon: Bug,
-                children: bugChildren.length > 0 ? bugChildren : undefined,
-                href: bugChildren.length === 0 ? route('bugs.index') : undefined
-            });
-        }
-
-        // Timesheets
-        if (hasPermission(permissions, 'timesheet_view_any')) {
-            const timesheetChildren = [];
-
-            timesheetChildren.push({
-                title: t('My Timesheets'),
-                href: route('timesheets.index')
-            });
-            timesheetChildren.push({
-                title: t('Daily View'),
-                href: route('timesheets.daily-view')
-            });
-            timesheetChildren.push({
-                title: t('Weekly View'),
-                href: route('timesheets.weekly-view')
-            });
-            timesheetChildren.push({
-                title: t('Monthly View'),
-                href: route('timesheets.monthly-view')
-            });
-            timesheetChildren.push({
-                title: t('Calendar View'),
-                href: route('timesheets.calendar-view')
-            });
-
-            if (hasPermission(permissions, 'timesheet_approve')) {
-                timesheetChildren.push({
-                    title: t('Approvals'),
-                    href: route('timesheet-approvals.index')
-                });
-            }
-
-            if (hasPermission(permissions, 'timesheet_generate_reports')) {
-                timesheetChildren.push({
-                    title: t('Reports'),
-                    href: route('timesheet-reports.index')
-                });
-            }
-
-            items.push({
-                title: t('Timesheets'),
-                icon: Clock,
-                children: timesheetChildren.length > 0 ? timesheetChildren : undefined,
-                href: timesheetChildren.length === 0 ? route('timesheets.index') : undefined
-            });
-        }
-
         // Zoom Meetings
         if (hasPermission(permissions, 'zoom_meeting_view_any') && globalSettings?.is_zoom_meeting_test === '1') {
             items.push({
@@ -280,13 +209,10 @@ export function AppSidebar() {
                 href: route('task-reports.index'),
                 icon: CheckSquare,
             });
-        }
-
-        if (hasPermission(permissions, 'report_timesheet')) {
             reportsChildren.push({
-                title: t('Task Reports'),
-                href: route('timesheet-reports.index'),
-                icon: CheckSquare,
+                title: t('Purchases Report'),
+                href: route('purchases-reports.index'),
+                icon: ShoppingBag,
             });
         }
 
@@ -485,26 +411,6 @@ export function AppSidebar() {
                 href: route('notification-templates.index'),
                 icon: Bell,
             });
-        }
-
-        // Analytics & Reports
-        if (hasPermission(permissions, 'view-analytics')) {
-            const analyticsChildren = [];
-
-            if (hasPermission(permissions, 'view-timesheet-reports')) {
-                analyticsChildren.push({
-                    title: t('Timesheet Reports'),
-                    href: route('timesheet-reports.index')
-                });
-            }
-
-            if (analyticsChildren.length > 0) {
-                items.push({
-                    title: t('Analytics & Reports'),
-                    icon: TrendingUp,
-                    children: analyticsChildren
-                });
-            }
         }
 
         // Email Templates
