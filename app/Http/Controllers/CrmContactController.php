@@ -102,11 +102,15 @@ class CrmContactController extends Controller
             return back()->withErrors(['name' => __('Name is required for physical persons.')])->withInput();
         }
 
-        CrmContact::create([
-            ...$validated,
+        $createData = array_merge($validated, [
             'workspace_id' => $workspaceId,
             'created_by' => auth()->id(),
         ]);
+        if ($validated['type'] === 'legal' && empty(trim($createData['name'] ?? ''))) {
+            $createData['name'] = trim($validated['company_name'] ?? '') ?: trim($validated['brand_name'] ?? '') ?: '-';
+        }
+
+        CrmContact::create($createData);
 
         return redirect()->route('crm-contacts.index')->with('success', __('CRM contact created successfully.'));
     }
@@ -138,6 +142,10 @@ class CrmContactController extends Controller
         }
         if ($validated['type'] === 'individual' && empty(trim($validated['name'] ?? ''))) {
             return back()->withErrors(['name' => __('Name is required for physical persons.')])->withInput();
+        }
+
+        if ($validated['type'] === 'legal' && empty(trim($validated['name'] ?? ''))) {
+            $validated['name'] = trim($validated['company_name'] ?? '') ?: trim($validated['brand_name'] ?? '') ?: '-';
         }
 
         $crmContact->update($validated);

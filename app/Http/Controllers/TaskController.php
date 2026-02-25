@@ -12,6 +12,7 @@ use App\Services\AssetTaskAllocationService;
 use App\Services\GoogleCalendarService;
 use App\Traits\HasPermissionChecks;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -74,11 +75,14 @@ class TaskController extends Controller
             $query->byPriority($request->priority);
         }
 
-        if ($request->assigned_to) {
-            $query->where(function ($q) use ($request) {
-                $q->where('assigned_to', $request->assigned_to)
-                    ->orWhereHas('members', function ($mq) use ($request) {
-                        $mq->where('user_id', $request->assigned_to);
+        $assignedToIds = $request->assigned_to
+            ? (array) $request->assigned_to
+            : [];
+        if (!empty($assignedToIds)) {
+            $query->where(function ($q) use ($assignedToIds) {
+                $q->whereIn('assigned_to', $assignedToIds)
+                    ->orWhereHas('members', function ($mq) use ($assignedToIds) {
+                        $mq->whereIn('user_id', $assignedToIds);
                     });
             });
         }
@@ -121,9 +125,18 @@ class TaskController extends Controller
             ->whereRaw('COALESCE(quantity, 1) > 0')
             ->orderBy('name')
             ->get(['id', 'name', 'asset_code', 'quantity']);
-        $members = User::whereHas('workspaces', function ($q) use ($workspace) {
+        $workspaceMemberIds = User::whereHas('workspaces', function ($q) use ($workspace) {
             $q->where('workspace_id', $workspace->id)->where('status', 'active');
-        })->whereNotIn('type', ['company', 'superadmin'])->get();
+        })->whereNotIn('type', ['superadmin'])->pluck('id');
+
+        $projectClientIds = DB::table('project_clients')
+            ->whereIn('project_id', Project::where('workspace_id', $workspace->id)->pluck('id'))
+            ->pluck('user_id')
+            ->unique()
+            ->values();
+
+        $memberIds = $workspaceMemberIds->merge($projectClientIds)->unique()->values();
+        $members = User::whereIn('id', $memberIds)->whereNotIn('type', ['superadmin'])->orderBy('name')->get();
 
         // Get Google Calendar sync settings from company owner
         $companyOwner = $workspace->owner; // Get the company owner
@@ -510,6 +523,123 @@ class TaskController extends Controller
         }
 
         return back()->with('success', __('Task stage updated successfully!'));
+    }
+
+    public function bulkUpdateStage(Request $request)
+    {
+        $this->authorizePermission('task_change_status');
+
+        $user = auth()->user();
+        $workspace = $user->currentWorkspace;
+        if (!$workspace) {
+            abort(403, 'No workspace selected.');
+        }
+
+        $validated = $request->validate([
+            'task_ids' => 'required|array',
+            'task_ids.*' => 'integer|exists:tasks,id',
+            'task_stage_id' => 'required|exists:task_stages,id'
+        ]);
+
+        $tasks = Task::whereIn('id', $validated['task_ids'])
+            ->whereHas('project', fn ($q) => $q->where('workspace_id', $workspace->id))
+            ->get();
+
+        $newStage = TaskStage::find($validated['task_stage_id'])->name ?? 'Unknown';
+        foreach ($tasks as $task) {
+            $oldStage = $task->taskStage->name ?? 'Unknown';
+            $task->update(['task_stage_id' => $validated['task_stage_id']]);
+            $task->logStatusChange($oldStage, $newStage);
+            if (!config('app.is_demo', true)) {
+                event(new \App\Events\TaskStageUpdated($task, $oldStage, $newStage));
+            }
+        }
+
+        return back()->with('success', __(':count task(s) stage updated successfully!', ['count' => $tasks->count()]));
+    }
+
+    public function bulkUpdateAssignee(Request $request)
+    {
+        $this->authorizePermission('task_assign_users');
+
+        $user = auth()->user();
+        $workspace = $user->currentWorkspace;
+        if (!$workspace) {
+            abort(403, 'No workspace selected.');
+        }
+
+        $validated = $request->validate([
+            'task_ids' => 'required|array',
+            'task_ids.*' => 'integer|exists:tasks,id',
+            'assigned_user_ids' => 'nullable|array',
+            'assigned_user_ids.*' => 'exists:users,id'
+        ]);
+
+        $tasks = Task::whereIn('id', $validated['task_ids'])
+            ->whereHas('project', fn ($q) => $q->where('workspace_id', $workspace->id))
+            ->with('project')
+            ->get();
+
+        $assignedIds = $validated['assigned_user_ids'] ?? [];
+        $assignedTo = !empty($assignedIds) ? (int) $assignedIds[0] : null;
+
+        foreach ($tasks as $task) {
+            $task->update(['assigned_to' => $assignedTo]);
+            if (!empty($assignedIds)) {
+                $syncData = collect($assignedIds)->mapWithKeys(fn ($id) => [(int) $id => ['assigned_by' => auth()->id()]])->toArray();
+                $task->members()->sync($syncData);
+                foreach ($assignedIds as $userId) {
+                    $assignedUser = User::find($userId);
+                    if ($assignedUser) {
+                        $task->logAssignment($assignedUser);
+                        if (!config('app.is_demo', true)) {
+                            event(new \App\Events\TaskAssigned($task, $assignedUser, auth()->user()));
+                        }
+                    }
+                }
+            } else {
+                $task->members()->detach();
+            }
+        }
+
+        return back()->with('success', __(':count task(s) assignee updated successfully!', ['count' => $tasks->count()]));
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        $this->authorizePermission('task_delete');
+
+        $user = auth()->user();
+        $workspace = $user->currentWorkspace;
+        if (!$workspace) {
+            abort(403, 'No workspace selected.');
+        }
+
+        $validated = $request->validate([
+            'task_ids' => 'required|array',
+            'task_ids.*' => 'integer|exists:tasks,id'
+        ]);
+
+        $tasks = Task::whereIn('id', $validated['task_ids'])
+            ->whereHas('project', fn ($q) => $q->where('workspace_id', $workspace->id))
+            ->get();
+
+        foreach ($tasks as $task) {
+            if ($task->google_calendar_event_id) {
+                try {
+                    $this->googleCalendarService->deleteEvent($task->google_calendar_event_id, auth()->id(), $user->current_workspace_id);
+                } catch (\Exception $e) {
+                    \Log::error('Failed to delete Google Calendar event', [
+                        'task_id' => $task->id,
+                        'event_id' => $task->google_calendar_event_id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+            $task->delete();
+        }
+
+        return back()->with('success', __(':count task(s) deleted successfully!', ['count' => $tasks->count()]));
     }
 
     /**

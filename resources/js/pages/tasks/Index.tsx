@@ -14,7 +14,9 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Copy, Trash2, LayoutGrid, List, User as UserIcon, CheckSquare, Columns, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Copy, Trash2, LayoutGrid, List, User as UserIcon, CheckSquare, Columns, AlertTriangle, X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { SimpleMultiSelect } from '@/components/simple-multi-select';
 import { PageTemplate } from '@/components/page-template';
 import { CrudDeleteModal } from '@/components/CrudDeleteModal';
 import { Task, Project, TaskStage, User, PaginatedData } from '@/types';
@@ -37,7 +39,7 @@ interface Props {
         project_id?: string;
         stage_id?: string;
         priority?: string;
-        assigned_to?: string;
+        assigned_to?: string | string[];
         search?: string;
         view?: string;
     };
@@ -55,7 +57,11 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
     const [selectedProject, setSelectedProject] = useState(filters.project_id || 'all');
     const [selectedStage, setSelectedStage] = useState(filters.stage_id || 'all');
     const [selectedPriority, setSelectedPriority] = useState(filters.priority || 'all');
-    const [selectedAssignee, setSelectedAssignee] = useState(filters.assigned_to || 'all');
+    const [selectedAssignees, setSelectedAssignees] = useState<string[]>(() => {
+        const v = filters.assigned_to;
+        if (!v) return [];
+        return Array.isArray(v) ? v : [v];
+    });
     const [showFilters, setShowFilters] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,6 +70,9 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
     const [viewMode, setViewMode] = useState<'card' | 'table' | 'kanban'>(filters.view || 'kanban');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+    const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
+    const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+    const [bulkAssignees, setBulkAssignees] = useState<string[]>([]);
 
     // Show flash messages
     useEffect(() => {
@@ -87,26 +96,27 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
         if (selectedProject !== 'all') params.project_id = selectedProject;
         if (selectedStage !== 'all') params.stage_id = selectedStage;
         if (selectedPriority !== 'all') params.priority = selectedPriority;
-        if (selectedAssignee !== 'all') params.assigned_to = selectedAssignee;
+        if (selectedAssignees.length > 0) params.assigned_to = selectedAssignees;
         params.view = viewMode;
         if (project_name) params.project_name = project_name;
         
         router.get(route('tasks.index'), params, { preserveState: true, preserveScroll: true });
     };
 
-    const handleFilter = (key: string, value: string) => {
+    const handleFilter = (key: string, value: string | string[]) => {
         const params: any = { page: 1 };
         if (searchTerm) params.search = searchTerm;
-        if (key === 'project_id') setSelectedProject(value);
-        if (key === 'stage_id') setSelectedStage(value);
-        if (key === 'priority') setSelectedPriority(value);
-        if (key === 'assigned_to') setSelectedAssignee(value);
+        if (key === 'project_id') setSelectedProject(value as string);
+        if (key === 'stage_id') setSelectedStage(value as string);
+        if (key === 'priority') setSelectedPriority(value as string);
+        if (key === 'assigned_to') setSelectedAssignees(Array.isArray(value) ? value : [value]);
         
         if (selectedProject !== 'all' && key !== 'project_id') params.project_id = selectedProject;
         if (selectedStage !== 'all' && key !== 'stage_id') params.stage_id = selectedStage;
         if (selectedPriority !== 'all' && key !== 'priority') params.priority = selectedPriority;
-        if (selectedAssignee !== 'all' && key !== 'assigned_to') params.assigned_to = selectedAssignee;
-        if (value !== 'all') params[key] = value;
+        if (selectedAssignees.length > 0 && key !== 'assigned_to') params.assigned_to = selectedAssignees;
+        if (key === 'assigned_to') params.assigned_to = Array.isArray(value) ? value : [value];
+        else if (value !== 'all') params[key] = value;
         params.view = viewMode;
         if (project_name) params.project_name = project_name;
         
@@ -172,18 +182,18 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
     };
 
     const hasActiveFilters = () => {
-        return selectedProject !== 'all' || selectedStage !== 'all' || selectedPriority !== 'all' || selectedAssignee !== 'all' || searchTerm !== '';
+        return selectedProject !== 'all' || selectedStage !== 'all' || selectedPriority !== 'all' || selectedAssignees.length > 0 || searchTerm !== '';
     };
 
     const activeFilterCount = () => {
-        return (selectedProject !== 'all' ? 1 : 0) + (selectedStage !== 'all' ? 1 : 0) + (selectedPriority !== 'all' ? 1 : 0) + (selectedAssignee !== 'all' ? 1 : 0) + (searchTerm ? 1 : 0);
+        return (selectedProject !== 'all' ? 1 : 0) + (selectedStage !== 'all' ? 1 : 0) + (selectedPriority !== 'all' ? 1 : 0) + (selectedAssignees.length > 0 ? 1 : 0) + (searchTerm ? 1 : 0);
     };
 
     const handleResetFilters = () => {
         setSelectedProject('all');
         setSelectedStage('all');
         setSelectedPriority('all');
-        setSelectedAssignee('all');
+        setSelectedAssignees([]);
         setSearchTerm('');
         setShowFilters(false);
         router.get(route('tasks.index'), { page: 1, view: 'kanban' }, { preserveState: true, preserveScroll: true });
@@ -206,6 +216,48 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                 }
             });
         }
+    };
+
+    const taskList = (Array.isArray(tasks) ? tasks : tasks?.data || []).filter((t: Task | null) => t != null) as Task[];
+    const toggleTaskSelection = (id: number) => {
+        setSelectedTaskIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+    const toggleAllTasks = () => {
+        if (selectedTaskIds.length === taskList.length) {
+            setSelectedTaskIds([]);
+        } else {
+            setSelectedTaskIds(taskList.map((t: Task) => t.id));
+        }
+    };
+    const isAllSelected = taskList.length > 0 && selectedTaskIds.length === taskList.length;
+    const isSomeSelected = selectedTaskIds.length > 0;
+
+    const handleBulkStageChange = (stageId: string) => {
+        if (!stageId || selectedTaskIds.length === 0) return;
+        toast.loading(t('Updating...'));
+        router.post(route('tasks.bulk-update-stage'), { task_ids: selectedTaskIds, task_stage_id: stageId }, {
+            onSuccess: () => { toast.dismiss(); setSelectedTaskIds([]); },
+            onError: () => { toast.dismiss(); toast.error(t('Failed to update')); }
+        });
+    };
+    const handleBulkAssigneeChange = (userIds: string[]) => {
+        if (selectedTaskIds.length === 0) return;
+        toast.loading(t('Updating...'));
+        router.post(route('tasks.bulk-update-assignee'), {
+            task_ids: selectedTaskIds,
+            assigned_user_ids: userIds
+        }, {
+            onSuccess: () => { toast.dismiss(); setSelectedTaskIds([]); },
+            onError: () => { toast.dismiss(); toast.error(t('Failed to update')); }
+        });
+    };
+    const handleBulkDeleteConfirm = () => {
+        if (selectedTaskIds.length === 0) return;
+        toast.loading(t('Deleting...'));
+        router.post(route('tasks.bulk-delete'), { task_ids: selectedTaskIds }, {
+            onSuccess: () => { toast.dismiss(); setSelectedTaskIds([]); setIsBulkDeleteModalOpen(false); },
+            onError: () => { toast.dismiss(); toast.error(t('Failed to delete')); setIsBulkDeleteModalOpen(false); }
+        });
     };
 
     const isTaskOverdue = (endDate: string | null) => {
@@ -314,7 +366,7 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                                 if (selectedProject !== 'all') params.project_id = selectedProject;
                                                 if (selectedStage !== 'all') params.stage_id = selectedStage;
                                                 if (selectedPriority !== 'all') params.priority = selectedPriority;
-                                                if (selectedAssignee !== 'all') params.assigned_to = selectedAssignee;
+                                                if (selectedAssignees.length > 0) params.assigned_to = selectedAssignees;
                                                 params.view = viewMode;
                                                 if (project_name) params.project_name = project_name;
                                                 router.get(route('tasks.index'), params, { preserveState: true, preserveScroll: true });
@@ -357,7 +409,7 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                         if (selectedProject !== 'all') params.project_id = selectedProject;
                                         if (selectedStage !== 'all') params.stage_id = selectedStage;
                                         if (selectedPriority !== 'all') params.priority = selectedPriority;
-                                        if (selectedAssignee !== 'all') params.assigned_to = selectedAssignee;
+                                        if (selectedAssignees.length > 0) params.assigned_to = selectedAssignees;
                                         if (project_name) params.project_name = project_name;
                                         router.get(route('tasks.index'), params, { preserveState: true, preserveScroll: true });
                                     }}
@@ -375,7 +427,7 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                         if (selectedProject !== 'all') params.project_id = selectedProject;
                                         if (selectedStage !== 'all') params.stage_id = selectedStage;
                                         if (selectedPriority !== 'all') params.priority = selectedPriority;
-                                        if (selectedAssignee !== 'all') params.assigned_to = selectedAssignee;
+                                        if (selectedAssignees.length > 0) params.assigned_to = selectedAssignees;
                                         if (project_name) params.project_name = project_name;
                                         router.get(route('tasks.index'), params, { preserveState: true, preserveScroll: true });
                                     }}
@@ -393,7 +445,7 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                         if (selectedProject !== 'all') params.project_id = selectedProject;
                                         if (selectedStage !== 'all') params.stage_id = selectedStage;
                                         if (selectedPriority !== 'all') params.priority = selectedPriority;
-                                        if (selectedAssignee !== 'all') params.assigned_to = selectedAssignee;
+                                        if (selectedAssignees.length > 0) params.assigned_to = selectedAssignees;
                                         if (project_name) params.project_name = project_name;
                                         router.get(route('tasks.index'), params, { preserveState: true, preserveScroll: true });
                                     }}
@@ -413,7 +465,7 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                             if (selectedProject !== 'all') params.project_id = selectedProject;
                                             if (selectedStage !== 'all') params.stage_id = selectedStage;
                                             if (selectedPriority !== 'all') params.priority = selectedPriority;
-                                            if (selectedAssignee !== 'all') params.assigned_to = selectedAssignee;
+                                            if (selectedAssignees.length > 0) params.assigned_to = selectedAssignees;
                                             params.view = viewMode;
                                             if (project_name) params.project_name = project_name;
                                             router.get(route('tasks.index'), params, { preserveState: true, preserveScroll: true });
@@ -488,19 +540,16 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                 
                                 <div className="space-y-2">
                                     <Label>{t('Assignee')}</Label>
-                                    <Select value={selectedAssignee} onValueChange={(value) => handleFilter('assigned_to', value)}>
-                                        <SelectTrigger className="w-40">
-                                            <SelectValue placeholder="All Assignees" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">{t('All Assignees')}</SelectItem>
-                                            {members.map((member) => (
-                                                <SelectItem key={member.id} value={member.id.toString()}>
-                                                    {member.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <SimpleMultiSelect
+                                        options={members.filter((m) => m.id != null && m.id !== '').map((m) => {
+                                            const typeLabel = (m as any).type === 'company' ? t('Company') : (m as any).type === 'client' ? t('Client') : t('Member');
+                                            return { value: String(m.id), label: `${m.name} (${typeLabel})` };
+                                        })}
+                                        selected={selectedAssignees}
+                                        onChange={(vals) => handleFilter('assigned_to', vals)}
+                                        placeholder={t('All Assignees')}
+                                        className="w-48 min-w-[192px]"
+                                    />
                                 </div>
                                 
                                 <Button 
@@ -517,6 +566,69 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                     )}
                 </div>
             </div>
+
+            {/* Bulk Action Bar */}
+            {isSomeSelected && userWorkspaceRole !== 'client' && (
+                <div className="mb-4 bg-primary/10 border border-primary/20 rounded-lg p-3 flex flex-wrap items-center gap-3">
+                    <span className="text-sm font-medium">
+                        {selectedTaskIds.length} {t('selected')}
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {taskPermissions?.change_status && (
+                            <Select onValueChange={handleBulkStageChange}>
+                                <SelectTrigger className="w-[180px] h-9">
+                                    <SelectValue placeholder={t('Change Status')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {stages.filter((s) => s.id != null && s.id !== '').map((stage) => (
+                                        <SelectItem key={stage.id} value={String(stage.id)}>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
+                                                {stage.name}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
+                        {taskPermissions?.assign_users && (
+                            <div className="flex items-center gap-2">
+                                <SimpleMultiSelect
+                                    options={[
+                                        { value: '__unassign__', label: t('Unassign') },
+                                        ...members.filter((m) => m.id != null && m.id !== '').map((m) => ({
+                                            value: String(m.id),
+                                            label: `${m.name} (${(m as any).type === 'company' ? t('Company') : (m as any).type === 'client' ? t('Client') : t('Member')})`
+                                        }))
+                                    ]}
+                                    selected={bulkAssignees}
+                                    onChange={setBulkAssignees}
+                                    placeholder={t('Change Assignee')}
+                                    className="w-[200px] min-w-[200px]"
+                                />
+                                <Button size="sm" onClick={() => {
+                                    const hasUnassign = bulkAssignees.includes('__unassign__');
+                                    const ids = hasUnassign ? [] : bulkAssignees.filter((v) => v !== '__unassign__');
+                                    handleBulkAssigneeChange(ids);
+                                    setBulkAssignees([]);
+                                }}>
+                                    {t('Assign')}
+                                </Button>
+                            </div>
+                        )}
+                        {taskPermissions?.delete && (
+                            <Button variant="destructive" size="sm" onClick={() => setIsBulkDeleteModalOpen(true)}>
+                                <Trash2 className="h-4 w-4 mr-1.5" />
+                                {t('Delete')}
+                            </Button>
+                        )}
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedTaskIds([])}>
+                        <X className="h-4 w-4 mr-1.5" />
+                        {t('Clear selection')}
+                    </Button>
+                </div>
+            )}
 
             {/* Tasks Content */}
             <div className="bg-white rounded-lg shadow">
@@ -554,7 +666,6 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                         `}</style>
                         <div className="flex gap-4 overflow-x-auto pb-4 kanban-scroll" style={{ height: 'calc(100vh - 280px)', width: '100%' }}>
                             {stages.map((stage) => {
-                                const taskList = (Array.isArray(tasks) ? tasks : tasks?.data || []).filter((t: Task | null) => t != null);
                                 const stageTasks = taskList.filter((task: Task) => task.task_stage?.id === stage.id);
                                 return (
                                     <div 
@@ -614,7 +725,14 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                                         <Card className="hover:shadow-md transition-all duration-200 border-l-4 hover:scale-105" style={{ borderLeftColor: stage.color }}>
                                                             <CardContent className="p-3">
                                                                 <div className="space-y-2">
-                                                                    <div className="flex items-start justify-between">
+                                                                    <div className="flex items-start justify-between gap-2">
+                                                                        {userWorkspaceRole !== 'client' && (
+                                                                            <Checkbox
+                                                                                checked={selectedTaskIds.includes(task.id)}
+                                                                                onCheckedChange={() => toggleTaskSelection(task.id)}
+                                                                                onClick={(e) => e.stopPropagation()}
+                                                                            />
+                                                                        )}
                                                                         <h4 
                                                                             className="font-medium text-sm line-clamp-2 hover:text-blue-600 transition-colors cursor-pointer flex-1"
                                                                             onClick={() => handleAction('view', task.id)}
@@ -737,10 +855,17 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                 ) : viewMode === 'card' ? (
                     <div className="p-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {tasks?.data?.filter((t: Task | null) => t != null)?.map((task: Task) => (
+                            {taskList?.map((task: Task) => (
                                 <Card key={`card-${task.id}`} className="overflow-hidden hover:shadow-md transition-shadow">
                                     <CardHeader className="pb-2">
-                                        <div className="flex justify-between items-start">
+                                        <div className="flex justify-between items-start gap-2">
+                                            {userWorkspaceRole !== 'client' && (
+                                                <Checkbox
+                                                    checked={selectedTaskIds.includes(task.id)}
+                                                    onCheckedChange={() => toggleTaskSelection(task.id)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                />
+                                            )}
                                             <CardTitle 
                                                 className="text-base line-clamp-1 cursor-pointer hover:text-blue-600 transition-colors"
                                                 onClick={() => handleAction('view', task.id)}
@@ -896,6 +1021,14 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
+                                    {userWorkspaceRole !== 'client' && (
+                                        <th className="px-3 py-3 w-10 sm:px-6">
+                                            <Checkbox
+                                                checked={isAllSelected}
+                                                onCheckedChange={toggleAllTasks}
+                                            />
+                                        </th>
+                                    )}
                                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">{t('Task')}</th>
                                     {!project_name && (
                                         <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Project</th>
@@ -909,8 +1042,16 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {tasks?.data?.filter((t: Task | null) => t != null)?.map((task: Task) => (
+                                {taskList?.map((task: Task) => (
                                     <tr key={`table-${task.id}`} className="hover:bg-gray-50">
+                                        {userWorkspaceRole !== 'client' && (
+                                            <td className="px-3 py-4 whitespace-nowrap sm:px-6">
+                                                <Checkbox
+                                                    checked={selectedTaskIds.includes(task.id)}
+                                                    onCheckedChange={() => toggleTaskSelection(task.id)}
+                                                />
+                                            </td>
+                                        )}
                                         <td className="px-3 py-4 whitespace-nowrap sm:px-6">
                                             <div>
                                                 <div 
@@ -1057,7 +1198,7 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
             </div>
 
             {/* Empty State */}
-            {tasks?.data?.length === 0 && (
+            {taskList?.length === 0 && (
                 <div className="bg-white rounded-lg shadow p-8 text-center">
                     <CheckSquare className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                     <h3 className="text-lg font-semibold mb-2">{t('No Tasks Found')}</h3>
@@ -1149,6 +1290,15 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                 onConfirm={handleDeleteConfirm}
                 itemName={taskToDelete?.title || ''}
                 entityName={t('task')}
+            />
+
+            {/* Bulk Delete Modal */}
+            <CrudDeleteModal
+                isOpen={isBulkDeleteModalOpen}
+                onClose={() => setIsBulkDeleteModalOpen(false)}
+                onConfirm={handleBulkDeleteConfirm}
+                itemName={`${selectedTaskIds.length} ${t('tasks')}`}
+                entityName={t('tasks')}
             />
         </PageTemplate>
     );
