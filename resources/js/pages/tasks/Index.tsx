@@ -12,7 +12,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Copy, Trash2, LayoutGrid, List, User as UserIcon, CheckSquare, Columns, AlertTriangle, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -31,6 +30,7 @@ declare global {
 
 interface Props {
     tasks: PaginatedData<Task>;
+    taskStats?: { total: number; in_progress: number; completed: number };
     projects: Project[];
     stages: TaskStage[];
     members: User[];
@@ -49,7 +49,7 @@ interface Props {
     googleCalendarEnabled?: boolean;
 }
 
-export default function TasksIndex({ tasks, projects, stages, members, assets = [], filters, project_name, userWorkspaceRole, permissions, googleCalendarEnabled }: Props) {
+export default function TasksIndex({ tasks, taskStats, projects, stages, members, assets = [], filters, project_name, userWorkspaceRole, permissions, googleCalendarEnabled }: Props) {
     const { t } = useTranslation();
     const { flash, permissions: pagePermissions } = usePage().props as any;
     const taskPermissions = permissions || pagePermissions;
@@ -311,38 +311,32 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
             {/* Overview Row */}
             <Card className="mb-4 hover:shadow-md transition-shadow">
                 <CardContent className="p-3 sm:p-4">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-                        <div className="text-center">
-                            <div className="text-xl font-bold text-blue-600">
-                                {Array.isArray(tasks) ? tasks.length : (tasks?.total || 0)}
+                    {(() => {
+                        const total = taskStats?.total ?? (Array.isArray(tasks) ? tasks.length : (tasks?.total ?? 0));
+                        const inProgress = taskStats?.in_progress ?? 0;
+                        const completed = taskStats?.completed ?? 0;
+                        const daily = total > 0 ? (total / 22).toFixed(1) : '0';
+                        return (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                                <div className="text-center">
+                                    <div className="text-xl font-bold text-blue-600">{total}</div>
+                                    <div className="text-xs text-gray-600">{t('Total Tasks')}</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-xl font-bold text-amber-600">{inProgress}</div>
+                                    <div className="text-xs text-gray-600">{t('Tasks In Progress')}</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-xl font-bold text-green-600">{completed}</div>
+                                    <div className="text-xs text-gray-600">{t('Completed Tasks')}</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-xl font-bold text-slate-600">{daily}</div>
+                                    <div className="text-xs text-gray-600">{t('Daily Tasks')}</div>
+                                </div>
                             </div>
-                            <div className="text-xs text-gray-600">{t('Total Tasks')}</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-xl font-bold text-yellow-600">
-                                {(Array.isArray(tasks) ? tasks : tasks?.data || []).filter((task: Task) => !task.assigned_to && !(task.members?.length)).length}
-                            </div>
-                            <div className="text-xs text-gray-600">{t('Unassigned')}</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-xl font-bold text-green-600">
-                                {(Array.isArray(tasks) ? tasks : tasks?.data || []).filter((task: Task) => task.assigned_to || (task.members?.length ?? 0) > 0).length}
-                            </div>
-                            <div className="text-xs text-gray-600">{t('Assigned')}</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-xl font-bold text-red-600">
-                                {(Array.isArray(tasks) ? tasks : tasks?.data || []).filter(task => task.end_date && isTaskOverdue(task.end_date)).length}
-                            </div>
-                            <div className="text-xs text-gray-600">{t('Overdue')}</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-xl font-bold text-orange-600">
-                                {(Array.isArray(tasks) ? tasks : tasks?.data || []).filter(task => task.priority === 'high' || task.priority === 'critical').length}
-                            </div>
-                            <div className="text-xs text-gray-600">{t('High Priority')}</div>
-                        </div>
-                    </div>
+                        );
+                    })()}
                 </CardContent>
             </Card>
 
@@ -812,14 +806,6 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                                                         })()}
                                                                     </div>
                                                                     
-                                                                    <div className="space-y-1">
-                                                                        <div className="flex justify-between text-xs">
-                                                                            <span>{t('Progress')}</span>
-                                                                            <span>{task.progress}%</span>
-                                                                        </div>
-                                                                        <Progress value={task.progress} className="h-1" />
-                                                                    </div>
-                                                                    
                                                                     <div className="flex justify-between items-center text-xs text-gray-500">
                                                                         {!project_name && (
                                                                             <span className="bg-gray-100 px-2 py-1 rounded text-xs">{task.project?.title}</span>
@@ -885,14 +871,6 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                     
                                     <CardContent className="py-2">
                                         <div className="space-y-3">
-                                            <div className="space-y-1">
-                                                <div className="flex justify-between text-xs">
-                                                    <span>{t('Progress')}</span>
-                                                    <span>{task.progress}%</span>
-                                                </div>
-                                                <Progress value={task.progress} className="h-1" />
-                                            </div>
-                                            
                                             <div className="flex justify-between items-center text-xs">
                                                 <TaskPriority priority={task.priority} showIcon />
                                                 <div className="flex items-center gap-2">
@@ -1036,7 +1014,6 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Stage</th>
                                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Priority</th>
                                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Assignee</th>
-                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Progress</th>
                                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Due Date</th>
                                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Actions</th>
                                 </tr>
@@ -1102,21 +1079,17 @@ export default function TasksIndex({ tasks, projects, stages, members, assets = 
                                                                 </Tooltip>
                                                             ))}
                                                             {extra > 0 && (
-                                                                <span className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-xs border-2 border-white">+{extra}</span>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <span className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-xs border-2 border-white">+{extra}</span>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>{assignees.slice(3).map((u: any) => u.name).join(', ')}</TooltipContent>
+                                                                </Tooltip>
                                                             )}
                                                         </div>
-                                                        <span className="text-sm">{display.map((u: any) => u.name).join(', ')}{extra > 0 ? ` +${extra}` : ''}</span>
                                                     </div>
                                                 );
                                             })()}
-                                        </td>
-                                        <td className="px-3 py-4 whitespace-nowrap sm:px-6">
-                                            <div className="flex items-center">
-                                                <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                                                    <div className="bg-blue-600 h-2 rounded-full" style={{width: `${task.progress}%`}}></div>
-                                                </div>
-                                                <span className="text-sm text-gray-900">{task.progress}%</span>
-                                            </div>
                                         </td>
                                         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 sm:px-6">
                                             <div className="flex items-center gap-2">

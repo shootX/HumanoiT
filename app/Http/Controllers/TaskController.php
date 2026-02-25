@@ -94,6 +94,26 @@ class TaskController extends Controller
         // Default to kanban view and get all data without pagination
         $view = $request->get('view', 'kanban');
 
+        $doneStageIds = TaskStage::forWorkspace($user->current_workspace_id)
+            ->where(function ($q) {
+                $q->where('name', 'like', '%done%')
+                    ->orWhere('name', 'like', '%in review%')
+                    ->orWhere('name', 'like', '%completed%')
+                    ->orWhere('name', 'like', '%finished%');
+            })
+            ->pluck('id');
+
+        $baseCount = (clone $query)->count();
+        $taskStats = [
+            'total' => $baseCount,
+            'in_progress' => $doneStageIds->isNotEmpty()
+                ? (clone $query)->whereNotIn('task_stage_id', $doneStageIds)->count()
+                : $baseCount,
+            'completed' => $doneStageIds->isNotEmpty()
+                ? (clone $query)->whereIn('task_stage_id', $doneStageIds)->count()
+                : 0,
+        ];
+
         if ($view === 'kanban') {
             $tasks = $query->get();
         } else {
@@ -145,6 +165,7 @@ class TaskController extends Controller
 
         return Inertia::render('tasks/Index', [
             'tasks' => $tasks,
+            'taskStats' => $taskStats,
             'projects' => $projects,
             'stages' => $stages,
             'assets' => $assets,
