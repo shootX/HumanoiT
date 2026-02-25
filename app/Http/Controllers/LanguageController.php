@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\File;
 
 class LanguageController extends Controller
 {
-    const ALLOWED_LANGUAGES = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'zh', 'ar', 'hi', 'ko', 'th', 'vi', 'tr', 'pl', 'nl', 'da', 'sv', 'no', 'fi', 'cs', 'sk', 'hu', 'ro', 'bg', 'hr', 'sl', 'et', 'lv', 'lt', 'mt', 'ga', 'cy', 'eu', 'ca', 'gl', 'pt-BR', 'zh-CN', 'zh-TW', 'he'];
+    const ALLOWED_LANGUAGES = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'zh', 'ar', 'hi', 'ko', 'th', 'vi', 'tr', 'pl', 'nl', 'da', 'sv', 'no', 'fi', 'cs', 'sk', 'hu', 'ro', 'bg', 'hr', 'sl', 'et', 'lv', 'lt', 'mt', 'ga', 'cy', 'eu', 'ca', 'gl', 'pt-BR', 'zh-CN', 'zh-TW', 'he'];
     // Show the manage language Inertia page
     public function managePage(Request $request, $lang = null)
     {
@@ -250,7 +250,7 @@ class LanguageController extends Controller
             }
         }
 
-        return redirect()->back();
+        return redirect()->back()->cookie('app_language', $languageCode, 60 * 24 * 365);
     }
 
     /**

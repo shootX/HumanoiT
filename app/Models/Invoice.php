@@ -493,8 +493,9 @@ class Invoice extends Model
     }
 
     /**
-     * When invoice is paid and approved, create Assets from items with type='asset' (without asset_id).
-     * Items with asset_id already link to existing assets.
+     * When invoice is paid and approved:
+     * - Create new Assets from items with type='asset' (without asset_id).
+     * - Increment quantity of existing assets for items with asset_id.
      */
     public function createAssetsFromPaidInvoice(): array
     {
@@ -504,11 +505,25 @@ class Invoice extends Model
         if (!$this->workspace_id) {
             return [];
         }
-        $assetItems = $this->items()->where('type', 'asset')->whereNull('asset_id')->get();
-        if ($assetItems->isEmpty()) {
+        if (\Schema::hasColumn('invoices', 'assets_processed_at') && $this->assets_processed_at) {
             return [];
         }
         $created = [];
+
+        foreach ($this->items()->where('type', 'asset')->whereNotNull('asset_id')->get() as $item) {
+            $asset = Asset::find($item->asset_id);
+            if ($asset && $asset->workspace_id == $this->workspace_id) {
+                $asset->increment('quantity', (int) round($item->quantity ?? 1));
+            }
+        }
+
+        $assetItems = $this->items()->where('type', 'asset')->whereNull('asset_id')->get();
+        if ($assetItems->isEmpty()) {
+            if (\Schema::hasColumn('invoices', 'assets_processed_at')) {
+                $this->update(['assets_processed_at' => now()]);
+            }
+            return $created;
+        }
         foreach ($assetItems as $item) {
             $name = $item->asset_name ?: $item->description;
             if (empty(trim($name))) {
@@ -534,6 +549,9 @@ class Invoice extends Model
             ]);
             $item->update(['asset_id' => $asset->id]);
             $created[] = $asset;
+        }
+        if (\Schema::hasColumn('invoices', 'assets_processed_at')) {
+            $this->update(['assets_processed_at' => now()]);
         }
         return $created;
     }
