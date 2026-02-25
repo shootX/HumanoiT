@@ -27,6 +27,10 @@ class AssetTaskAllocationService
                 $availableQty = (int) ($asset->quantity ?? 1);
 
                 if ($asset->status === 'used') {
+                    $alreadyLinked = $task->assets()->where('asset_id', $asset->id)->exists();
+                    if (!$alreadyLinked) {
+                        abort(422, __('Used assets cannot be allocated to tasks.'));
+                    }
                     if ($qty > $availableQty) {
                         abort(422, __('Cannot allocate more than available quantity for used asset.'));
                     }

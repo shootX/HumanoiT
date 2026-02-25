@@ -122,9 +122,10 @@ class TaskController extends Controller
         $projects = $projectsQuery->get();
         $stages = TaskStage::forWorkspace($user->current_workspace_id)->ordered()->get();
         $assets = Asset::forWorkspace($workspace->id)
+            ->where('status', 'active')
             ->whereRaw('COALESCE(quantity, 1) > 0')
             ->orderBy('name')
-            ->get(['id', 'name', 'asset_code', 'quantity']);
+            ->get(['id', 'name', 'asset_code', 'quantity', 'status']);
         $workspaceMemberIds = User::whereHas('workspaces', function ($q) use ($workspace) {
             $q->where('workspace_id', $workspace->id)->where('status', 'active');
         })->whereNotIn('type', ['superadmin'])->pluck('id');

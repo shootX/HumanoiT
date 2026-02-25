@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2 } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 import { formatCurrency } from '@/utils/currency';
+import { cn } from '@/lib/utils';
 
 interface InvoiceItem {
     type: 'service' | 'asset';
@@ -96,6 +97,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
     const [projectClients, setProjectClients] = useState([]);
     const [availableClients, setAvailableClients] = useState([]);
     const [titleManuallyEdited, setTitleManuallyEdited] = useState(isEdit);
+    const [assetDropdownIndex, setAssetDropdownIndex] = useState<number | null>(null);
 
     const breadcrumbs = [
         { title: t('Dashboard'), href: route('dashboard') },
@@ -232,7 +234,17 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
         }
         if (field === 'asset_id' && value) {
             const a = assets.find((x: any) => x.id === parseInt(value, 10));
-            if (a) item.description = a.name;
+            if (a) {
+                item.description = a.name;
+                item.asset_category_id = a.asset_category_id ?? null;
+            }
+        }
+        if (field === 'description' && item.type === 'asset' && item.asset_id) {
+            const a = assets.find((x: any) => x.id === item.asset_id);
+            if (a && value !== a.name) {
+                item.asset_id = null;
+                item.asset_category_id = null;
+            }
         }
         if (field === 'quantity' || field === 'rate') {
             const qty = field === 'quantity' ? parseItemNum(value) : parseItemNum(item.quantity);
@@ -261,6 +273,28 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
         if (items.length > 1) {
             setItems(items.filter((_, i) => i !== index));
         }
+    };
+
+    const handleAssetSelect = (index: number, asset: { id: number; name: string; asset_category_id?: number | null }) => {
+        const updatedItems = [...items];
+        updatedItems[index] = {
+            ...updatedItems[index],
+            description: asset.name,
+            asset_id: asset.id,
+            asset_category_id: asset.asset_category_id ?? null,
+            asset_name: asset.name,
+        };
+        setItems(updatedItems);
+        setAssetDropdownIndex(null);
+    };
+
+    const getFilteredAssets = (query: string) => {
+        if (!query || query.length < 3) return [];
+        const q = query.toLowerCase().trim();
+        return (assets || []).filter((a: any) =>
+            (a.name || '').toLowerCase().includes(q) ||
+            (a.asset_code || '').toLowerCase().includes(q)
+        ).slice(0, 10);
     };
 
     const getItemBase = (item: InvoiceItem) => {
@@ -304,7 +338,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             items: validItems.map(item => ({
                 type: item.type,
                 task_id: formData.task_ids?.[0] ? parseInt(formData.task_ids[0]) : (formData.task_id && formData.task_id !== 'none' ? parseInt(formData.task_id) : null),
-                asset_id: null,
+                asset_id: item.type === 'asset' ? (item.asset_id ?? null) : null,
                 asset_category_id: item.type === 'asset' ? (item.asset_category_id ?? null) : null,
                 asset_name: item.type === 'asset' ? item.description : null,
                 tax_id: item.tax_id ?? null,
@@ -522,13 +556,38 @@ setErrors(errors);
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <div className="md:col-span-3">
+                                        <div className="md:col-span-3 relative">
                                             <Label>{t('Name')}</Label>
                                             <Input
                                                 value={item.description}
                                                 onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                                                onFocus={() => item.type === 'asset' && setAssetDropdownIndex(index)}
+                                                onBlur={() => setTimeout(() => setAssetDropdownIndex(null), 150)}
                                                 placeholder={t('Item name')}
                                             />
+                                            {item.type === 'asset' && assetDropdownIndex === index && (() => {
+                                                const matches = getFilteredAssets(item.description || '');
+                                                return matches.length > 0 && (
+                                                    <div className="absolute z-[9999] mt-1 w-full rounded-md border bg-popover shadow-lg">
+                                                        {matches.map((a: any) => (
+                                                            <button
+                                                                key={a.id}
+                                                                type="button"
+                                                                className={cn(
+                                                                    'w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground',
+                                                                    'first:rounded-t-md last:rounded-b-md'
+                                                                )}
+                                                                onMouseDown={(e) => { e.preventDefault(); handleAssetSelect(index, a); }}
+                                                            >
+                                                                {a.name}
+                                                                {(a.asset_category?.name || a.assetCategory?.name) && (
+                                                                    <span className="ml-2 text-muted-foreground text-xs">({a.asset_category?.name || a.assetCategory?.name})</span>
+                                                                )}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                         <div className="md:col-span-1">
                                             <Label>{t('Quantity')}</Label>

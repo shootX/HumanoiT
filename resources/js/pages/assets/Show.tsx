@@ -14,15 +14,23 @@ interface TaskAllocation {
     pivot: { quantity: number };
 }
 
+interface SourceInvoice {
+    id: number;
+    invoice_number: string;
+    invoice_date: string;
+    quantity: number;
+}
+
 interface Props {
     asset: Asset & {
         project?: { id: number; title: string };
         invoice?: { id: number; invoice_number: string } | null;
         taskAllocations?: TaskAllocation[];
     };
+    sourceInvoices?: SourceInvoice[];
 }
 
-export default function AssetShow({ asset }: Props) {
+export default function AssetShow({ asset, sourceInvoices = [] }: Props) {
     const { t } = useTranslation();
 
     const getTypeLabel = (type: string) => t(`asset_type_${type}`);
@@ -89,14 +97,29 @@ export default function AssetShow({ asset }: Props) {
                                     </Link>
                                 </div>
                             )}
-                            {asset.invoice && (
-                                <div className="flex items-start gap-2">
-                                    <FileText className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                            {(sourceInvoices.length > 0 || asset.invoice) && (
+                                <div className="flex items-start gap-2 md:col-span-2">
+                                    <FileText className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
                                     <div>
-                                        <p className="text-sm text-muted-foreground">{t('Invoice')}</p>
-                                        <Link href={route('invoices.show', asset.invoice.id)} className="font-medium text-primary hover:underline">
-                                            {asset.invoice.invoice_number}
-                                        </Link>
+                                        <p className="text-sm text-muted-foreground">{t('Invoices')}</p>
+                                        {sourceInvoices.length > 0 ? (
+                                            <ul className="space-y-1 mt-1">
+                                                {sourceInvoices.map((inv) => (
+                                                    <li key={inv.id}>
+                                                        <Link href={route('invoices.show', inv.id)} className="font-medium text-primary hover:underline">
+                                                            {inv.invoice_number}
+                                                        </Link>
+                                                        <span className="text-muted-foreground text-sm ml-2">
+                                                            ({inv.quantity}) — {(inv.invoice_date || '').toString().slice(0, 10)}
+                                                        </span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : asset.invoice && (
+                                            <Link href={route('invoices.show', asset.invoice.id)} className="font-medium text-primary hover:underline">
+                                                {asset.invoice.invoice_number}
+                                            </Link>
+                                        )}
                                     </div>
                                 </div>
                             )}

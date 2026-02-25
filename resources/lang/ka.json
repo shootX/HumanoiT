@@ -49,6 +49,7 @@
     "asset_status_retired": "ექსპლუატაციიდან ამოღებული",
     "Cannot allocate more than available quantity for used asset.": "გამოყენებული აქტივიდან არსებულ რაოდენობაზე მეტის გამოყოფა შეუძლებელია.",
     "Only active assets can be allocated to tasks.": "დავალებების შესასრულებლად მხოლოდ აქტიური აქტივების გამოყენებაა დასაშვები.",
+    "Used assets cannot be allocated to tasks.": "გამოყენებული აქტივების დავალებაზე მინიჭება შეუძლებელია.",
     "Insufficient asset quantity. Available: :available": "აქტივების არასაკმარისი რაოდენობა. ხელმისაწვდომია: :available",
     "Purchase Date": "შეძენის თარიღი",
     "Warranty Until": "გარანტიის ვადა",

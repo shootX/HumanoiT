@@ -215,8 +215,8 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                             return Number(a.quantity ?? 1);
                         };
                         const assetsFromTask = ((task as any)?.assets ?? []).filter((a: any) => !assets.some((x: any) => x.id === a.id));
-                        const availableAssets = [...assets, ...assetsFromTask];
-                        return availableAssets.length > 0 && (
+                        const hasAnyAssets = assets.length > 0 || assetsFromTask.length > 0;
+                        return hasAnyAssets && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 {t('Used Assets')}
@@ -224,7 +224,8 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                             <p className="text-xs text-muted-foreground mb-2">{t('Select assets and quantity used for this task')}</p>
                             <div className="space-y-2">
                                 {formData.asset_items.map((item, idx) => {
-                                    const selectedAsset = availableAssets.find((a: any) => String(a.id) === item.asset_id);
+                                    const availableForRow = [...assets, ...assetsFromTask.filter((a: any) => String(a.id) === item.asset_id)];
+                                    const selectedAsset = availableForRow.find((a: any) => String(a.id) === item.asset_id);
                                     const maxQty = selectedAsset ? getAvailable(selectedAsset) - formData.asset_items.reduce((sum, itm, i) =>
                                         i !== idx && itm.asset_id === item.asset_id ? sum + (parseInt(itm.quantity, 10) || 0) : sum, 0) : 999;
                                     return (
@@ -242,7 +243,7 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                                             )}
                                         >
                                             <option value="">{t('Select asset')}</option>
-                                            {availableAssets.map((asset: any) => {
+                                            {availableForRow.map((asset: any) => {
                                                 const avail = getAvailable(asset) - formData.asset_items.reduce((s, itm, i) =>
                                                     i !== idx && itm.asset_id === String(asset.id) ? s + (parseInt(itm.quantity, 10) || 0) : s, 0);
                                                 return (
@@ -278,7 +279,7 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                                     </div>
                                     );
                                 })}
-                                {availableAssets.length > 0 && (
+                                {assets.length > 0 && (
                                     <Button
                                         type="button"
                                         variant="outline"

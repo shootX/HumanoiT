@@ -458,7 +458,7 @@ class InvoiceController extends Controller
             ->get(['id', 'name', 'color'])
             ->toArray();
 
-        $assets = Asset::forWorkspace($workspace->id)->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity']);
+        $assets = Asset::forWorkspace($workspace->id)->with('assetCategory:id,name')->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity', 'asset_category_id']);
 
         $crmContacts = CrmContact::forWorkspace($workspace->id)
             ->orderBy('name')
@@ -660,7 +660,7 @@ class InvoiceController extends Controller
             ->get(['id', 'name', 'color'])
             ->toArray();
 
-        $assets = Asset::forWorkspace($workspaceId)->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity']);
+        $assets = Asset::forWorkspace($workspaceId)->with('assetCategory:id,name')->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity', 'asset_category_id']);
 
         $crmContacts = CrmContact::forWorkspace($workspace->id)
             ->orderBy('name')

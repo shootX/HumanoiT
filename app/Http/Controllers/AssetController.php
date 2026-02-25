@@ -72,13 +72,27 @@ class AssetController extends Controller
         }
 
         $asset->load([
-            'project', 'assetCategory', 'invoice:id,invoice_number',
+            'project', 'assetCategory', 'invoice:id,invoice_number,invoice_date',
             'taskAllocations' => fn ($q) => $q->with('project:id,title')->orderBy('asset_task.created_at', 'desc')->limit(50),
         ]);
 
+        $sourceInvoices = \DB::table('invoice_items as ii')
+            ->join('invoices as i', 'ii.invoice_id', '=', 'i.id')
+            ->where('ii.asset_id', $asset->id)
+            ->where('ii.type', 'asset')
+            ->select('i.id', 'i.invoice_number', 'i.invoice_date', 'ii.quantity')
+            ->orderBy('i.invoice_date')
+            ->get()
+            ->map(fn ($r) => [
+                'id' => $r->id,
+                'invoice_number' => $r->invoice_number,
+                'invoice_date' => $r->invoice_date,
+                'quantity' => (float) $r->quantity,
+            ]);
 
         return Inertia::render('assets/Show', [
             'asset' => $asset,
+            'sourceInvoices' => $sourceInvoices,
         ]);
     }
 

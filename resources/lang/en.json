@@ -48,6 +48,7 @@
     "asset_status_retired": "Retired",
     "Cannot allocate more than available quantity for used asset.": "Cannot allocate more than available quantity for used asset.",
     "Only active assets can be allocated to tasks.": "Only active assets can be allocated to tasks.",
+    "Used assets cannot be allocated to tasks.": "Used assets cannot be allocated to tasks.",
     "Insufficient asset quantity. Available: :available": "Insufficient asset quantity. Available: :available",
     "Purchase Date": "Purchase Date",
     "Warranty Until": "Warranty Until",
