@@ -21,6 +21,7 @@ storage/*.key
 !/storage/framework/views/.gitignore
 /storage/logs/*
 !/storage/logs/.gitignore
+/storage/media-library/temp/*
 /bootstrap/cache/*
 !/bootstrap/cache/.gitignore
 

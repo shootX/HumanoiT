@@ -40,11 +40,9 @@ class DashboardController extends Controller
         $routes = [
             ['route' => 'projects.index', 'permission' => 'project_view_any'],
             ['route' => 'tasks.index', 'permission' => 'task_view_any'],
-            ['route' => 'timesheets.index', 'permission' => 'timesheet_view_any'],
             ['route' => 'expenses.index', 'permission' => 'expense_view_any'],
             ['route' => 'budgets.index', 'permission' => 'budget_view_any'],
             ['route' => 'invoices.index', 'permission' => 'invoice_view_any'],
-            ['route' => 'bugs.index', 'permission' => 'bug_view_any'],
             ['route' => 'workspaces.index', 'permission' => 'workspace_view_any'],
             ['route' => 'plans.index', 'permission' => 'plan_view_any'],
             ['route' => 'companies.index', 'permission' => 'company_view_any'],
@@ -106,11 +104,9 @@ class DashboardController extends Controller
                 'projects' => $this->checkPermission('project_view_any') ? $this->getProjectStats($workspace, $user, $role) : null,
                 'tasks' => $this->checkPermission('task_view_any') ? $this->getTaskStats($workspace, $user, $role) : null,
                 'taskStages' => $this->checkPermission('task_view_any') ? $this->getTaskStages($workspace, $user, $role) : null,
-                'timesheets' => $this->checkPermission('timesheet_view_any') ? $this->getTimesheetStats($workspace, $user, $role) : null,
                 'budgets' => $this->checkPermission('budget_view_any') ? $this->getBudgetStats($workspace, $user, $role) : null,
                 'expenses' => $this->checkPermission('expense_view_any') ? $this->getExpenseStats($workspace, $user, $role) : null,
                 'invoices' => (($role === 'company' || $role === 'client') && $this->checkPermission('invoice_view_any')) ? $this->getInvoiceStats($workspace, $user, $role) : null,
-                'bugs' => $this->checkPermission('bug_view_any') ? $this->getBugStats($workspace, $user, $role) : null,
                 'recentActivities' => $this->getRecentActivities($workspace, $user, $role),
                 'currentWorkspace' => $workspace
             ];
@@ -443,48 +439,6 @@ class DashboardController extends Controller
         }
     }
     
-    private function getTimesheetStats($workspace, $user, $role)
-    {
-        try {
-            if (!class_exists('\App\Models\TimesheetEntry') || !class_exists('\App\Models\Timesheet') || !$workspace) {
-                return ['totalHours' => 0, 'thisWeek' => 0, 'pendingApprovals' => 0];
-            }
-            
-            $entryQuery = \App\Models\TimesheetEntry::whereHas('timesheet.user', function($q) use ($workspace) {
-                $q->whereHas('workspaces', function($wq) use ($workspace) {
-                    $wq->where('workspace_id', $workspace->id);
-                });
-            });
-            
-            $timesheetQuery = \App\Models\Timesheet::whereHas('user', function($q) use ($workspace) {
-                $q->whereHas('workspaces', function($wq) use ($workspace) {
-                    $wq->where('workspace_id', $workspace->id);
-                });
-            });
-            
-            // Non-company workspace roles only see their own timesheet data
-            if ($role !== 'company') {
-                $entryQuery->whereHas('timesheet', function($q) use ($user) {
-                    $q->where('user_id', $user->id);
-                });
-                $timesheetQuery->where('user_id', $user->id);
-            }
-            
-            $totalHours = (clone $entryQuery)->sum('hours') ?? 0;
-            $thisWeek = (clone $entryQuery)->whereBetween('date', [now()->startOfWeek(), now()->endOfWeek()])
-                ->sum('hours') ?? 0;
-            $pendingApprovals = (clone $timesheetQuery)->where('status', 'submitted')->count();
-            
-            return [
-                'totalHours' => (int)$totalHours,
-                'thisWeek' => (int)$thisWeek,
-                'pendingApprovals' => $pendingApprovals
-            ];
-        } catch (\Exception $e) {
-            return ['totalHours' => 0, 'thisWeek' => 0, 'pendingApprovals' => 0];
-        }
-    }
-    
     private function getBudgetStats($workspace, $user, $role)
     {
         try {
@@ -568,42 +522,6 @@ class DashboardController extends Controller
             ];
         } catch (\Exception $e) {
             return ['total' => 0, 'paid' => 0, 'pending' => 0, 'overdue' => 0];
-        }
-    }
-    
-    private function getBugStats($workspace, $user, $role)
-    {
-        try {
-            if (!class_exists('\App\Models\Bug') || !class_exists('\App\Models\BugStatus') || !$workspace) {
-                return [];
-            }
-            
-            $statuses = \App\Models\BugStatus::where('workspace_id', $workspace->id)
-                ->withCount(['bugs' => function($q) use ($workspace, $user, $role) {
-                    $q->whereHas('project', function($pq) use ($workspace, $user, $role) {
-                        $pq->where('workspace_id', $workspace->id);
-                        if ($role === 'client') {
-                            $pq->whereHas('clients', function($m) use ($user) {
-                                $m->where('user_id', $user->id);
-                            });
-                        } elseif ($role !== 'company') {
-                            $pq->whereHas('members', function($m) use ($user) {
-                                $m->where('user_id', $user->id);
-                            });
-                        }
-                    });
-                }])
-                ->take(6)
-                ->get();
-            
-            return $statuses->map(function($status) {
-                return [
-                    'name' => $status->name,
-                    'count' => $status->bugs_count
-                ];
-            })->toArray();
-        } catch (\Exception $e) {
-            return [];
         }
     }
     
@@ -718,51 +636,30 @@ class DashboardController extends Controller
             ],
             [
                 'id' => 4, 
-                'type' => 'bug', 
-                'description' => 'Critical security bug fixed in user authentication system', 
-                'user' => 'Sarah Wilson', 
-                'time' => '5 hours ago'
-            ],
-            [
-                'id' => 5, 
                 'type' => 'invoice', 
                 'description' => 'Invoice #INV-2024-001 sent to client for ₾2,500', 
                 'user' => 'David Brown', 
                 'time' => '6 hours ago'
             ],
             [
-                'id' => 6, 
-                'type' => 'timesheet', 
-                'description' => 'Weekly timesheet submitted for approval (40 hours)', 
-                'user' => 'Emily Davis', 
-                'time' => '8 hours ago'
-            ],
-            [
-                'id' => 7, 
+                'id' => 5, 
                 'type' => 'project', 
                 'description' => 'Project "Website Redesign" milestone completed ahead of schedule', 
                 'user' => 'Alex Chen', 
                 'time' => '10 hours ago'
             ],
             [
-                'id' => 8, 
+                'id' => 6, 
                 'type' => 'task', 
                 'description' => 'Database optimization task assigned to development team', 
                 'user' => 'Lisa Wang', 
                 'time' => '12 hours ago'
             ],
             [
-                'id' => 9, 
+                'id' => 7, 
                 'type' => 'expense', 
                 'description' => 'Software license renewal expense of ₾199 submitted', 
                 'user' => 'Tom Anderson', 
-                'time' => '1 day ago'
-            ],
-            [
-                'id' => 10, 
-                'type' => 'bug', 
-                'description' => 'UI responsiveness issue reported on mobile devices', 
-                'user' => 'Rachel Green', 
                 'time' => '1 day ago'
             ]
         ];

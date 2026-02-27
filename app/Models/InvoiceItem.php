@@ -16,6 +16,8 @@ class InvoiceItem extends Model
         'task_id',
         'expense_id',
         'asset_id',
+        'equipment_id',
+        'service_type_id',
         'asset_category_id',
         'asset_name',
         'tax_id',
@@ -52,6 +54,16 @@ class InvoiceItem extends Model
     public function asset(): BelongsTo
     {
         return $this->belongsTo(Asset::class);
+    }
+
+    public function equipment(): BelongsTo
+    {
+        return $this->belongsTo(Equipment::class);
+    }
+
+    public function serviceType(): BelongsTo
+    {
+        return $this->belongsTo(ServiceType::class);
     }
 
     public function assetCategory(): BelongsTo

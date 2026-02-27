@@ -17,7 +17,7 @@ import { formatCurrency } from '@/utils/currency';
 import { cn } from '@/lib/utils';
 
 interface InvoiceItem {
-    type: 'service' | 'asset';
+    type: 'service' | 'asset' | 'equipment';
     description: string;
     quantity: number | string;
     rate: number | string;
@@ -26,6 +26,8 @@ interface InvoiceItem {
     asset_id: number | null;
     asset_category_id: number | null;
     asset_name: string;
+    equipment_id: number | null;
+    service_type_id: number | null;
 }
 
 interface Props {
@@ -37,11 +39,13 @@ interface Props {
     taxes: any[];
     assetCategories?: any[];
     assets?: { id: number; name: string; asset_code?: string; quantity?: number }[];
+    equipment?: { id: number; name: string; project?: { title: string } }[];
+    serviceTypes?: { id: number; name: string }[];
 }
 
 const defaultVatTaxId = (taxes: any[]) => taxes?.find((x: any) => Math.abs(parseFloat(x.rate) - 18) < 0.01 && !!x.is_inclusive)?.id ?? null;
 
-export default function InvoiceForm({ invoice, projects, clients, crmContacts = [], currencies, taxes, assetCategories: initialAssetCategories = [], assets = [] }: Props) {
+export default function InvoiceForm({ invoice, projects, clients, crmContacts = [], currencies, taxes, assetCategories: initialAssetCategories = [], assets = [], equipment = [], serviceTypes = [] }: Props) {
     const { t } = useTranslation();
     const isEdit = !!invoice;
     const defaultTaxId = defaultVatTaxId(taxes || []);
@@ -64,7 +68,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
         terms: invoice?.terms || '',
     });
 
-    const mapItemType = (t: string) => (['asset', 'service'].includes(t) ? t : 'asset') as 'service' | 'asset';
+    const mapItemType = (t: string) => (['asset', 'service', 'equipment'].includes(t) ? t : 'asset') as 'service' | 'asset' | 'equipment';
     const [items, setItems] = useState<InvoiceItem[]>(
         invoice?.items?.map((item: any) => ({
             type: mapItemType(item.type),
@@ -76,6 +80,8 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             asset_id: item.asset_id ?? null,
             asset_category_id: item.asset_category_id ?? null,
             asset_name: item.asset_name || '',
+            equipment_id: item.equipment_id ?? null,
+            service_type_id: item.service_type_id ?? null,
         })) || [{
             type: 'asset',
             description: '',
@@ -85,7 +91,9 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             tax_id: defaultVatTaxId(taxes || []),
             asset_id: null,
             asset_category_id: null,
-            asset_name: ''
+            asset_name: '',
+            equipment_id: null,
+            service_type_id: null,
         }]
     );
 
@@ -230,13 +238,24 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
         const updatedItems = [...items];
         const item = { ...updatedItems[index], [field]: value };
         if (field === 'type') {
-            if (value === 'service') { item.asset_id = null; item.asset_category_id = null; item.asset_name = ''; }
+            if (value === 'service') { item.asset_id = null; item.asset_category_id = null; item.asset_name = ''; item.equipment_id = null; item.service_type_id = null; }
+            if (value === 'asset') { item.equipment_id = null; item.service_type_id = null; }
+            if (value === 'equipment') { item.asset_id = null; item.asset_category_id = null; item.asset_name = ''; }
         }
         if (field === 'asset_id' && value) {
             const a = assets.find((x: any) => x.id === parseInt(value, 10));
             if (a) {
                 item.description = a.name;
                 item.asset_category_id = a.asset_category_id ?? null;
+            }
+        }
+        if (field === 'equipment_id' || field === 'service_type_id') {
+            const eqId = field === 'equipment_id' ? (value ? parseInt(String(value), 10) : null) : (item.equipment_id ? parseInt(String(item.equipment_id), 10) : null);
+            const stId = field === 'service_type_id' ? (value ? parseInt(String(value), 10) : null) : (item.service_type_id ? parseInt(String(item.service_type_id), 10) : null);
+            if (eqId && stId) {
+                const eq = equipment.find((e: any) => e.id === eqId);
+                const st = serviceTypes.find((s: any) => s.id === stId);
+                if (eq && st) item.description = `${eq.name} - ${st.name}`;
             }
         }
         if (field === 'description' && item.type === 'asset' && item.asset_id) {
@@ -265,7 +284,9 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             tax_id: defaultTaxId,
             asset_id: null,
             asset_category_id: null,
-            asset_name: ''
+            asset_name: '',
+            equipment_id: null,
+            service_type_id: null,
         }]);
     };
 
@@ -327,6 +348,12 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
         setIsSubmitting(true);
 
         const validItems = items.filter(item => !!item.description?.trim());
+        const equipmentItemsInvalid = validItems.some(item => item.type === 'equipment' && (!item.equipment_id || !item.service_type_id));
+        if (equipmentItemsInvalid) {
+            toast.error(t('Please select Equipment and Service Type for all equipment consumable items'));
+            setIsSubmitting(false);
+            return;
+        }
         const submitData = {
             ...formData,
             project_ids: formData.project_ids || (formData.project_id ? [formData.project_id] : []),
@@ -341,6 +368,8 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
                 asset_id: item.type === 'asset' ? (item.asset_id ?? null) : null,
                 asset_category_id: item.type === 'asset' ? (item.asset_category_id ?? null) : null,
                 asset_name: item.type === 'asset' ? item.description : null,
+                equipment_id: item.type === 'equipment' ? (item.equipment_id ?? null) : null,
+                service_type_id: item.type === 'equipment' ? (item.service_type_id ?? null) : null,
                 tax_id: item.tax_id ?? null,
                 description: item.description,
                 quantity: parseItemNum(item.quantity) || 1,
@@ -553,17 +582,52 @@ setErrors(errors);
                                                 <SelectContent className="z-[9999]">
                                                     <SelectItem value="service">{t('Service')}</SelectItem>
                                                     <SelectItem value="asset">{t('Asset')}</SelectItem>
+                                                    <SelectItem value="equipment">{t('Equipment consumable')}</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <div className="md:col-span-3 relative">
+                                        {item.type === 'equipment' && (
+                                            <>
+                                                <div className="md:col-span-2">
+                                                    <Label>{t('Equipment')}</Label>
+                                                    <Select
+                                                        value={item.equipment_id?.toString() || ''}
+                                                        onValueChange={(v) => handleItemChange(index, 'equipment_id', v || null)}
+                                                    >
+                                                        <SelectTrigger><SelectValue placeholder={t('Select')} /></SelectTrigger>
+                                                        <SelectContent className="z-[9999]">
+                                                            {equipment?.map((e: any) => (
+                                                                <SelectItem key={e.id} value={String(e.id)}>
+                                                                    {e.name} {e.project ? `(${e.project.title})` : ''}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="md:col-span-2">
+                                                    <Label>{t('Service Type')}</Label>
+                                                    <Select
+                                                        value={item.service_type_id?.toString() || ''}
+                                                        onValueChange={(v) => handleItemChange(index, 'service_type_id', v || null)}
+                                                    >
+                                                        <SelectTrigger><SelectValue placeholder={t('Select')} /></SelectTrigger>
+                                                        <SelectContent className="z-[9999]">
+                                                            {serviceTypes?.map((st: any) => (
+                                                                <SelectItem key={st.id} value={String(st.id)}>{st.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </>
+                                        )}
+                                        <div className={item.type === 'equipment' ? 'md:col-span-2' : 'md:col-span-3'} relative>
                                             <Label>{t('Name')}</Label>
                                             <Input
                                                 value={item.description}
                                                 onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                                                 onFocus={() => item.type === 'asset' && setAssetDropdownIndex(index)}
                                                 onBlur={() => setTimeout(() => setAssetDropdownIndex(null), 150)}
-                                                placeholder={t('Item name')}
+                                                placeholder={item.type === 'equipment' ? t('Auto-filled from selection') : t('Item name')}
                                             />
                                             {item.type === 'asset' && assetDropdownIndex === index && (() => {
                                                 const matches = getFilteredAssets(item.description || '');

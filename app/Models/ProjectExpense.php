@@ -17,6 +17,8 @@ class ProjectExpense extends Model
         'budget_category_id',
         'task_id',
         'invoice_id',
+        'equipment_id',
+        'service_type_id',
         'submitted_by',
         'amount',
         'currency',
@@ -73,6 +75,16 @@ class ProjectExpense extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function equipment(): BelongsTo
+    {
+        return $this->belongsTo(Equipment::class);
+    }
+
+    public function serviceType(): BelongsTo
+    {
+        return $this->belongsTo(ServiceType::class);
     }
 
     public function submitter(): BelongsTo

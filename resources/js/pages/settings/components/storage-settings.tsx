@@ -98,6 +98,7 @@ export default function StorageSettings({ settings = {} }: StorageSettingsProps)
 'png': 'png',
 'pps': 'pps',
 'ppt': 'ppt',
+'pptx': 'pptx',
 'ppz': 'ppz',
 'pot': 'pot',
 'ps': 'ps',
@@ -128,6 +129,7 @@ export default function StorageSettings({ settings = {} }: StorageSettingsProps)
 'wrl': 'wrl',
 'xla': 'xla',
 'xls': 'xls',
+'xlsx': 'xlsx',
 'xlc': 'xlc',
 'xml': 'xml',
 'zip': 'zip',
@@ -137,8 +139,8 @@ export default function StorageSettings({ settings = {} }: StorageSettingsProps)
   
   const [storageSettings, setStorageSettings] = useState<StorageSettings>({
     storageType: (settings.storage_type as StorageType) || 'local',
-    allowedFileTypes: settings.storage_file_types || 'jpg,png,webp,gif',
-    maxUploadSize: settings.storage_max_upload_size || '2048',
+    allowedFileTypes: settings.storage_file_types || 'jpg,jpeg,png,pdf,doc,docx,xls,xlsx,ppt,pptx',
+    maxUploadSize: settings.storage_max_upload_size || '10240',
     awsAccessKeyId: settings.aws_access_key_id || '',
     awsSecretAccessKey: settings.aws_secret_access_key || '',
     awsDefaultRegion: settings.aws_default_region || 'us-east-1',
@@ -273,7 +275,7 @@ export default function StorageSettings({ settings = {} }: StorageSettingsProps)
           type="number"
           value={storageSettings.maxUploadSize}
           onChange={(e) => handleSettingChange('maxUploadSize', e.target.value)}
-          placeholder="2048"
+          placeholder="10240"
         />
       </div>
     </div>

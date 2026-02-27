@@ -62,11 +62,6 @@ class Workspace extends Model
         return $this->hasMany(\App\Models\TaskStage::class);
     }
 
-    public function bugStatuses(): HasMany
-    {
-        return $this->hasMany(\App\Models\BugStatus::class);
-    }
-
     public function isOwner(User $user): bool
     {
         return $this->owner_id === $user->id;
@@ -86,11 +81,6 @@ class Workspace extends Model
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class);
-    }
-
-    public function timesheets(): HasMany
-    {
-        return $this->hasMany(Timesheet::class);
     }
 
     public function crmContacts(): HasMany

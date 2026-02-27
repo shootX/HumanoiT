@@ -61,8 +61,6 @@ class RoleSeeder extends Seeder
                 'workspace',
                 'projects',
                 'tasks',
-                'bugs',
-                'timesheet',
                 'budget',
                 'expense',
                 'expense_approval',
@@ -85,6 +83,7 @@ class RoleSeeder extends Seeder
                 'project_report',
                 'project_permissions',
                 'assets',
+                'equipment',
                 'crm_contact',
 
             ])->get();
@@ -134,8 +133,6 @@ class RoleSeeder extends Seeder
                 'currency',
                 'projects',
                 'tasks',
-                'bugs',
-                'timesheet',
                 'budget',
                 'expense',
                 'expense_approval',
@@ -169,6 +166,7 @@ class RoleSeeder extends Seeder
                 'google_meeting',
                 'project_permissions',
                 'assets',
+                'equipment',
                 'crm_contact',
 
             ])->get();
@@ -197,7 +195,8 @@ class RoleSeeder extends Seeder
             ['label' => 'Manager', 'description' => 'Manager with full workspace management']
         );
 
-        $managerPermissions = Permission::whereIn('module', ['dashboards', 'TaskModal', 'bugs', 'timesheet', 'budget', 'expense', 'expense_approval', 'invoice', 'media', 'report', 'notes', 'calendar', 'task_calendar', 'project_report'])
+        $managerPermissions = Permission::whereIn('module', ['dashboards', 'TaskModal', 'budget', 'expense', 'expense_approval', 'invoice', 'media', 'report', 'notes', 'calendar', 'task_calendar', 'project_report', 'equipment'])
+            ->where('name', '!=', 'equipment_delete') // Only company/owner can delete equipment
             ->orWhereIn('name', [
                 'workspace_switch',
                 'workspace_leave',
@@ -254,20 +253,6 @@ class RoleSeeder extends Seeder
             'task_update',
             'task_view',
             'task_add_comments',
-            'bug_view_any',
-            'bug_create',
-            'bug_update',
-            'bug_view',
-            'bug_add_comments',
-            'timesheet_view_any',
-            'timesheet_view',
-            'timesheet_create',
-            'timesheet_update',
-            'timesheet_delete',
-            'timesheet_assign',
-            'timesheet_submit',
-            'timesheet_use_timer',
-            'timesheet_bulk_operations',
             'expense_view_any',
             'expense_create',
             'expense_view',
@@ -318,11 +303,9 @@ class RoleSeeder extends Seeder
             'task_view',
             'asset_view_any',
             'asset_view',
+            'equipment_view_any',
+            'equipment_view',
             'crm_contact_view_any',
-            'bug_view_any',
-            'bug_view',
-            'timesheet_view_any',
-            'timesheet_view',
             'invoice_view_any',
             'invoice_view',
             'budget_view_any',

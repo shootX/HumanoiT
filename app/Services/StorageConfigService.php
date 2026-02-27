@@ -113,10 +113,13 @@ class StorageConfigService
                 default => 'public'
             };
             
+            $maxSizeSetting = (int)($settings['storage_max_upload_size'] ?? 10);
+            $maxFileSizeMb = $maxSizeSetting >= 1000 ? (int)($maxSizeSetting / 1024) : $maxSizeSetting;
+
             return [
                 'disk' => $diskName,
-                'allowed_file_types' => $settings['storage_file_types'] ?? 'jpg,png,webp,gif',
-                'max_file_size_mb' => (int)($settings['storage_max_upload_size'] ?? 2),
+                'allowed_file_types' => $settings['storage_file_types'] ?? 'jpg,jpeg,png,pdf,doc,docx,xls,xlsx,ppt,pptx',
+                'max_file_size_mb' => $maxFileSizeMb ?: 10,
                 's3' => [
                     'key' => $settings['aws_access_key_id'] ?? '',
                     'secret' => $settings['aws_secret_access_key'] ?? '',
@@ -147,8 +150,8 @@ class StorageConfigService
     {
         return [
             'disk' => 'public',
-            'allowed_file_types' => 'jpg,png,webp,gif',
-            'max_file_size_mb' => 2,
+            'allowed_file_types' => 'jpg,jpeg,png,pdf,doc,docx,xls,xlsx,ppt,pptx',
+            'max_file_size_mb' => 10,
             's3' => [],
             'wasabi' => []
         ];

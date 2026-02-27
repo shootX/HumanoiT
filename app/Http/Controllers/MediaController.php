@@ -71,6 +71,25 @@ class MediaController extends Controller
         return $baseUrl . $url;
     }
 
+    private function sanitizeMediaFileName(string $fileName): string
+    {
+        $fileName = preg_replace('#\p{C}+#u', '', $fileName);
+        $fileName = str_replace(['#', '/', '\\', ' '], '-', $fileName);
+        $ext = pathinfo($fileName, PATHINFO_EXTENSION);
+        $base = pathinfo($fileName, PATHINFO_FILENAME);
+        if (preg_match('/[^\x20-\x7E]/u', $base)) {
+            $slug = \Illuminate\Support\Str::slug($base);
+            $base = ($slug !== '' && $slug !== null) ? $slug : 'file-' . substr(md5($base . uniqid('', true)), 0, 12);
+        }
+        $base = preg_replace('/[^\w\-]/', '-', $base) ?: 'file';
+        $result = $base . ($ext ? '.' . strtolower($ext) : '');
+        $phpExts = ['.php', '.php3', '.phtml', '.phar'];
+        if (in_array(strtolower('.' . $ext), $phpExts)) {
+            $result = $base . '.txt';
+        }
+        return $result;
+    }
+
     private function getUserFriendlyError(\Exception $e, $fileName): string
     {
         $message = $e->getMessage();
@@ -105,15 +124,16 @@ class MediaController extends Controller
 
     public function batchStore(Request $request)
     {
-        // Debug: Check user permissions
+        $files = $request->file('files');
+        if (!$files || (is_array($files) && empty($files))) {
+            return response()->json([
+                'message' => __('No files provided'),
+                'errors' => [__('Please select at least one file to upload.')]
+            ], 422);
+        }
+
         $user = auth()->user();
-        $userPermissions = $user->getAllPermissions()->pluck('name')->toArray();
-        $hasMediaCreate = $user->hasPermissionTo('media_create');
-        $hasMediaUpload = $user->hasPermissionTo('media_upload');
-        
-        // Check storage limits using plan limit service
-        $user = auth()->user();
-        $totalSize = collect($request->file('files'))->sum(fn($file) => $file->getSize());
+        $totalSize = collect($files)->sum(fn($file) => $file->getSize());
         
         $limitCheck = $this->planLimitService->canUploadFile($user, $totalSize);
         if (!$limitCheck['allowed']) {
@@ -128,7 +148,7 @@ class MediaController extends Controller
         
         // Custom validation with user-friendly messages
         // Normalize allowed file types to handle case sensitivity
-        $allowedTypes = $config['allowed_file_types'] ?? 'jpg,jpeg,png,webp,gif,pdf,doc,docx,zip,rar';
+        $allowedTypes = $config['allowed_file_types'] ?? 'jpg,jpeg,png,pdf,doc,docx,xls,xlsx,ppt,pptx';
         $normalizedTypes = strtolower($allowedTypes);
         
         $validator = \Validator::make($request->all(), [
@@ -154,13 +174,14 @@ class MediaController extends Controller
         $uploadedMedia = [];
         $errors = [];
         
-        foreach ($request->file('files') as $file) {
+        foreach ($files as $file) {
             try {
                 $mediaItem = MediaItem::create([
                     'name' => $file->getClientOriginalName(),
                 ]);
 
                 $media = $mediaItem->addMedia($file)
+                    ->sanitizingFileName(fn ($name) => $this->sanitizeMediaFileName($name))
                     ->toMediaCollection('images');
                 
                 $media->user_id = auth()->id();

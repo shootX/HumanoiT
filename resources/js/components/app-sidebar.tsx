@@ -8,7 +8,7 @@ import { useBrand } from '@/contexts/BrandContext';
 
 import { type NavItem } from '@/types';
 import { Link, usePage, router } from '@inertiajs/react';
-import { BookOpen, Contact, Folder, LayoutGrid, ShoppingBag, Users, Tag, FileIcon, Settings, BarChart, Barcode, FileText, Briefcase, CheckSquare, Calendar, CreditCard, Nfc, Ticket, Gift, DollarSign, MessageSquare, CalendarDays, Palette, Image, Mail, Mail as VCard, ChevronDown, Building2, Globe, FolderOpen, Receipt, TrendingUp, Bot, Video, Bell, HelpCircle, Workflow, Activity, Archive, Package } from 'lucide-react';
+import { BookOpen, Contact, Folder, LayoutGrid, ShoppingBag, Users, Tag, FileIcon, Settings, BarChart, Barcode, FileText, Briefcase, CheckSquare, Calendar, CreditCard, Nfc, Ticket, Gift, DollarSign, MessageSquare, CalendarDays, Palette, Image, Mail, Mail as VCard, ChevronDown, Building2, Globe, FolderOpen, Receipt, TrendingUp, Bot, Video, Bell, HelpCircle, Workflow, Activity, Archive, Package, Wrench } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import AppLogo from './app-logo';
@@ -135,6 +135,26 @@ export function AppSidebar() {
                 icon: Package,
                 children: assetChildren.length > 1 ? assetChildren : undefined,
                 href: assetChildren.length === 1 ? route('assets.index') : undefined
+            });
+        }
+
+        // Equipment
+        if (hasPermission(permissions, 'equipment_view_any')) {
+            const equipmentChildren = [
+                { title: t('All Equipment'), href: route('equipment.index') },
+                { title: t('Schedule'), href: route('equipment-schedule.index') }
+            ];
+            if (hasPermission(permissions, 'equipment_type_manage')) {
+                equipmentChildren.push({ title: t('Equipment Types'), href: route('equipment-types.index') });
+            }
+            if (hasPermission(permissions, 'service_type_manage')) {
+                equipmentChildren.push({ title: t('Service Types'), href: route('service-types.index') });
+            }
+            items.push({
+                title: t('Equipment'),
+                icon: Wrench,
+                children: equipmentChildren,
+                href: route('equipment.index')
             });
         }
 

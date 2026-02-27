@@ -434,6 +434,39 @@ class Invoice extends Model
         foreach ($this->items()->get() as $item) {
             $itemAmount = (float) ($item->amount ?? ($item->rate * ($item->quantity ?: 1)));
             $assetId = $item->asset_id;
+            $equipmentId = $item->equipment_id;
+
+            // Equipment consumables: expense goes to equipment's project (branch), no Asset created
+            if ($equipmentId) {
+                $equipment = \App\Models\Equipment::find($equipmentId);
+                if ($equipment && $equipment->project_id) {
+                    $projId = $equipment->project_id;
+                    // Create expense with equipment_id for equipment consumables
+                    $project = Project::find($projId);
+                    $currency = ($project && $project->budget && isset($project->budget->currency)) ? $project->budget->currency : 'GEL';
+                    $expense = ProjectExpense::create([
+                        'project_id' => $projId,
+                        'budget_category_id' => $this->budget_category_id,
+                        'task_id' => null,
+                        'invoice_id' => $this->id,
+                        'equipment_id' => $equipmentId,
+                        'service_type_id' => $item->service_type_id,
+                        'submitted_by' => $this->created_by,
+                        'amount' => $itemAmount,
+                        'currency' => $currency,
+                        'expense_date' => $this->paid_at ?? $this->invoice_date ?? now(),
+                        'title' => $this->title ?: __('Invoice :number', ['number' => $this->invoice_number]),
+                        'description' => __('From invoice :number (equipment)', ['number' => $this->invoice_number]),
+                        'vendor' => $this->client?->name,
+                        'status' => 'approved',
+                        'approved_at' => now(),
+                        'approved_by' => $this->created_by,
+                        'approved_amount' => $itemAmount,
+                    ]);
+                    $created[] = $expense;
+                }
+                continue;
+            }
 
             if ($assetId && !empty($ourTaskIds)) {
                 $allocations = \DB::table('asset_task')
@@ -510,14 +543,14 @@ class Invoice extends Model
         }
         $created = [];
 
-        foreach ($this->items()->where('type', 'asset')->whereNotNull('asset_id')->get() as $item) {
+        foreach ($this->items()->where('type', 'asset')->whereNull('equipment_id')->whereNotNull('asset_id')->get() as $item) {
             $asset = Asset::find($item->asset_id);
             if ($asset && $asset->workspace_id == $this->workspace_id) {
                 $asset->increment('quantity', (int) round($item->quantity ?? 1));
             }
         }
 
-        $assetItems = $this->items()->where('type', 'asset')->whereNull('asset_id')->get();
+        $assetItems = $this->items()->where('type', 'asset')->whereNull('equipment_id')->whereNull('asset_id')->get();
         if ($assetItems->isEmpty()) {
             if (\Schema::hasColumn('invoices', 'assets_processed_at')) {
                 $this->update(['assets_processed_at' => now()]);

@@ -13,8 +13,8 @@ class Task extends Model
 {
     use LogsActivity;
     protected $fillable = [
-        'project_id', 'task_stage_id', 'milestone_id', 'asset_id', 'title', 'description',
-        'priority', 'start_date', 'end_date', 'due_date', 'assigned_to', 'created_by', 'progress',
+        'project_id', 'task_stage_id', 'milestone_id', 'asset_id', 'equipment_id', 'equipment_schedule_id',
+        'title', 'description', 'priority', 'start_date', 'end_date', 'due_date', 'assigned_to', 'created_by', 'progress',
         'estimated_hours', 'google_calendar_event_id', 'is_googlecalendar_sync', 'google_sheet_sync_key'
     ];
 
@@ -45,6 +45,21 @@ class Task extends Model
     public function asset(): BelongsTo
     {
         return $this->belongsTo(Asset::class);
+    }
+
+    public function equipment(): BelongsTo
+    {
+        return $this->belongsTo(Equipment::class);
+    }
+
+    public function equipmentSchedule(): BelongsTo
+    {
+        return $this->belongsTo(EquipmentSchedule::class);
+    }
+
+    public function equipmentServicePhotos(): HasMany
+    {
+        return $this->hasMany(EquipmentServicePhoto::class);
     }
 
     public function assets(): BelongsToMany
@@ -91,10 +106,6 @@ class Task extends Model
                     ->withTimestamps();
     }
 
-    public function timesheetEntries(): HasMany
-    {
-        return $this->hasMany(TimesheetEntry::class);
-    }
 
     public function invoiceItems(): HasMany
     {
@@ -171,6 +182,21 @@ class Task extends Model
         ]);
     }
 
+    public function requiresEquipmentPhotosForCompletion(): bool
+    {
+        return (bool) $this->equipment_id;
+    }
+
+    public function hasRequiredEquipmentPhotos(): bool
+    {
+        if (!$this->requiresEquipmentPhotosForCompletion()) {
+            return true;
+        }
+        $before = $this->equipmentServicePhotos()->before()->exists();
+        $after = $this->equipmentServicePhotos()->after()->exists();
+        return $before && $after;
+    }
+
     public function updateMilestoneProgress(): void
     {
         if ($this->milestone_id) {
@@ -183,6 +209,13 @@ class Task extends Model
 
     protected static function booted()
     {
+        static::updating(function (Task $task) {
+            if ($task->isDirty('progress') && $task->progress >= 100 && $task->requiresEquipmentPhotosForCompletion() && !$task->hasRequiredEquipmentPhotos()) {
+                $v = \Illuminate\Support\Facades\Validator::make([], []);
+                $v->errors()->add('equipment_photos', __('Equipment maintenance tasks require Before and After photos before completion.'));
+                throw new \Illuminate\Validation\ValidationException($v);
+            }
+        });
         static::updated(function ($task) {
             $task->updateMilestoneProgress();
         });

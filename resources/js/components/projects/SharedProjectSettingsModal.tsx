@@ -26,8 +26,6 @@ export default function SharedProjectSettingsModal({ isOpen, onClose, project }:
         budget: false,
         expenses: false,
         task: false,
-        recent_bugs: false,
-        timesheet: false,
         files: false,
         activity: false
     });
@@ -116,8 +114,6 @@ export default function SharedProjectSettingsModal({ isOpen, onClose, project }:
         { key: 'budget', label: 'Budget', description: t('Project budget and financial information') },
         { key: 'expenses', label: 'Expenses', description: t('Project expenses and costs') },
         { key: 'task', label: 'Task', description: t('Project tasks and assignments') },
-        { key: 'recent_bugs', label: 'Recent Bugs', description: 'Recent bug reports and issues' },
-        { key: 'timesheet', label: 'Timesheet', description: 'Timesheet entries and approvals' },
         { key: 'files', label: 'Files', description: t('Project attachments and documents') },
         { key: 'activity', label: 'Activity', description: t('Project activity log and updates') },
 

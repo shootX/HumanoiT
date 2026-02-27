@@ -100,9 +100,9 @@ class Project extends Model
         return $this->hasMany(Task::class);
     }
 
-    public function timesheetEntries(): HasMany
+    public function equipment(): HasMany
     {
-        return $this->hasMany(TimesheetEntry::class);
+        return $this->hasMany(Equipment::class);
     }
 
     public function attachments(): HasMany
@@ -202,7 +202,7 @@ class Project extends Model
         static::deleting(function ($project) {
             DB::transaction(function () use ($project) {
                 // Delete all tasks and their related data
-                $tasks = $project->tasks()->with(['comments', 'checklists', 'attachments', 'timesheetEntries'])->get();
+                $tasks = $project->tasks()->with(['comments', 'checklists', 'attachments'])->get();
                 foreach ($tasks as $task) {
                     // Delete task comments
                     $task->comments()->delete();
@@ -212,9 +212,6 @@ class Project extends Model
                     
                     // Delete task attachments (files will be handled by media library)
                     $task->attachments()->delete();
-                    
-                    // Delete timesheet entries for this task
-                    $task->timesheetEntries()->delete();
                     
                     // Delete task member assignments
                     $task->members()->detach();
@@ -268,8 +265,6 @@ class Project extends Model
                 // Delete project client assignments
                 $project->projectClients()->delete();
                 
-                // Delete timesheet entries related to this project
-                $project->timesheetEntries()->delete();
             });
         });
     }

@@ -5,7 +5,6 @@ import { type BreadcrumbItem as BreadcrumbItemType } from '@/types';
 import { ProfileMenu } from '@/components/profile-menu';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { WorkspaceSwitcher } from '@/components/workspace-switcher';
-import NavigationTimer from '@/components/timesheets/NavigationTimer';
 import { usePage, router } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 import { Building2 } from 'lucide-react';
@@ -43,7 +42,6 @@ export function AppSidebarHeader({ breadcrumbs = [] }: { breadcrumbs?: Breadcrum
                         </button>
                     )}
 
-                    {auth?.user?.type !== 'superadmin' && <NavigationTimer />}
                     <WorkspaceSwitcher />
                     <LanguageSwitcher />
                     <ProfileMenu />

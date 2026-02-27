@@ -64,34 +64,6 @@ class PermissionSeeder extends Seeder
             ['name' => 'task_manage_checklists', 'module' => 'tasks', 'label' => 'Manage Task Checklists', 'description' => 'Add checklist items to task'],
             ['name' => 'task_track_progress', 'module' => 'tasks', 'label' => 'Track Task Progress', 'description' => 'Monitor task completion'],
 
-            // Bug Module
-            ['name' => 'bug_view_any', 'module' => 'bugs', 'label' => 'View All Bugs', 'description' => 'View all bugs in workspace'],
-            ['name' => 'bug_view', 'module' => 'bugs', 'label' => 'View Bug', 'description' => 'View individual bug information'],
-            ['name' => 'bug_create', 'module' => 'bugs', 'label' => 'Create Bug', 'description' => 'Create new bug report'],
-            ['name' => 'bug_update', 'module' => 'bugs', 'label' => 'Update Bug', 'description' => 'Modify bug information'],
-            ['name' => 'bug_delete', 'module' => 'bugs', 'label' => 'Delete Bug', 'description' => 'Remove bug report'],
-            ['name' => 'bug_assign', 'module' => 'bugs', 'label' => 'Assign Bug', 'description' => 'Assign bug to team member'],
-            ['name' => 'bug_assign_project', 'module' => 'bugs', 'label' => 'Assign Bug to Branch', 'description' => 'Link bug to specific branch'],
-            ['name' => 'bug_change_status', 'module' => 'bugs', 'label' => 'Change Bug Status', 'description' => 'Update bug resolution status'],
-            ['name' => 'bug_add_comments', 'module' => 'bugs', 'label' => 'Add Bug Comments', 'description' => 'Add comments to bug'],
-            ['name' => 'bug_add_attachments', 'module' => 'bugs', 'label' => 'Add Bug Attachments', 'description' => 'Upload files to bug report'],
-            ['name' => 'bug_track_resolution', 'module' => 'bugs', 'label' => 'Track Bug Resolution', 'description' => 'Monitor bug fix progress'],
-            ['name' => 'bug_manage_statuses', 'module' => 'bugs', 'label' => 'Manage Bug Statuses', 'description' => 'Create/edit bug status types'],
-            ['name' => 'bug_manage_priority', 'module' => 'bugs', 'label' => 'Manage Bug Priority', 'description' => 'Set bug priority levels'],
-
-            // Timesheet Module
-            ['name' => 'timesheet_view_any', 'module' => 'timesheet', 'label' => 'View All Timesheets', 'description' => 'View all timesheets in workspace'],
-            ['name' => 'timesheet_view', 'module' => 'timesheet', 'label' => 'View Timesheet', 'description' => 'View individual timesheet'],
-            ['name' => 'timesheet_create', 'module' => 'timesheet', 'label' => 'Create Timesheet', 'description' => 'Add new time entries'],
-            ['name' => 'timesheet_update', 'module' => 'timesheet', 'label' => 'Update Timesheet', 'description' => 'Modify time entries'],
-            ['name' => 'timesheet_delete', 'module' => 'timesheet', 'label' => 'Delete Timesheet', 'description' => 'Remove time entries'],
-            ['name' => 'timesheet_assign', 'module' => 'timesheet', 'label' => 'Assign Timesheet', 'description' => 'Link timesheet to project/task'],
-            ['name' => 'timesheet_submit', 'module' => 'timesheet', 'label' => 'Submit Timesheet', 'description' => 'Submit timesheet for review'],
-            ['name' => 'timesheet_approve', 'module' => 'timesheet', 'label' => 'Approve Timesheet', 'description' => 'Review and approve timesheets'],
-            ['name' => 'timesheet_generate_reports', 'module' => 'timesheet', 'label' => 'Generate Timesheet Reports', 'description' => 'Create time tracking reports'],
-            ['name' => 'timesheet_use_timer', 'module' => 'timesheet', 'label' => 'Use Timer', 'description' => 'Use timer functionality'],
-            ['name' => 'timesheet_bulk_operations', 'module' => 'timesheet', 'label' => 'Bulk Timesheet Operations', 'description' => 'Mass update time entries'],
-
             // Budget Module
             ['name' => 'budget_view_any', 'module' => 'budget', 'label' => 'View All Budgets', 'description' => 'View all budgets in workspace'],
             ['name' => 'budget_view', 'module' => 'budget', 'label' => 'View Budget', 'description' => 'View individual budget'],
@@ -179,7 +151,6 @@ class PermissionSeeder extends Seeder
             ['name' => 'report_export', 'module' => 'report', 'label' => 'Export Report', 'description' => 'Download reports'],
             ['name' => 'report_assign', 'module' => 'report', 'label' => 'Assign Report', 'description' => 'Grant report permissions'],
             ['name' => 'report_schedule', 'module' => 'report', 'label' => 'Schedule Report', 'description' => 'Setup automatic reports'],
-            ['name' => 'report_timesheet', 'module' => 'report', 'label' => 'Timesheet Reports', 'description' => 'Generate timesheet reports'],
             ['name' => 'report_expense', 'module' => 'report', 'label' => 'Expense Reports', 'description' => 'Generate expense reports'],
             ['name' => 'report_customer', 'module' => 'report', 'label' => 'Customer Reports', 'description' => 'Generate customer reports'],
             ['name' => 'report_budget_vs_actual', 'module' => 'report', 'label' => 'Budget vs Actual Reports', 'description' => 'Generate budget comparison reports'],
@@ -412,6 +383,15 @@ class PermissionSeeder extends Seeder
             ['name' => 'asset_update', 'module' => 'assets', 'label' => 'Update Asset', 'description' => 'Modify asset information'],
             ['name' => 'asset_delete', 'module' => 'assets', 'label' => 'Delete Asset', 'description' => 'Remove asset'],
             ['name' => 'asset_manage_categories', 'module' => 'assets', 'label' => 'Manage Asset Categories', 'description' => 'Create/edit/delete asset categories'],
+
+            // Equipment Module
+            ['name' => 'equipment_view_any', 'module' => 'equipment', 'label' => 'View All Equipment', 'description' => 'View all equipment in workspace'],
+            ['name' => 'equipment_view', 'module' => 'equipment', 'label' => 'View Equipment', 'description' => 'View individual equipment'],
+            ['name' => 'equipment_create', 'module' => 'equipment', 'label' => 'Create Equipment', 'description' => 'Create new equipment'],
+            ['name' => 'equipment_update', 'module' => 'equipment', 'label' => 'Update Equipment', 'description' => 'Modify equipment information'],
+            ['name' => 'equipment_delete', 'module' => 'equipment', 'label' => 'Delete Equipment', 'description' => 'Remove equipment'],
+            ['name' => 'equipment_type_manage', 'module' => 'equipment', 'label' => 'Manage Equipment Types', 'description' => 'Create/edit/delete equipment types'],
+            ['name' => 'service_type_manage', 'module' => 'equipment', 'label' => 'Manage Service Types', 'description' => 'Create/edit/delete service types'],
 
             // Contract Types Module
             ['name' => 'contract_type_view_any', 'module' => 'contract_types', 'label' => 'View All Contract Types', 'description' => 'View all contract types in workspace'],

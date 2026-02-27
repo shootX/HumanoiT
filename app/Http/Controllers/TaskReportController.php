@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TaskStage;
-use App\Models\TimesheetEntry;
 use App\Models\User;
 use App\Exports\TaskReportExport;
 use Illuminate\Http\Request;
@@ -125,7 +124,7 @@ class TaskReportController extends Controller
 
     private function transformTask(Task $task): array
     {
-        $loggedHours = TimesheetEntry::where('task_id', $task->id)->sum('hours');
+        $loggedHours = 0;
         $assignedUsers = collect();
         if ($task->assignedUser) $assignedUsers->push($task->assignedUser);
         if ($task->members?->count() > 0) $assignedUsers = $assignedUsers->merge($task->members);
@@ -163,7 +162,7 @@ class TaskReportController extends Controller
             ->groupBy('priority')->pluck('count', 'priority')->toArray();
 
         $taskIds = (clone $baseQuery)->pluck('id');
-        $totalHours = TimesheetEntry::whereIn('task_id', $taskIds)->sum('hours');
+        $totalHours = 0;
 
         return [
             'total_tasks' => $total,

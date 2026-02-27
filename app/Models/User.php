@@ -13,10 +13,7 @@ use App\Models\Referral;
 use App\Models\PayoutRequest;
 use App\Services\MailConfigService;
 use App\Models\ProjectActivity;
-use App\Models\TimesheetEntry;
-use App\Models\Timesheet;
 use App\Models\TaskComment;
-use App\Models\BugComment;
 use App\Models\ProjectNote;
 use App\Models\WorkspaceMember;
 use App\Models\ProjectMember;
@@ -425,19 +422,6 @@ class User extends BaseAuthenticatable implements MustVerifyEmail
     }
 
     /**
-     * Timesheet relationships
-     */
-    public function timesheets()
-    {
-        return $this->hasMany(Timesheet::class);
-    }
-
-    public function timesheetEntries()
-    {
-        return $this->hasMany(TimesheetEntry::class);
-    }
-    
-    /**
      * Project activity relationship
      */
     public function projectActivities()
@@ -455,11 +439,6 @@ class User extends BaseAuthenticatable implements MustVerifyEmail
     public function timerTask()
     {
         return $this->belongsTo(Task::class, 'timer_task_id');
-    }
-
-    public function timerEntry()
-    {
-        return $this->belongsTo(TimesheetEntry::class, 'timer_entry_id');
     }
 
     /**
@@ -496,10 +475,7 @@ class User extends BaseAuthenticatable implements MustVerifyEmail
         static::deleting(function ($user) {
             // Handle cascading deletes for related records
             ProjectActivity::where('user_id', $user->id)->delete();
-            TimesheetEntry::where('user_id', $user->id)->delete();
-            Timesheet::where('user_id', $user->id)->delete();
             TaskComment::where('user_id', $user->id)->delete();
-            BugComment::where('user_id', $user->id)->delete();
             ProjectNote::where('created_by', $user->id)->delete();
             
             // Remove user from workspace memberships

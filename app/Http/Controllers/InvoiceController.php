@@ -146,7 +146,7 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice)
     {
-        $invoice->load(['project', 'task', 'budgetCategory', 'client', 'crmContact', 'creator', 'approver', 'items.task', 'items.expense', 'items.assetCategory', 'items.asset', 'payments']);
+        $invoice->load(['project', 'task', 'budgetCategory', 'client', 'crmContact', 'creator', 'approver', 'items.task', 'items.expense', 'items.assetCategory', 'items.asset', 'items.equipment', 'items.serviceType', 'payments']);
         $user = auth()->user();
         $workspace = $user->currentWorkspace;
         $userWorkspaceRole = $workspace->getMemberRole($user);
@@ -208,9 +208,11 @@ class InvoiceController extends Controller
             'notes' => 'nullable|string',
             'terms' => 'nullable|string',
             'items' => 'required|array|min:1',
-            'items.*.type' => 'required|in:asset,service',
+            'items.*.type' => 'required|in:asset,service,equipment',
             'items.*.task_id' => 'nullable|exists:tasks,id',
             'items.*.asset_id' => 'nullable|exists:assets,id',
+            'items.*.equipment_id' => 'nullable|exists:equipment,id',
+            'items.*.service_type_id' => 'nullable|exists:service_types,id',
             'items.*.asset_category_id' => 'nullable|exists:asset_categories,id',
             'items.*.asset_name' => 'nullable|string|max:255',
             'items.*.tax_id' => 'nullable|exists:taxes,id',
@@ -291,6 +293,8 @@ class InvoiceController extends Controller
                 'asset_id' => $item['asset_id'] ?? null,
                 'asset_category_id' => $item['asset_category_id'] ?? null,
                 'asset_name' => $item['asset_name'] ?? null,
+                'equipment_id' => $item['equipment_id'] ?? null,
+                'service_type_id' => $item['service_type_id'] ?? null,
                 'tax_id' => $item['tax_id'] ?? null,
                 'sort_order' => $index + 1,
             ]);
@@ -327,7 +331,7 @@ class InvoiceController extends Controller
             'notes' => 'nullable|string',
             'terms' => 'nullable|string',
             'items' => 'required|array|min:1',
-            'items.*.type' => 'required|in:asset,service',
+            'items.*.type' => 'required|in:asset,service,equipment',
             'items.*.description' => 'required|string|max:500',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.rate' => 'required|numeric|min:0',
@@ -335,6 +339,8 @@ class InvoiceController extends Controller
             'items.*.asset_id' => 'nullable|exists:assets,id',
             'items.*.asset_category_id' => 'nullable|exists:asset_categories,id',
             'items.*.asset_name' => 'nullable|string|max:255',
+            'items.*.equipment_id' => 'nullable|exists:equipment,id',
+            'items.*.service_type_id' => 'nullable|exists:service_types,id',
             'items.*.tax_id' => 'nullable|exists:taxes,id',
         ]);
 
@@ -402,6 +408,8 @@ class InvoiceController extends Controller
                 'asset_id' => $assetId,
                 'asset_category_id' => $item['asset_category_id'] ?? null,
                 'asset_name' => $item['asset_name'] ?? null,
+                'equipment_id' => $item['equipment_id'] ?? null,
+                'service_type_id' => $item['service_type_id'] ?? null,
                 'tax_id' => $item['tax_id'] ?? null,
                 'sort_order' => $index + 1,
             ]);
@@ -460,6 +468,9 @@ class InvoiceController extends Controller
 
         $assets = Asset::forWorkspace($workspace->id)->with('assetCategory:id,name')->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity', 'asset_category_id']);
 
+        $equipment = \App\Models\Equipment::forWorkspace($workspace->id)->with('project:id,title')->orderBy('name')->get(['id', 'name', 'project_id']);
+        $serviceTypes = \App\Models\ServiceType::forWorkspace($workspace->id)->ordered()->get(['id', 'name']);
+
         $crmContacts = CrmContact::forWorkspace($workspace->id)
             ->orderBy('name')
             ->get(['id', 'name', 'company_name', 'type', 'email']);
@@ -471,6 +482,8 @@ class InvoiceController extends Controller
             'taxes' => $taxes,
             'assetCategories' => $assetCategories,
             'assets' => $assets,
+            'equipment' => $equipment,
+            'serviceTypes' => $serviceTypes,
         ]);
     }
 
@@ -662,6 +675,9 @@ class InvoiceController extends Controller
 
         $assets = Asset::forWorkspace($workspaceId)->with('assetCategory:id,name')->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity', 'asset_category_id']);
 
+        $equipment = \App\Models\Equipment::forWorkspace($workspaceId)->with('project:id,title')->orderBy('name')->get(['id', 'name', 'project_id']);
+        $serviceTypes = \App\Models\ServiceType::forWorkspace($workspaceId)->ordered()->get(['id', 'name']);
+
         $crmContacts = CrmContact::forWorkspace($workspace->id)
             ->orderBy('name')
             ->get(['id', 'name', 'company_name', 'type', 'email']);
@@ -674,6 +690,8 @@ class InvoiceController extends Controller
             'taxes' => $taxes,
             'assetCategories' => $assetCategories,
             'assets' => $assets,
+            'equipment' => $equipment,
+            'serviceTypes' => $serviceTypes,
         ]);
     }
 

@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
-import { Upload, X, Image as ImageIcon, Search, Plus, Check } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Search, Plus, Check, File } from 'lucide-react';
 import { usePage } from '@inertiajs/react';
 import { hasPermission } from '@/utils/authorization';
 import { useTranslation } from 'react-i18next';
@@ -104,9 +104,11 @@ export default function MediaLibraryModal({
   const handleFileUpload = async (files: FileList) => {
     setUploading(true);
     
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
     const validFiles = Array.from(files).filter(file => {
-      if (!file.type.startsWith('image/')) {
-        toast.error(t('{{fileName}} is not an image file', { fileName: file.name }));
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (!ext || !allowedExtensions.includes(ext)) {
+        toast.error(t('{{fileName}} - file type not allowed', { fileName: file.name }));
         return false;
       }
       return true;
@@ -248,7 +250,7 @@ export default function MediaLibraryModal({
                 <Input
                   type="file"
                   multiple
-                  accept="image/*"
+                  accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
                   onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
                   className="hidden"
                   id="file-upload"
@@ -340,16 +342,36 @@ export default function MediaLibraryModal({
                       }`}
                       onClick={() => handleSelect(item.url)}
                     >
-                      <div className="relative aspect-square bg-muted">
-                        <img
-                          src={item.thumb_url}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = item.url;
-                          }}
-                        />
-                        
+                      <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                        {item.mime_type?.startsWith('image/') ? (
+                          <>
+                            <img
+                              src={item.thumb_url}
+                              alt={item.name}
+                              className="w-full h-full object-cover absolute inset-0"
+                              onError={(e) => {
+                                const t = e.currentTarget;
+                                if (t.dataset.fallback === '1') {
+                                  t.style.display = 'none';
+                                  t.nextElementSibling?.classList.remove('hidden');
+                                } else {
+                                  t.dataset.fallback = '1';
+                                  t.src = item.url;
+                                }
+                              }}
+                            />
+                            <div className="hidden absolute inset-0 flex flex-col items-center justify-center p-2 bg-muted">
+                              <File className="h-10 w-10 text-muted-foreground" />
+                              <span className="text-[10px] text-muted-foreground mt-1 truncate max-w-full">{item.file_name?.split('.').pop()?.toUpperCase() || 'FILE'}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center p-2">
+                            <File className="h-10 w-10 text-muted-foreground" />
+                            <span className="text-[10px] text-muted-foreground mt-1 truncate max-w-full">{item.file_name?.split('.').pop()?.toUpperCase() || 'FILE'}</span>
+                          </div>
+                        )}
+                      </div>
                         {/* Selection Indicator */}
                         {selectedItems.includes(item.url) && (
                           <div className="absolute inset-0 bg-primary/30 flex items-center justify-center">
@@ -369,7 +391,6 @@ export default function MediaLibraryModal({
                           </p>
                         </div>
                       </div>
-                    </div>
                   ))}
                 </div>
               </div>

@@ -59,10 +59,6 @@ class DemoModeMiddleware
             'expense-approvals.request-info',
             'expense-approvals.bulk-approve',
             
-            'timesheet-approvals.approve',
-            'timesheet-approvals.reject',
-            'timesheet-approvals.bulk-approve',
-            'timesheet-approvals.bulk-reject',
             // Settings: brand has demo handling (saves theme to cookies); allow all settings updates
             'settings.brand.update',
             'settings.system.update',
@@ -113,7 +109,6 @@ class DemoModeMiddleware
             '/languages/create',
             '/languages/',
             '/toggle',
-            '/timesheet-entries',
             '/payout-request',
             'referral/settings'
         ];
@@ -141,7 +136,6 @@ class DemoModeMiddleware
             'invitations.resend',
             '.invite-client',
             '.invite-member',
-            'timesheet-entries',
             'referral.payout-request.approve',
             'referral.payout-request.reject',
             'referral.settings.update',

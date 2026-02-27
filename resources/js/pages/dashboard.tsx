@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { PageTemplate } from '@/components/page-template';
-import TimesheetDashboardWidget from '@/components/timesheets/TimesheetDashboardWidget';
 import { 
   RefreshCw, BarChart3, Download, Users, Activity, UserPlus, DollarSign,
-  FolderOpen, CheckSquare, Clock, Bug, Receipt, FileText, Building2,
+  FolderOpen, CheckSquare, Clock, Receipt, FileText, Building2,
   TrendingUp, AlertTriangle, Calendar, Target, Wallet, CreditCard, Ticket, X,
   Settings as SettingsIcon, Globe, Shield
 } from 'lucide-react';
@@ -30,11 +29,6 @@ interface DashboardData {
     inProgress: number;
     completed: number;
   };
-  timesheets?: {
-    totalHours: number;
-    thisWeek: number;
-    pendingApprovals: number;
-  };
   budgets?: {
     totalBudget: number;
     spent: number;
@@ -46,12 +40,6 @@ interface DashboardData {
     paid: number;
     pending: number;
     overdue: number;
-  };
-  bugs?: {
-    total: number;
-    open: number;
-    resolved: number;
-    critical: number;
   };
   recentActivities?: Array<{
     id: number;
@@ -614,7 +602,6 @@ export default function Dashboard({ dashboardData, isSuperAdmin, isSaasMode = tr
   // Use actual data from backend
   const projects = dashboardData?.projects || { total: 0, active: 0, completed: 0, overdue: 0 };
   const tasks = dashboardData?.tasks || { total: 0, pending: 0, inProgress: 0, completed: 0 };
-  const timesheets = dashboardData?.timesheets || { totalHours: 0, thisWeek: 0, pendingApprovals: 0 };
   const budgets = dashboardData?.budgets || { totalBudget: 0, spent: 0, remaining: 0, utilization: 0 };
   const invoices = dashboardData?.invoices || { total: 0, paid: 0, pending: 0, overdue: 0 };
   const recentActivities = dashboardData?.recentActivities || [];
@@ -669,35 +656,6 @@ export default function Dashboard({ dashboardData, isSuperAdmin, isSaasMode = tr
 
         {/* Secondary Stats Grid - Only show if data exists */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {/* Time Tracking */}
-          {dashboardData?.timesheets && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Clock className="h-4 w-4" />
-                  {t('Time Tracking')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">{t('This Week')}</span>
-                  <span className="font-semibold">{timesheets.thisWeek}{t('h')}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">{t('Total Hours')}</span>
-                  <span className="font-semibold">{timesheets.totalHours.toLocaleString()}{t('h')}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">{t('Pending Approvals')}</span>
-                  <Badge variant="secondary">{timesheets.pendingApprovals}</Badge>
-                </div>
-                <Link href={route('timesheets.index')} className="block">
-                  <div className="text-xs text-primary hover:underline mt-2">{t('View Timesheets')} →</div>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Budget Overview */}
           {dashboardData?.budgets && (
             <Card>
@@ -730,32 +688,6 @@ export default function Dashboard({ dashboardData, isSuperAdmin, isSaasMode = tr
             </Card>
           )}
 
-          {/* Bug Tracking */}
-          {dashboardData?.bugs && dashboardData.bugs.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Bug className="h-4 w-4" />
-                  {t('Bug Tracking')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  {dashboardData.bugs.map((bugStatus: any) => (
-                    <div key={bugStatus.name} className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">{bugStatus.name}</span>
-                      <Badge variant="secondary">
-                        {bugStatus.count}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-                <Link href={route('bugs.index')} className="block">
-                  <div className="text-xs text-primary hover:underline mt-2">{t('View Bugs')} →</div>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         {/* Main Dashboard Content */}
@@ -910,12 +842,8 @@ export default function Dashboard({ dashboardData, isSuperAdmin, isSaasMode = tr
                         return <FolderOpen className="h-4 w-4 text-green-500" />;
                       case 'expense':
                         return <Receipt className="h-4 w-4 text-yellow-500" />;
-                      case 'bug':
-                        return <Bug className="h-4 w-4 text-red-500" />;
                       case 'invoice':
                         return <FileText className="h-4 w-4 text-purple-500" />;
-                      case 'timesheet':
-                        return <Clock className="h-4 w-4 text-indigo-500" />;
                       default:
                         return <Activity className="h-4 w-4 text-gray-500" />;
                     }
@@ -929,12 +857,8 @@ export default function Dashboard({ dashboardData, isSuperAdmin, isSaasMode = tr
                         return 'border-l-green-500 bg-green-50 dark:bg-green-900/10';
                       case 'expense':
                         return 'border-l-yellow-500 bg-yellow-50 dark:bg-yellow-900/10';
-                      case 'bug':
-                        return 'border-l-red-500 bg-red-50 dark:bg-red-900/10';
                       case 'invoice':
                         return 'border-l-purple-500 bg-purple-50 dark:bg-purple-900/10';
-                      case 'timesheet':
-                        return 'border-l-indigo-500 bg-indigo-50 dark:bg-indigo-900/10';
                       default:
                         return 'border-l-gray-500 bg-gray-50 dark:bg-gray-900/10';
                     }

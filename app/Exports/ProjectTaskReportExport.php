@@ -4,7 +4,6 @@ namespace App\Exports;
 
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\TimesheetEntry;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -74,7 +73,7 @@ class ProjectTaskReportExport implements FromCollection, WithHeadings, WithMappi
 
     public function map($task): array
     {
-        $loggedHours = TimesheetEntry::where('task_id', $task->id)->sum('hours');
+        $loggedHours = 0;
         $assignedUsers = collect();
         if ($task->assignedUser) {
             $assignedUsers->push($task->assignedUser);

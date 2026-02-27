@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ArrowLeft, Edit, Plus, Pin, Trash2, Users, Calendar, DollarSign, Clock, User, Eye, Receipt, CheckSquare, Timer, CheckCircle, AlertTriangle, BarChart3, CreditCard, Columns, Paperclip, Download, Upload, Search, Bug, Link, Settings, Shield, MapPin, FileText } from 'lucide-react';
+import { ArrowLeft, Edit, Plus, Pin, Trash2, Users, Calendar, DollarSign, Clock, User, Eye, Receipt, CheckSquare, Timer, CheckCircle, AlertTriangle, BarChart3, CreditCard, Columns, Paperclip, Download, Upload, Search, Link, Settings, Shield, MapPin, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageTemplate } from '@/components/page-template';
@@ -17,16 +17,14 @@ import { SimplePagination } from '@/components/SimplePagination';
 import { toast } from '@/components/custom-toast';
 import { hasPermission } from '@/utils/authorization';
 import { useTranslation } from 'react-i18next';
-import { getTimesheetLabel, formatHoursDisplay, isTimesheetOverdue, getDaysOverdue } from '@/utils/timesheetUtils';
 import { formatCurrency } from '@/utils/currency';
 import MediaPicker from '@/components/MediaPicker';
-import TimesheetFormModal from '@/components/timesheets/TimesheetFormModal';
 import SharedProjectSettingsModal from '@/components/projects/SharedProjectSettingsModal';
 
 
 export default function ProjectShow() {
     const { t } = useTranslation();
-    const { auth, project, budget = null, projectInvoices = [], paidInvoicesTotal = 0, members, managers, clients, projectTasks = [], projectBugs = [], projectTimesheets = [], canDeleteProject, canViewBudget, canManageSharedSettings, attachmentFilters = {}, noteFilters = {}, activityFilters = {} } = usePage().props as any;
+    const { auth, project, budget = null, projectInvoices = [], paidInvoicesTotal = 0, members, managers, clients, projectTasks = [], canDeleteProject, canViewBudget, canManageSharedSettings, attachmentFilters = {}, noteFilters = {}, activityFilters = {} } = usePage().props as any;
     const permissions = auth?.permissions || [];
     
     const formatText = (text: string) => {
@@ -50,14 +48,13 @@ export default function ProjectShow() {
     
     
     const tabFromUrl = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
-    const validTabs = ['overview', 'team', 'milestones', 'notes', 'budget', 'expense', 'tasks', 'bugs', 'timesheet', 'attachments', 'activity'];
+    const validTabs = ['overview', 'team', 'milestones', 'notes', 'budget', 'expense', 'tasks', 'attachments', 'activity'];
     const [activeTab, setActiveTab] = useState(tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : 'overview');
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState<any>(null);
     const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
     const [modalType, setModalType] = useState<'milestone' | 'note' | 'client' | 'member' | 'manager' | 'project' | 'attachment'>('milestone');
-    const [isTimesheetModalOpen, setIsTimesheetModalOpen] = useState(false);
     const [selectedAttachments, setSelectedAttachments] = useState('');
     const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
     const [isSharedSettingsModalOpen, setIsSharedSettingsModalOpen] = useState(false);
@@ -646,12 +643,6 @@ export default function ProjectShow() {
             onClick: () => router.get(route('projects.gantt', { project: project.id }))
         },
         {
-            label: t('Bugs'),
-            icon: <Bug className="h-4 w-4 mr-2" />,
-            variant: 'outline',
-            onClick: () => router.get(route('bugs.index', { project_id: project.id, project_name: project.title }))
-        },
-        {
             label: t('Expenses'),
             icon: <Receipt className="h-4 w-4 mr-2" />,
             variant: 'outline',
@@ -898,18 +889,6 @@ export default function ProjectShow() {
                                     {t('Tasks')}
                                 </TabsTrigger>
                             )}
-                            {hasPermission(permissions, 'bug_view_any') && (
-                                <TabsTrigger value="bugs" className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg data-[state=active]:scale-105 hover:bg-primary/10 hover:text-primary text-gray-600">
-                                    <Bug className="h-4 w-4 mr-2" />
-                                    {t('Bugs')}
-                                </TabsTrigger>
-                            )}
-                            {hasPermission(permissions, 'timesheet_view_any') && (
-                                <TabsTrigger value="timesheet" className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg data-[state=active]:scale-105 hover:bg-primary/10 hover:text-primary text-gray-600">
-                                    <Timer className="h-4 w-4 mr-2" />
-                                    {t('Timesheet')}
-                                </TabsTrigger>
-                            )}
                             {hasPermission(permissions, 'project_manage_attachments') && (
                                 <TabsTrigger value="attachments" className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg data-[state=active]:scale-105 hover:bg-primary/10 hover:text-primary text-gray-600">
                                     <Paperclip className="h-4 w-4 mr-2" />
@@ -1000,28 +979,19 @@ export default function ProjectShow() {
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-600">Total Hours Logged:</span>
                                                 <span className="font-semibold">
-                                                    {projectTimesheets ? 
-                                                        projectTimesheets.reduce((total: number, ts: any) => total + parseFloat(ts.total_hours || 0), 0).toFixed(1) 
-                                                        : '0.0'
-                                                    }h
+                                                    0h
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-600">Billable Hours:</span>
                                                 <span className="font-semibold text-green-600">
-                                                    {projectTimesheets ? 
-                                                        projectTimesheets.reduce((total: number, ts: any) => total + parseFloat(ts.billable_hours || 0), 0).toFixed(1) 
-                                                        : '0.0'
-                                                    }h
+                                                    0h
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-600">Team Members Active:</span>
                                                 <span className="font-semibold">
-                                                    {projectTimesheets ? 
-                                                        new Set(projectTimesheets.map((ts: any) => ts.user?.id)).size 
-                                                        : 0
-                                                    }
+                                                    0
                                                 </span>
                                             </div>
                                         </div>
@@ -1110,19 +1080,13 @@ export default function ProjectShow() {
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-600">Active Members:</span>
                                                 <span className="font-semibold text-green-600">
-                                                    {projectTimesheets ? 
-                                                        new Set(projectTimesheets.map((ts: any) => ts.user?.id)).size 
-                                                        : 0
-                                                    }
+                                                    0
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-600">Avg Hours/Member:</span>
                                                 <span className="font-semibold">
-                                                    {projectTimesheets && project.members?.length ? 
-                                                        (projectTimesheets.reduce((total: number, ts: any) => total + parseFloat(ts.total_hours || 0), 0) / project.members.length).toFixed(1) 
-                                                        : '0.0'
-                                                    }h
+                                                    0h
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center">
@@ -2073,424 +2037,6 @@ export default function ProjectShow() {
                             )}
                         </TabsContent>
 
-                        <TabsContent value="bugs" className="space-y-6 mt-0">
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-semibold">{t('Project Bugs')}</h3>
-                                <div className="flex gap-2">
-                                    <Button size="sm" onClick={() => router.get(route('bugs.index', { project_id: project.id, project_name: project.title }))}>
-                                        <Eye className="h-4 w-4 mr-2" />
-                                        Manage Bugs
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {projectBugs && projectBugs.length > 0 ? (
-                                <div className="space-y-4">
-                                    {/* Bug Stats */}
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                        <Card>
-                                            <CardContent className="p-4">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <Bug className="h-4 w-4 text-red-500" />
-                                                    <span className="text-sm font-medium">Total Bugs</span>
-                                                </div>
-                                                <p className="text-2xl font-bold">{projectBugs.length}</p>
-                                            </CardContent>
-                                        </Card>
-                                        <Card>
-                                            <CardContent className="p-4">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <CheckCircle className="h-4 w-4 text-green-500" />
-                                                    <span className="text-sm font-medium">Open Issues</span>
-                                                </div>
-                                                <p className="text-2xl font-bold">
-                                                    {projectBugs.filter((bug: any) => !['Resolved', 'Closed'].includes(bug.bug_status?.name)).length}
-                                                </p>
-                                            </CardContent>
-                                        </Card>
-                                        <Card>
-                                            <CardContent className="p-4">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <AlertTriangle className="h-4 w-4 text-orange-500" />
-                                                    <span className="text-sm font-medium">Critical</span>
-                                                </div>
-                                                <p className="text-2xl font-bold">
-                                                    {projectBugs.filter((bug: any) => bug.priority === 'critical').length}
-                                                </p>
-                                            </CardContent>
-                                        </Card>
-                                        <Card>
-                                            <CardContent className="p-4">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <User className="h-4 w-4 text-purple-500" />
-                                                    <span className="text-sm font-medium">Unassigned</span>
-                                                </div>
-                                                <p className="text-2xl font-bold">
-                                                    {projectBugs.filter((bug: any) => !bug.assigned_to).length}
-                                                </p>
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-
-                                    {/* Recent Bugs */}
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Recent Bugs</CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="space-y-3">
-                                                {projectBugs.slice(0, 5).map((bug: any) => (
-                                                    <div key={bug.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="flex-1">
-                                                                    <h4 className="font-medium text-sm">{bug.title}</h4>
-                                                                    <p className="text-xs text-gray-500 mt-1 line-clamp-1">{bug.description || 'No description'}</p>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <Badge 
-                                                                        variant="outline" 
-                                                                        className={`text-xs ${
-                                                                            bug.priority === 'critical' ? 'bg-red-100 text-red-800 border-red-200' :
-                                                                            bug.priority === 'high' ? 'bg-orange-100 text-orange-800 border-orange-200' :
-                                                                            bug.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                                                                            'bg-green-100 text-green-800 border-green-200'
-                                                                        }`}
-                                                                    >
-                                                                        {formatText(bug.priority)}
-                                                                    </Badge>
-                                                                    <Badge 
-                                                                        variant="outline" 
-                                                                        className={`text-xs ${
-                                                                            bug.severity === 'blocker' ? 'bg-red-100 text-red-800 border-red-200' :
-                                                                            bug.severity === 'critical' ? 'bg-orange-100 text-orange-800 border-orange-200' :
-                                                                            bug.severity === 'major' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                                                                            'bg-green-100 text-green-800 border-green-200'
-                                                                        }`}
-                                                                    >
-                                                                        {formatText(bug.severity)}
-                                                                    </Badge>
-                                                                    <Badge 
-                                                                        variant="outline" 
-                                                                        style={{ 
-                                                                            backgroundColor: bug.bug_status?.color + '20', 
-                                                                            borderColor: bug.bug_status?.color,
-                                                                            color: bug.bug_status?.color
-                                                                        }}
-                                                                        className="text-xs"
-                                                                    >
-                                                                        {formatText(bug.bug_status?.name)}
-                                                                    </Badge>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center justify-between mt-2">
-                                                                <div className="flex items-center gap-2">
-                                                                    {bug.assigned_to ? (
-                                                                        <div className="flex items-center gap-1">
-                                                                            <Avatar className="h-5 w-5">
-                                                                                <AvatarImage src={bug.assigned_to.avatar} />
-                                                                                <AvatarFallback className="text-xs">
-                                                                                    {bug.assigned_to.name?.charAt(0)}
-                                                                                </AvatarFallback>
-                                                                            </Avatar>
-                                                                            <span className="text-xs text-gray-600">{bug.assigned_to.name}</span>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <span className="text-xs text-gray-400">Unassigned</span>
-                                                                    )}
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-xs text-gray-500">
-                                                                        Reported by {bug.reported_by?.name}
-                                                                    </span>
-                                                                    <span className="text-xs text-gray-500">
-                                                                        {bug.end_date ? new Date(bug.end_date).toLocaleDateString() : 'No due date'}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            {projectBugs.length > 5 && (
-                                                <div className="mt-4 text-center">
-                                                    <Button 
-                                                        variant="outline" 
-                                                        size="sm" 
-                                                        onClick={() => router.get(route('bugs.index', { project_id: project.id, project_name: project.title }))}
-                                                    >
-                                                        View All {projectBugs.length} Bugs
-                                                    </Button>
-                                                </div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-                                </div>
-                            ) : (
-                                <Card>
-                                    <CardContent className="p-8 text-center">
-                                        <Bug className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                                        <h3 className="text-lg font-semibold mb-2">No Bugs Reported</h3>
-                                        <p className="text-gray-500 mb-4">Track and manage bugs for better project quality.</p>
-                                        {canManageProject && (
-                                            <Button onClick={() => router.get(route('bugs.index', { project_id: project.id, project_name: project.title }))}>
-                                                <Plus className="h-4 w-4 mr-2" />
-                                                Report First Bug
-                                            </Button>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            )}
-                        </TabsContent>
-
-                        <TabsContent value="timesheet" className="space-y-6 mt-0">
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-semibold">Time Tracking</h3>
-                                <div className="flex gap-2">
-                                    {canManageProject && (
-                                        <Button size="sm" onClick={() => setIsTimesheetModalOpen(true)}>
-                                            <Plus className="h-4 w-4 mr-2" />
-                                            Create Timesheet
-                                        </Button>
-                                    )}
-                                    <Button size="sm" variant="outline" onClick={() => router.get(route('timesheets.index', { project_id: project.id }))}>
-                                        <Eye className="h-4 w-4 mr-2" />
-                                        Manage Timesheets
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {projectTimesheets && projectTimesheets.length > 0 ? (
-                                <div className="space-y-4">
-                                    {/* Timesheet Stats */}
-                                    {(() => {
-                                        const totalHours = projectTimesheets.reduce((total: number, timesheet: any) => total + parseFloat(timesheet.total_hours || 0), 0);
-                                        const billableHours = projectTimesheets.reduce((total: number, timesheet: any) => total + parseFloat(timesheet.billable_hours || 0), 0);
-                                        const hoursDisplay = formatHoursDisplay(totalHours, billableHours);
-                                        const overdueCount = projectTimesheets.filter((timesheet: any) => isTimesheetOverdue(timesheet.end_date, timesheet.status)).length;
-                                        
-                                        return (
-                                            <>
-                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                                    <Card>
-                                                        <CardContent className="p-4">
-                                                            <div className="flex items-center gap-2 mb-2">
-                                                                <Timer className="h-4 w-4 text-blue-500" />
-                                                                <span className="text-sm font-medium">Total Hours</span>
-                                                                {hoursDisplay.match && totalHours > 0 && (
-                                                                    <CheckCircle className="h-4 w-4 text-green-500" title="Hours match" />
-                                                                )}
-                                                            </div>
-                                                            <p className="text-2xl font-bold">{project.total_project_hours?.toFixed(1) || '0.0'}h</p>
-                                                        </CardContent>
-                                                    </Card>
-                                                    <Card>
-                                                        <CardContent className="p-4">
-                                                            <div className="flex items-center gap-2 mb-2">
-                                                                <Clock className="h-4 w-4 text-green-500" />
-                                                                <span className="text-sm font-medium">Billable Hours</span>
-                                                            </div>
-                                                            <p className="text-2xl font-bold text-green-600">
-                                                                {project.total_billable_hours?.toFixed(1) || '0.0'}h
-                                                            </p>
-                                                            <p className="text-xs text-gray-500 mt-1">{project.submitted_timesheets_percentage || 0}% of total hours</p>
-                                                        </CardContent>
-                                                    </Card>
-                                                    <Card>
-                                                        <CardContent className="p-4">
-                                                            <div className="flex items-center gap-2 mb-2">
-                                                                <Users className="h-4 w-4 text-purple-500" />
-                                                                <span className="text-sm font-medium">Team Members</span>
-                                                            </div>
-                                                            <p className="text-2xl font-bold">
-                                                                {new Set(projectTimesheets.map((timesheet: any) => timesheet.user?.id)).size}
-                                                            </p>
-                                                        </CardContent>
-                                                    </Card>
-                                                    <Card>
-                                                        <CardContent className="p-4">
-                                                            <div className="flex items-center gap-2 mb-2">
-                                                                <CheckSquare className="h-4 w-4 text-orange-500" />
-                                                                <span className="text-sm font-medium">Approved</span>
-                                                            </div>
-                                                            <p className="text-2xl font-bold">
-                                                                {projectTimesheets.filter((timesheet: any) => timesheet.status === 'approved').length}
-                                                            </p>
-                                                        </CardContent>
-                                                    </Card>
-                                                </div>
-                                                
-                                                {/* Hours Status Summary */}
-                                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-4">
-                                                    <div className="space-y-4">
-                                                        <div className="flex items-center justify-between">
-                                                            <h4 className="text-sm font-semibold text-gray-700">Hours Status</h4>
-                                                            <div className="flex items-center gap-2">
-                                                                {hoursDisplay.match && totalHours > 0 ? (
-                                                                    <Badge className="bg-green-100 text-green-800 border-green-300" variant="outline">
-                                                                        <CheckCircle className="h-3 w-3 mr-1" />
-                                                                        All Hours Billable
-                                                                    </Badge>
-                                                                ) : totalHours > 0 ? (
-                                                                    <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300" variant="outline">
-                                                                        <AlertTriangle className="h-3 w-3 mr-1" />
-                                                                        Partial Billable
-                                                                    </Badge>
-                                                                ) : (
-                                                                    <Badge variant="outline">No Hours Logged</Badge>
-                                                                )}
-                                                                {overdueCount > 0 && (
-                                                                    <Badge className="bg-red-100 text-red-800 border-red-300" variant="outline">
-                                                                        <AlertTriangle className="h-3 w-3 mr-1" />
-                                                                        {overdueCount} Overdue
-                                                                    </Badge>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        {totalHours > 0 && (
-                                                            <div className="bg-white rounded-md p-3 border border-gray-200">
-                                                                <div className="flex items-center justify-between mb-2">
-                                                                    <span className="text-sm font-medium text-gray-700">Billable Rate</span>
-                                                                    <span className="text-lg font-bold text-gray-900">{project.submitted_timesheets_percentage}%</span>
-                                                                </div>
-                                                                <div className="relative">
-                                                                    <Progress value={project.submitted_timesheets_percentage} className="w-full h-3 bg-gray-200" />
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </>
-                                        );
-                                    })()}
-
-                                    {/* Recent Timesheets */}
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Recent Timesheets</CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="space-y-3">
-                                                {projectTimesheets.slice(0, 5).map((timesheet: any) => {
-                                                    const hoursDisplay = formatHoursDisplay(timesheet.total_hours || 0, timesheet.billable_hours || 0);
-                                                    const label = getTimesheetLabel({
-                                                        total_hours: timesheet.total_hours || 0,
-                                                        billable_hours: timesheet.billable_hours || 0,
-                                                        end_date: timesheet.end_date,
-                                                        status: timesheet.status
-                                                    });
-                                                    const isOverdue = isTimesheetOverdue(timesheet.end_date, timesheet.status);
-                                                    
-                                                    return (
-                                                        <div key={timesheet.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                                            <div className="flex-1">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="flex-1">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <h4 className="font-medium text-sm">
-                                                                                Week of {new Date(timesheet.start_date).toLocaleDateString()}
-                                                                            </h4>
-                                                                            {hoursDisplay.match && timesheet.total_hours > 0 && (
-                                                                                <CheckCircle className="h-3 w-3 text-green-500" title="Hours match" />
-                                                                            )}
-                                                                            {isOverdue && (
-                                                                                <Badge className="bg-red-100 text-red-800 border-red-200 text-xs" variant="outline">
-                                                                                    {getDaysOverdue(timesheet.end_date)}d overdue
-                                                                                </Badge>
-                                                                            )}
-                                                                        </div>
-                                                                        <p className="text-xs text-gray-500 mt-1">
-                                                                            {new Date(timesheet.start_date).toLocaleDateString()} - {new Date(timesheet.end_date).toLocaleDateString()}
-                                                                        </p>
-                                                                        {label && (
-                                                                            <Badge className={`${label.className} text-xs mt-1`} variant="outline">
-                                                                                {label.label}
-                                                                            </Badge>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <Badge 
-                                                                            variant="outline" 
-                                                                            className={`text-xs ${
-                                                                                timesheet.status === 'approved' ? 'bg-green-100 text-green-800 border-green-200' :
-                                                                                timesheet.status === 'submitted' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                                                                                timesheet.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
-                                                                                isOverdue ? 'bg-red-100 text-red-800 border-red-200' :
-                                                                                'bg-gray-100 text-gray-800 border-gray-200'
-                                                                            }`}
-                                                                        >
-                                                                            {isOverdue ? formatText('overdue') : formatText(timesheet.status)}
-                                                                        </Badge>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex items-center justify-between mt-2">
-                                                                    <div className="flex items-center gap-2">
-                                                                        {timesheet.user ? (
-                                                                            <div className="flex items-center gap-1">
-                                                                                <Avatar className="h-5 w-5">
-                                                                                    <AvatarImage src={timesheet.user.avatar} />
-                                                                                    <AvatarFallback className="text-xs">
-                                                                                        {timesheet.user.name?.charAt(0)}
-                                                                                    </AvatarFallback>
-                                                                                </Avatar>
-                                                                                <span className="text-xs text-gray-600">{timesheet.user.name}</span>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <span className="text-xs text-gray-400">Unknown User</span>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="flex items-center gap-4">
-                                                                        <div className="flex items-center gap-1">
-                                                                            <Timer className="h-3 w-3 text-blue-500" />
-                                                                            <span className="text-xs text-gray-600">{hoursDisplay.total}</span>
-                                                                        </div>
-                                                                        <div className="flex items-center gap-1">
-                                                                            <DollarSign className="h-3 w-3 text-green-500" />
-                                                                            <span className="text-xs text-green-600">
-                                                                                {hoursDisplay.billable} ({hoursDisplay.percentage}%)
-                                                                            </span>
-                                                                        </div>
-                                                                        <span className="text-xs text-gray-500">
-                                                                            {timesheet.entries?.length || 0} entries
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                            {projectTimesheets.length > 5 && (
-                                                <div className="mt-4 text-center">
-                                                    <Button 
-                                                        variant="outline" 
-                                                        size="sm" 
-                                                        onClick={() => router.get(route('timesheets.index', { project_id: project.id }))}
-                                                    >
-                                                        View All {projectTimesheets.length} Timesheets
-                                                    </Button>
-                                                </div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-                                </div>
-                            ) : (
-                                <Card>
-                                    <CardContent className="p-8 text-center">
-                                        <Timer className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                                        <h3 className="text-lg font-semibold mb-2">No Timesheets Yet</h3>
-                                        <p className="text-gray-500 mb-4">Start tracking time on project tasks to see timesheet data here.</p>
-                                        {canManageProject && (
-                                            <Button onClick={() => router.get(route('timesheets.index', { project_id: project.id }))}>
-                                                <Plus className="h-4 w-4 mr-2" />
-                                                Create First Timesheet
-                                            </Button>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            )}
-                        </TabsContent>
-
                         <TabsContent value="attachments" className="space-y-6 mt-0">
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center">
@@ -2506,13 +2052,13 @@ export default function ProjectShow() {
                                 {/* Search and Filter Bar */}
                                 <div className="bg-gray-50 rounded-lg p-4 border">
                                     <div className="flex items-center justify-between gap-4">
-                                        <form onSubmit={(e) => { e.preventDefault(); handleAttachmentSearch(); }} className="flex gap-2 flex-1">
+                                        <form onSubmit={(e) => { e.preventDefault(); handleActivitySearch(); }} className="flex gap-2 flex-1">
                                             <div className="relative flex-1 max-w-md">
                                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                                                 <Input
-                                                    placeholder="Search by filename or uploader..."
-                                                    value={attachmentSearch}
-                                                    onChange={(e) => setAttachmentSearch(e.target.value)}
+                                                    placeholder="Search activity..."
+                                                    value={activitySearch}
+                                                    onChange={(e) => setActivitySearch(e.target.value)}
                                                     className="pl-10 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                                                 />
                                             </div>
@@ -2520,17 +2066,17 @@ export default function ProjectShow() {
                                                 <Search className="h-4 w-4 mr-1.5" />
                                                 Search
                                             </Button>
-                                            {attachmentSearch && (
+                                            {activitySearch && (
                                                 <Button 
                                                     type="button" 
                                                     variant="outline" 
                                                     size="sm"
                                                     onClick={() => {
-                                                        setAttachmentSearch('');
+                                                        setActivitySearch('');
                                                         router.get(route('projects.show', project.id), {}, { 
                                                             preserveState: true, 
                                                             preserveScroll: true,
-                                                            only: ['project', 'attachmentFilters']
+                                                            only: ['project', 'activityFilters']
                                                         });
                                                     }}
                                                 >
@@ -2542,25 +2088,25 @@ export default function ProjectShow() {
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm text-gray-600 whitespace-nowrap">Per Page:</span>
                                             <Select 
-                                                value={attachmentsPerPage.toString()} 
-                                                onValueChange={handleAttachmentPerPageChange}
+                                                value={activityPerPage.toString()} 
+                                                onValueChange={handleActivityPerPageChange}
                                             >
                                                 <SelectTrigger className="w-20 h-9 bg-white border-gray-200">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="6">6</SelectItem>
-                                                    <SelectItem value="12">12</SelectItem>
-                                                    <SelectItem value="24">24</SelectItem>
-                                                    <SelectItem value="48">48</SelectItem>
+                                                    <SelectItem value="5">5</SelectItem>
+                                                    <SelectItem value="10">10</SelectItem>
+                                                    <SelectItem value="20">20</SelectItem>
+                                                    <SelectItem value="50">50</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-
-                            {project.attachments && project.attachments.data?.length > 0 ? (
+                            
+                            {project.activities && project.activities.data?.length > 0 ? (
                                 <>
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
                                         {project.attachments.data.map((attachment: any) => (
@@ -2690,6 +2236,7 @@ export default function ProjectShow() {
                                     </h3>
                                     <p className="text-gray-500 mb-6 max-w-sm mx-auto">
                                         {attachmentSearch ? 'Try adjusting your search terms or ' : 'Upload files to share documents, images, and other resources with your team.'}
+                                    </p>
                                     {attachmentSearch && (
                                         <Button variant="link" className="p-0 h-auto" onClick={() => {
                                             setAttachmentSearch('');
@@ -2702,11 +2249,10 @@ export default function ProjectShow() {
                                             clear search
                                         </Button>
                                     )}
-                                    </p>
                                     {!attachmentSearch && canManageProject && (
                                         <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700" onClick={() => handleAction('add-attachment')}>
                                             <Upload className="h-4 w-4 mr-2" />
-                                            Upload First Attachment
+                                            Upload Files
                                         </Button>
                                     )}
                                 </div>
@@ -2726,9 +2272,9 @@ export default function ProjectShow() {
                                             <div className="relative flex-1 max-w-md">
                                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                                                 <Input
-                                                    placeholder="Search activity..."
-                                                    value={activitySearch}
-                                                    onChange={(e) => setActivitySearch(e.target.value)}
+                                                    placeholder="Search by filename or uploader..."
+                                                    value={attachmentSearch}
+                                                    onChange={(e) => setAttachmentSearch(e.target.value)}
                                                     className="pl-10 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                                                 />
                                             </div>
@@ -2736,17 +2282,17 @@ export default function ProjectShow() {
                                                 <Search className="h-4 w-4 mr-1.5" />
                                                 Search
                                             </Button>
-                                            {activitySearch && (
+                                            {attachmentSearch && (
                                                 <Button 
                                                     type="button" 
                                                     variant="outline" 
                                                     size="sm"
                                                     onClick={() => {
-                                                        setActivitySearch('');
+                                                        setAttachmentSearch('');
                                                         router.get(route('projects.show', project.id), {}, { 
                                                             preserveState: true, 
                                                             preserveScroll: true,
-                                                            only: ['project', 'activityFilters']
+                                                            only: ['project', 'attachmentFilters']
                                                         });
                                                     }}
                                                 >
@@ -2758,24 +2304,24 @@ export default function ProjectShow() {
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm text-gray-600 whitespace-nowrap">Per Page:</span>
                                             <Select 
-                                                value={activityPerPage.toString()} 
-                                                onValueChange={handleActivityPerPageChange}
+                                                value={attachmentsPerPage.toString()} 
+                                                onValueChange={handleAttachmentPerPageChange}
                                             >
                                                 <SelectTrigger className="w-20 h-9 bg-white border-gray-200">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="5">5</SelectItem>
-                                                    <SelectItem value="10">10</SelectItem>
-                                                    <SelectItem value="20">20</SelectItem>
-                                                    <SelectItem value="50">50</SelectItem>
+                                                    <SelectItem value="6">6</SelectItem>
+                                                    <SelectItem value="12">12</SelectItem>
+                                                    <SelectItem value="24">24</SelectItem>
+                                                    <SelectItem value="48">48</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            
+
                             {project.activities && project.activities.data?.length > 0 ? (
                                 <>
                                     <div className="space-y-4">
@@ -2844,26 +2390,28 @@ export default function ProjectShow() {
                                     )}
                                 </>
                             ) : (
-                                <div className="text-center py-8 text-gray-500">
-                                    <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                <div className="text-center py-16">
+                                    <div className="mx-auto w-24 h-24 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-full flex items-center justify-center mb-6">
+                                        <BarChart3 className="h-10 w-10 text-blue-500" />
+                                    </div>
                                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                        {activitySearch ? 'No activity found' : 'No activity recorded yet'}
+                                        {activitySearch ? 'No activities found' : 'No activities yet'}
                                     </h3>
                                     <p className="text-gray-500 mb-6 max-w-sm mx-auto">
-                                        {activitySearch ? 'Try adjusting your search terms or ' : t('Project activities will appear here as they happen.')}
-                                        {activitySearch && (
-                                            <Button variant="link" className="p-0 h-auto" onClick={() => {
-                                                setActivitySearch('');
-                                                router.get(route('projects.show', project.id), {}, { 
-                                                    preserveState: true, 
-                                                    preserveScroll: true,
-                                                    only: ['project', 'activityFilters']
-                                                });
-                                            }}>
-                                                clear search
-                                            </Button>
-                                        )}
+                                        {activitySearch ? 'Try adjusting your search terms.' : 'Project activity will appear here.'}
                                     </p>
+                                    {activitySearch && (
+                                        <Button variant="link" className="p-0 h-auto" onClick={() => {
+                                            setActivitySearch('');
+                                            router.get(route('projects.show', project.id), {}, { 
+                                                preserveState: true, 
+                                                preserveScroll: true,
+                                                only: ['project', 'activityFilters']
+                                            });
+                                        }}>
+                                            clear search
+                                        </Button>
+                                    )}
                                 </div>
                             )}
                         </TabsContent>
@@ -2910,13 +2458,6 @@ export default function ProjectShow() {
                         'Download history will be preserved'
                     ] : []
                 }
-            />
-
-            {/* Timesheet Modal */}
-            <TimesheetFormModal
-                isOpen={isTimesheetModalOpen}
-                onClose={() => setIsTimesheetModalOpen(false)}
-                projects={[project]}
             />
 
             {/* Shared Project Settings Modal */}

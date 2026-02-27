@@ -262,48 +262,12 @@ class ProjectController extends Controller
             ->where('project_id', $project->id)
             ->latest()
             ->get();
-        // Load project bugs with related data
-        $projectBugs = \App\Models\Bug::with(['bugStatus', 'assignedTo', 'reportedBy'])
-            ->where('project_id', $project->id)
-            ->latest()
-            ->get();
-
-        // Load project timesheets with related data
-        $projectTimesheets = \App\Models\Timesheet::with([
-            'user',
-            'entries' => function ($query) use ($project) {
-                $query->whereHas('task', function ($taskQuery) use ($project) {
-                    $taskQuery->where('project_id', $project->id);
-                });
-            }
-        ])
-            ->whereHas('entries.task', function ($query) use ($project) {
-                $query->where('project_id', $project->id);
-            })
-            ->latest()
-            ->get()
-            ->map(function ($timesheet) {
-                $timesheet->total_hours = $timesheet->entries->sum('hours');
-                $timesheet->billable_hours = $timesheet->entries->where('is_billable', true)->sum('hours');
-                $timesheet->billable_percentage = $timesheet->total_hours > 0 
-                    ? round(($timesheet->billable_hours / $timesheet->total_hours) * 100) 
-                    : 0;
-                $timesheet->entries_count = $timesheet->entries->count();
-                return $timesheet;
-            });
-            
-        // Calculate project totals (only submitted timesheets)
-        $submittedTimesheets = $projectTimesheets->whereIn('status', ['submitted', 'approved']);
-        $project->total_project_hours = $submittedTimesheets->sum('total_hours');
-        $project->total_billable_hours = $submittedTimesheets->sum('billable_hours');
-        $project->billable_rate_percentage = $project->total_project_hours > 0 
-            ? round(($project->total_billable_hours / $project->total_project_hours) * 100) 
-            : 0;
-        $project->total_team_members = $projectTimesheets->pluck('user.id')->unique()->count();
-        $project->approved_timesheets_count = $projectTimesheets->where('status', 'approved')->count();
-        $project->submitted_timesheets_percentage = $projectTimesheets->count() > 0 
-            ? round(($submittedTimesheets->count() / $projectTimesheets->count()) * 100) 
-            : 0;
+        $project->total_project_hours = 0;
+        $project->total_billable_hours = 0;
+        $project->billable_rate_percentage = 0;
+        $project->total_team_members = 0;
+        $project->approved_timesheets_count = 0;
+        $project->submitted_timesheets_percentage = 0;
 
         // Load single budget for this project
         $budget = \App\Models\ProjectBudget::with(['categories', 'creator'])
@@ -361,8 +325,8 @@ class ProjectController extends Controller
             'managers' => $managers,
             'clients' => $clients,
             'projectTasks' => $projectTasks,
-            'projectBugs' => $projectBugs,
-            'projectTimesheets' => $projectTimesheets,
+            'projectBugs' => [],
+            'projectTimesheets' => [],
             'userWorkspaceRole' => $userWorkspaceRole,
             'canManageBudget' => $this->checkPermission('project_manage_budget'),
             'canDeleteProject' => $this->checkPermission('project_delete'),
@@ -785,8 +749,8 @@ class ProjectController extends Controller
             'shared_settings.budget' => 'boolean',
             'shared_settings.expenses' => 'boolean',
             'shared_settings.task' => 'boolean',
-            'shared_settings.recent_bugs' => 'boolean',
-            'shared_settings.timesheet' => 'boolean',
+            'shared_settings.recent_bugs' => 'sometimes|boolean',
+            'shared_settings.timesheet' => 'sometimes|boolean',
             'shared_settings.files' => 'boolean',
             'shared_settings.activity' => 'boolean',
 
@@ -1012,50 +976,14 @@ class ProjectController extends Controller
             ->latest()
             ->get();
             
-        // Load project bugs
-        $project->bugs = \App\Models\Bug::with(['bugStatus', 'assignedTo', 'reportedBy'])
-            ->where('project_id', $project->id)
-            ->latest()
-            ->get();
-            
-        // Load project timesheets with detailed entries
-        $timesheets = \App\Models\Timesheet::with([
-            'user',
-            'entries' => function ($query) use ($project) {
-                $query->whereHas('task', function ($taskQuery) use ($project) {
-                    $taskQuery->where('project_id', $project->id);
-                });
-            }
-        ])
-            ->whereHas('entries.task', function ($query) use ($project) {
-                $query->where('project_id', $project->id);
-            })
-            ->latest()
-            ->get()
-            ->map(function ($timesheet) {
-                $timesheet->total_hours = $timesheet->entries->sum('hours');
-                $timesheet->billable_hours = $timesheet->entries->where('is_billable', true)->sum('hours');
-                $timesheet->billable_percentage = $timesheet->total_hours > 0 
-                    ? round(($timesheet->billable_hours / $timesheet->total_hours) * 100) 
-                    : 0;
-                $timesheet->entries_count = $timesheet->entries->count();
-                return $timesheet;
-            });
-            
-        // Calculate project totals (only submitted timesheets)
-        $submittedTimesheets = $timesheets->whereIn('status', ['submitted', 'approved']);
-        $project->total_project_hours = $submittedTimesheets->sum('total_hours');
-        $project->total_billable_hours = $submittedTimesheets->sum('billable_hours');
-        $project->billable_rate_percentage = $project->total_project_hours > 0 
-            ? round(($project->total_billable_hours / $project->total_project_hours) * 100) 
-            : 0;
-        $project->total_team_members = $timesheets->pluck('user.id')->unique()->count();
-        $project->approved_timesheets_count = $timesheets->where('status', 'approved')->count();
-        $project->submitted_timesheets_percentage = $timesheets->count() > 0 
-            ? round(($submittedTimesheets->count() / $timesheets->count()) * 100) 
-            : 0;
-        
-        $project->setRelation('timesheets', $timesheets);
+        $project->bugs = collect();
+        $project->total_project_hours = 0;
+        $project->total_billable_hours = 0;
+        $project->billable_rate_percentage = 0;
+        $project->total_team_members = 0;
+        $project->approved_timesheets_count = 0;
+        $project->submitted_timesheets_percentage = 0;
+        $project->setRelation('timesheets', collect());
         // Validate token timestamp matches project creation
         if ($timestamp != $project->created_at->timestamp) {
             abort(404, 'Invalid share link');

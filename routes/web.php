@@ -812,6 +812,32 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('asset-categories/{assetCategory}', [\App\Http\Controllers\AssetCategoryController::class, 'destroy'])->middleware('permission:asset_manage_categories')->name('asset-categories.destroy');
         Route::post('asset-categories/reorder', [\App\Http\Controllers\AssetCategoryController::class, 'reorder'])->middleware('permission:asset_manage_categories')->name('asset-categories.reorder');
 
+        // Equipment
+        Route::get('equipment/qr/{token}', [\App\Http\Controllers\EquipmentController::class, 'showByQr'])->middleware('permission:equipment_view')->name('equipment.show-by-qr');
+        Route::get('equipment-types', [\App\Http\Controllers\EquipmentTypeController::class, 'index'])->middleware('permission:equipment_type_manage')->name('equipment-types.index');
+        Route::post('equipment-types', [\App\Http\Controllers\EquipmentTypeController::class, 'store'])->middleware('permission:equipment_type_manage')->name('equipment-types.store');
+        Route::put('equipment-types/{equipmentType}', [\App\Http\Controllers\EquipmentTypeController::class, 'update'])->middleware('permission:equipment_type_manage')->name('equipment-types.update');
+        Route::delete('equipment-types/{equipmentType}', [\App\Http\Controllers\EquipmentTypeController::class, 'destroy'])->middleware('permission:equipment_type_manage')->name('equipment-types.destroy');
+        Route::get('service-types', [\App\Http\Controllers\ServiceTypeController::class, 'index'])->middleware('permission:service_type_manage')->name('service-types.index');
+        Route::post('service-types', [\App\Http\Controllers\ServiceTypeController::class, 'store'])->middleware('permission:service_type_manage')->name('service-types.store');
+        Route::put('service-types/{serviceType}', [\App\Http\Controllers\ServiceTypeController::class, 'update'])->middleware('permission:service_type_manage')->name('service-types.update');
+        Route::delete('service-types/{serviceType}', [\App\Http\Controllers\ServiceTypeController::class, 'destroy'])->middleware('permission:service_type_manage')->name('service-types.destroy');
+        Route::get('equipment', [\App\Http\Controllers\EquipmentController::class, 'index'])->middleware('permission:equipment_view_any')->name('equipment.index');
+        Route::get('equipment/create', [\App\Http\Controllers\EquipmentController::class, 'create'])->middleware('permission:equipment_create')->name('equipment.create');
+        Route::post('equipment', [\App\Http\Controllers\EquipmentController::class, 'store'])->middleware('permission:equipment_create')->name('equipment.store');
+        Route::get('equipment/{equipment}', [\App\Http\Controllers\EquipmentController::class, 'show'])->middleware('permission:equipment_view')->name('equipment.show');
+        Route::get('equipment/{equipment}/edit', [\App\Http\Controllers\EquipmentController::class, 'edit'])->middleware('permission:equipment_update')->name('equipment.edit');
+        Route::put('equipment/{equipment}', [\App\Http\Controllers\EquipmentController::class, 'update'])->middleware('permission:equipment_update')->name('equipment.update');
+        Route::delete('equipment/{equipment}', [\App\Http\Controllers\EquipmentController::class, 'destroy'])->middleware('permission:equipment_delete')->name('equipment.destroy');
+        Route::get('equipment-schedule', [\App\Http\Controllers\EquipmentScheduleController::class, 'index'])->middleware('permission:equipment_view_any')->name('equipment-schedule.index');
+        Route::post('equipment-schedule', [\App\Http\Controllers\EquipmentScheduleController::class, 'store'])->middleware('permission:equipment_update')->name('equipment-schedule.store');
+        Route::put('equipment-schedule/{equipmentSchedule}', [\App\Http\Controllers\EquipmentScheduleController::class, 'update'])->middleware('permission:equipment_update')->name('equipment-schedule.update');
+        Route::delete('equipment-schedule/{equipmentSchedule}', [\App\Http\Controllers\EquipmentScheduleController::class, 'destroy'])->middleware('permission:equipment_update')->name('equipment-schedule.destroy');
+        Route::post('equipment-consumable-limits', [\App\Http\Controllers\EquipmentConsumableLimitController::class, 'store'])->middleware('permission:equipment_type_manage')->name('equipment-consumable-limits.store');
+        Route::delete('equipment-consumable-limits/{equipmentConsumableLimit}', [\App\Http\Controllers\EquipmentConsumableLimitController::class, 'destroy'])->middleware('permission:equipment_type_manage')->name('equipment-consumable-limits.destroy');
+        Route::post('tasks/{task}/equipment-service-photos', [\App\Http\Controllers\EquipmentServicePhotoController::class, 'store'])->middleware('permission:task_add_attachments')->name('equipment-service-photos.store');
+        Route::delete('equipment-service-photos/{equipmentServicePhoto}', [\App\Http\Controllers\EquipmentServicePhotoController::class, 'destroy'])->middleware('permission:task_add_attachments')->name('equipment-service-photos.destroy');
+
         // Task stages
         Route::get('task-stages', [\App\Http\Controllers\TaskStageController::class, 'index'])->middleware('permission:task_manage_stages')->name('task-stages.index');
         Route::post('task-stages', [\App\Http\Controllers\TaskStageController::class, 'store'])->middleware('permission:task_manage_stages')->name('task-stages.store');

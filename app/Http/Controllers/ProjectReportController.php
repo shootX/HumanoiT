@@ -7,7 +7,6 @@ use App\Models\Task;
 use App\Models\TaskStage;
 use App\Models\User;
 use App\Models\ProjectMilestone;
-use App\Models\TimesheetEntry;
 use App\Models\Workspace;
 use App\Exports\ProjectTaskReportExport;
 use Illuminate\Http\Request;
@@ -113,7 +112,7 @@ class ProjectReportController extends Controller
             ->limit(10);
         
         $initialTasks = $initialTasksQuery->get()->map(function ($task) {
-            $loggedHours = TimesheetEntry::where('task_id', $task->id)->sum('hours');
+            $loggedHours = 0;
             
             // Get assigned users
             $assignedUsers = collect();
@@ -225,7 +224,7 @@ class ProjectReportController extends Controller
 
         // Transform tasks data
         $transformedTasks = $tasks->getCollection()->map(function ($task) {
-            $loggedHours = TimesheetEntry::where('task_id', $task->id)->sum('hours');
+            $loggedHours = 0;
             
             // Get assigned users
             $assignedUsers = collect();
@@ -337,7 +336,7 @@ class ProjectReportController extends Controller
         $html .= '<div class="table-container"><div style="padding:16px;background:#f9fafb;border-bottom:1px solid #e5e7eb;"><div style="font-size:16px;font-weight:bold;color:#1f2937;">Tasks</div></div><table><thead><tr><th>TASK NAME</th><th>MILESTONE</th><th>START DATE</th><th>DUE DATE</th><th>ASSIGNED TO</th><th>TOTAL LOGGED HOURS</th><th>PRIORITY</th><th>STATUS</th></tr></thead><tbody>';
 
         foreach ($tasks as $task) {
-            $loggedHours = TimesheetEntry::where('task_id', $task->id)->sum('hours');
+            $loggedHours = 0;
             $assignedUsers = collect();
             if ($task->assignedUser) $assignedUsers->push($task->assignedUser);
             if ($task->members) $assignedUsers = $assignedUsers->merge($task->members);
@@ -372,8 +371,7 @@ class ProjectReportController extends Controller
 
         $totalMilestones = $project->milestones()->count();
         $completedMilestones = $project->milestones()->where('status', 'completed')->count();
-        // Calculate logged hours from timesheet entries
-        $totalLoggedHours = TimesheetEntry::whereIn('task_id', $project->tasks()->pluck('id'))->sum('hours');
+        $totalLoggedHours = 0;
         
 
 
@@ -395,11 +393,9 @@ class ProjectReportController extends Controller
         // Get task-wise hours data for chart
         $taskHoursData = [];
         foreach ($project->tasks as $task) {
-            $taskLogged = TimesheetEntry::where('task_id', $task->id)->sum('hours');
-            
             $taskHoursData[] = [
                 'task_name' => $task->title,
-                'logged_hours' => round($taskLogged, 2)
+                'logged_hours' => 0
             ];
         }
 

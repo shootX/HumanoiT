@@ -273,12 +273,6 @@ class HandleInertiaRequests extends Middleware
         $paymentSettings = \App\Models\PaymentSetting::getUserSettings($user->id, $workspace->id);
 
         return [
-            'timesheet_enabled' => $workspace->timesheet_enabled,
-            'timesheet_approval_required' => $workspace->timesheet_approval_required,
-            'timesheet_auto_submit' => $workspace->timesheet_auto_submit,
-            'timesheet_reminder_days' => $workspace->timesheet_reminder_days,
-            'default_work_start' => $workspace->default_work_start?->format('H:i'),
-            'default_work_end' => $workspace->default_work_end?->format('H:i'),
             'settings' => $workspace->settings ?? [],
             'payment_settings' => $paymentSettings
         ];
