@@ -824,6 +824,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('service-types/{serviceType}', [\App\Http\Controllers\ServiceTypeController::class, 'destroy'])->middleware('permission:service_type_manage')->name('service-types.destroy');
         Route::get('equipment', [\App\Http\Controllers\EquipmentController::class, 'index'])->middleware('permission:equipment_view_any')->name('equipment.index');
         Route::get('equipment/create', [\App\Http\Controllers\EquipmentController::class, 'create'])->middleware('permission:equipment_create')->name('equipment.create');
+        Route::get('equipment/export', [\App\Http\Controllers\ExportImportController::class, 'export'])->middleware('permission:equipment_view_any')->name('equipment.export');
+        Route::get('equipment/template', [\App\Http\Controllers\ExportImportController::class, 'getTemplate'])->middleware('permission:equipment_view_any')->name('equipment.template');
+        Route::post('equipment/import', [\App\Http\Controllers\ExportImportController::class, 'import'])->middleware('permission:equipment_create')->name('equipment.import');
+        Route::post('equipment/import/data', [\App\Http\Controllers\ExportImportController::class, 'importData'])->middleware('permission:equipment_create')->name('equipment.import.data');
+        Route::post('equipment/bulk-delete', [\App\Http\Controllers\EquipmentController::class, 'bulkDelete'])->middleware('permission:equipment_delete')->name('equipment.bulk-delete');
+        Route::post('equipment/bulk-update', [\App\Http\Controllers\EquipmentController::class, 'bulkUpdate'])->middleware('permission:equipment_update')->name('equipment.bulk-update');
         Route::post('equipment', [\App\Http\Controllers\EquipmentController::class, 'store'])->middleware('permission:equipment_create')->name('equipment.store');
         Route::get('equipment/{equipment}', [\App\Http\Controllers\EquipmentController::class, 'show'])->middleware('permission:equipment_view')->name('equipment.show');
         Route::get('equipment/{equipment}/edit', [\App\Http\Controllers\EquipmentController::class, 'edit'])->middleware('permission:equipment_update')->name('equipment.edit');

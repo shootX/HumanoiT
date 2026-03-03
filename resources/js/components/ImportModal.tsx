@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Upload, FileText, Download, AlertCircle } from 'lucide-react';
+import { Upload, FileText, Download, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 import { toast } from './custom-toast';
 import { router } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +25,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showMapping, setShowMapping] = useState(false);
+  const [showResult, setShowResult] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    total_rows: number;
+    imported_count: number;
+    skipped_count: number;
+    error_count?: number;
+    skipped_details?: { row: number; reason: string; preview: string }[];
+    errors?: { row: number; message: string; preview: string }[];
+  } | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [fields, setFields] = useState<string[]>([]);
   const [preview, setPreview] = useState<string[][]>([]);
@@ -123,12 +132,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       const result = await response.json();
 
       if (result.success) {
+        setImportResult(result.data || null);
+        setShowMapping(false);
+        setShowResult(true);
         toast.success(result.message);
-        resetState();
-        onClose();
-        router.reload();
       } else {
-        toast.error(result.error || 'Import failed');
+        setImportResult(result.data || null);
+        setShowMapping(false);
+        setShowResult(true);
+        toast.error(result.message || result.error || 'Import failed');
       }
     } catch (error) {
       toast.error(t('Import failed'));
@@ -140,10 +152,18 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const resetState = () => {
     setFile(null);
     setShowMapping(false);
+    setShowResult(false);
+    setImportResult(null);
     setHeaders([]);
     setFields([]);
     setPreview([]);
     setMapping({});
+  };
+
+  const handleCloseResult = () => {
+    resetState();
+    onClose();
+    router.reload();
   };
 
   const handleClose = () => {
@@ -170,7 +190,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         const url = window.URL.createObjectURL(blob); 
         const a = document.createElement('a');
         a.href = url;
-        const ext = (type === 'assets' || type === 'crm-contacts') ? 'xlsx' : 'csv';
+        const ext = (type === 'assets' || type === 'crm-contacts' || type === 'equipment') ? 'xlsx' : 'csv';
         a.download = `sample_${type}.${ext}`;
         document.body.appendChild(a);
         a.click();
@@ -189,13 +209,91 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className={showMapping ? "max-w-[95vw] sm:max-w-6xl max-h-[90vh] overflow-y-auto" : "max-w-[95vw] sm:max-w-md"}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && (showResult ? handleCloseResult() : handleClose())}>
+      <DialogContent className={showMapping || showResult ? "max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto" : "max-w-[95vw] sm:max-w-md"}>
         <DialogHeader>
-          <DialogTitle>{t('Import')} {t(title)}</DialogTitle>
+          <DialogTitle>{showResult ? t('Import result') : `${t('Import')} ${t(title)}`}</DialogTitle>
         </DialogHeader>
 
-        {!showMapping ? (
+        {showResult && importResult ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="flex items-center gap-2 p-3 rounded bg-muted/50">
+                <FileText className="h-4 w-4" />
+                <span>{t('Total rows in file')}: <strong>{importResult.total_rows}</strong></span>
+              </div>
+              <div className="flex items-center gap-2 p-3 rounded bg-green-50 text-green-800">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>{t('Imported')}: <strong>{importResult.imported_count}</strong></span>
+              </div>
+              {importResult.skipped_count > 0 && (
+                <div className="flex items-center gap-2 p-3 rounded bg-amber-50 text-amber-800 col-span-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{t('Skipped')}: <strong>{importResult.skipped_count}</strong></span>
+                </div>
+              )}
+              {importResult.error_count && importResult.error_count > 0 && (
+                <div className="flex items-center gap-2 p-3 rounded bg-red-50 text-red-800 col-span-2">
+                  <XCircle className="h-4 w-4" />
+                  <span>{t('Errors')}: <strong>{importResult.error_count}</strong></span>
+                </div>
+              )}
+            </div>
+            {importResult.skipped_details && importResult.skipped_details.length > 0 && (
+              <div>
+                <h4 className="font-medium mb-2 text-sm">{t('Skipped rows')}:</h4>
+                <div className="max-h-40 overflow-y-auto border rounded text-xs">
+                  <table className="w-full">
+                    <thead className="bg-muted/50 sticky top-0">
+                      <tr>
+                        <th className="px-2 py-1.5 text-left">{t('Row')}</th>
+                        <th className="px-2 py-1.5 text-left">{t('Reason')}</th>
+                        <th className="px-2 py-1.5 text-left">{t('Preview')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importResult.skipped_details.map((s, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="px-2 py-1.5">{s.row}</td>
+                          <td className="px-2 py-1.5">{s.reason}</td>
+                          <td className="px-2 py-1.5 truncate max-w-[200px]" title={s.preview}>{s.preview || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            {importResult.errors && importResult.errors.length > 0 && (
+              <div>
+                <h4 className="font-medium mb-2 text-sm text-red-700">{t('Failed rows')}:</h4>
+                <div className="max-h-40 overflow-y-auto border rounded text-xs border-red-200">
+                  <table className="w-full">
+                    <thead className="bg-red-50 sticky top-0">
+                      <tr>
+                        <th className="px-2 py-1.5 text-left">{t('Row')}</th>
+                        <th className="px-2 py-1.5 text-left">{t('Error')}</th>
+                        <th className="px-2 py-1.5 text-left">{t('Preview')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importResult.errors.map((e, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="px-2 py-1.5">{e.row}</td>
+                          <td className="px-2 py-1.5 text-red-600">{e.message}</td>
+                          <td className="px-2 py-1.5 truncate max-w-[200px]" title={e.preview}>{e.preview || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            <Button onClick={handleCloseResult} className="w-full">
+              {t('Close')}
+            </Button>
+          </div>
+        ) : !showMapping ? (
           <div className="space-y-4">
             <div className="text-sm text-gray-600">
               {t('Import')} {type} {t('data from Excel (.xlsx, .xls) or CSV (.csv) file')}

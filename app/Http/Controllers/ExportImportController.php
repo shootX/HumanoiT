@@ -15,6 +15,7 @@ class ExportImportController extends Controller
         'projects' => \App\Exports\ProjectExport::class,
         'invoices' => \App\Exports\InvoiceExport::class,
         'assets' => \App\Exports\AssetExport::class,
+        'equipment' => \App\Exports\EquipmentExport::class,
     ];
 
     protected $importClasses = [
@@ -35,6 +36,8 @@ class ExportImportController extends Controller
                 $type = 'invoices';
             } elseif (str_contains($path, 'assets/export')) {
                 $type = 'assets';
+            } elseif (str_contains($path, 'equipment/export')) {
+                $type = 'equipment';
             } else {
                 $type = $request->route()->parameter('type');
             }
@@ -65,6 +68,8 @@ class ExportImportController extends Controller
                 $type = 'assets';
             } elseif (str_contains($path, 'crm-contacts/import')) {
                 $type = 'crm_contacts';
+            } elseif (str_contains($path, 'equipment/import')) {
+                $type = 'equipment';
             } else {
                 $type = $request->route()->parameter('type');
             }
@@ -92,11 +97,14 @@ class ExportImportController extends Controller
         try {
             $imported = 0;
             $errors = [];
+            $skippedDetails = [];
             $table = session('import_table', $type);
+            $totalRows = count($csvData);
 
             $seen = [];
-            $skipped = 0;
             foreach ($csvData as $rowIndex => $row) {
+                $rowNum = $rowIndex + 2;
+                $rowPreview = implode(' | ', array_slice(array_map(fn ($v) => is_string($v) ? trim($v) : $v, $row), 0, 5));
                 try {
                     $mappedData = [];
                     foreach ($mappingData as $field => $columnIndex) {
@@ -104,42 +112,65 @@ class ExportImportController extends Controller
                     }
 
                     $uniqueKey = $this->getUniqueKeyForTable($table, $mappedData);
-                    
+
                     if (isset($seen[$uniqueKey])) {
-                        $skipped++;
+                        $skippedDetails[] = [
+                            'row' => $rowNum,
+                            'reason' => __('Duplicate row in file'),
+                            'preview' => mb_substr($rowPreview, 0, 80),
+                        ];
                         continue;
                     }
                     $seen[$uniqueKey] = true;
-                    
+
                     if ($this->checkDuplicateRecord($table, $mappedData)) {
-                        $skipped++;
+                        $skippedDetails[] = [
+                            'row' => $rowNum,
+                            'reason' => __('Already exists in database'),
+                            'preview' => mb_substr($rowPreview, 0, 80),
+                        ];
                         continue;
                     }
 
                     $this->createRecord($table, $mappedData);
                     $imported++;
                 } catch (\Exception $e) {
-                    $errors[] = "Row " . ($rowIndex + 2) . ": " . $e->getMessage();
+                    $errors[] = [
+                        'row' => $rowNum,
+                        'message' => $e->getMessage(),
+                        'preview' => mb_substr($rowPreview, 0, 80),
+                    ];
                 }
             }
 
             session()->forget(['file_data', 'file_header', 'import_table']);
 
+            $skippedCount = count($skippedDetails);
+
             if (count($errors) > 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Import completed with errors',
-                    'errors' => $errors
+                    'message' => __('Import completed with errors'),
+                    'data' => [
+                        'total_rows' => $totalRows,
+                        'imported_count' => $imported,
+                        'skipped_count' => $skippedCount,
+                        'error_count' => count($errors),
+                        'skipped_details' => $skippedDetails,
+                        'errors' => $errors,
+                    ],
                 ], 422);
             }
 
             return response()->json([
                 'success' => true,
-                'message' => "{$imported} {$type} imported successfully" . ($skipped > 0 ? ", {$skipped} duplicates skipped" : ""),
+                'message' => "{$imported} {$type} imported successfully" . ($skippedCount > 0 ? ", {$skippedCount} skipped" : ""),
                 'data' => [
+                    'total_rows' => $totalRows,
                     'imported_count' => $imported,
-                    'skipped_count' => $skipped
-                ]
+                    'skipped_count' => $skippedCount,
+                    'skipped_details' => $skippedDetails,
+                ],
             ], 200);
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
             $failures = $e->failures();
@@ -185,7 +216,12 @@ class ExportImportController extends Controller
                 $filename = 'კონტაქტების_ნიმუში_' . date('Y-m-d') . '.xlsx';
                 return Excel::download(new \App\Exports\CrmContactTemplateExport(), $filename);
             }
-            
+
+            if ($type === 'equipment') {
+                $filename = 'ტექნიკის_ნიმუში_' . date('Y-m-d') . '.xlsx';
+                return Excel::download(new \App\Exports\EquipmentTemplateExport(), $filename);
+            }
+
             // Download template file from storage
             $templatePath = $this->getTemplateFilePath($type);
             
@@ -223,6 +259,10 @@ class ExportImportController extends Controller
             'assets' => [
                 'view' => 'asset_view_any',
                 'create' => 'asset_create'
+            ],
+            'equipment' => [
+                'view' => 'equipment_view_any',
+                'create' => 'equipment_create'
             ],
             'crm_contacts' => [
                 'view' => 'crm_contact_view_any',
@@ -407,6 +447,9 @@ class ExportImportController extends Controller
             case 'crm_contacts':
                 $tableFields = ['type', 'name', 'company_name', 'brand_name', 'identification_code', 'email', 'phone', 'address', 'notes'];
                 break;
+            case 'equipment':
+                $tableFields = ['name', 'project', 'equipment_type', 'installation_date', 'last_service_date', 'health_status', 'notes'];
+                break;
             default:
                 $error = 'Something went wrong!';
                 $tableFields = [];
@@ -436,6 +479,9 @@ class ExportImportController extends Controller
             case 'crm_contacts':
                 $workspaceId = auth()->user()->current_workspace_id ?? 0;
                 return strtolower(trim($data['name'] ?? '')) . '_' . strtolower(trim($data['email'] ?? '')) . '_' . $workspaceId;
+            case 'equipment':
+                $workspaceId = auth()->user()->current_workspace_id ?? 0;
+                return strtolower(trim($data['name'] ?? '')) . '_' . strtolower(trim($data['project'] ?? '')) . '_' . strtolower(trim($data['equipment_type'] ?? '')) . '_' . $workspaceId;
             default:
                 return '';
         }
@@ -474,6 +520,21 @@ class ExportImportController extends Controller
                     $q->where('email', trim($data['email']));
                 }
                 return $q->exists();
+            case 'equipment':
+                $workspaceId = auth()->user()->current_workspace_id;
+                if (!$workspaceId || empty(trim($data['name'] ?? ''))) return false;
+                $projectTitle = trim($data['project'] ?? '');
+                $typeName = trim($data['equipment_type'] ?? '');
+                if (empty($projectTitle) || empty($typeName)) return false;
+                $project = \App\Models\Project::forWorkspace($workspaceId)->where('title', $projectTitle)->first();
+                if (!$project) return false;
+                $equipmentType = \App\Models\EquipmentType::forWorkspace($workspaceId)->where('name', $typeName)->first();
+                if (!$equipmentType) return false;
+                return \App\Models\Equipment::where('workspace_id', $workspaceId)
+                    ->where('name', trim($data['name']))
+                    ->where('project_id', $project->id)
+                    ->where('equipment_type_id', $equipmentType->id)
+                    ->exists();
             default:
                 return false;
         }
@@ -650,6 +711,58 @@ class ExportImportController extends Controller
                 }
 
                 $contact->save();
+                break;
+            case 'equipment':
+                $workspaceId = auth()->user()->current_workspace_id;
+                if (!$workspaceId) {
+                    throw new \Exception('No active workspace found');
+                }
+                $name = trim($data['name'] ?? '');
+                if (empty($name)) {
+                    throw new \Exception('Name is required');
+                }
+                $projectTitle = trim($data['project'] ?? '');
+                if (empty($projectTitle)) {
+                    throw new \Exception('Project (branch) is required');
+                }
+                $project = \App\Models\Project::forWorkspace($workspaceId)->where('title', $projectTitle)->first();
+                if (!$project) {
+                    throw new \Exception("Project not found: {$projectTitle}");
+                }
+                $typeName = trim($data['equipment_type'] ?? '');
+                if (empty($typeName)) {
+                    throw new \Exception('Equipment type is required');
+                }
+                $equipmentType = \App\Models\EquipmentType::forWorkspace($workspaceId)->where('name', $typeName)->first();
+                if (!$equipmentType) {
+                    throw new \Exception("Equipment type not found: {$typeName}");
+                }
+                $healthStatus = strtolower(trim($data['health_status'] ?? 'green'));
+                if (!in_array($healthStatus, ['green', 'yellow', 'red'])) {
+                    $healthStatus = 'green';
+                }
+                $equipment = new \App\Models\Equipment();
+                $equipment->workspace_id = $workspaceId;
+                $equipment->project_id = $project->id;
+                $equipment->equipment_type_id = $equipmentType->id;
+                $equipment->name = $name;
+                $equipment->health_status = $healthStatus;
+                $equipment->notes = !empty($data['notes']) ? trim($data['notes']) : null;
+                if (!empty($data['installation_date'])) {
+                    try {
+                        $equipment->installation_date = \Carbon\Carbon::parse($data['installation_date'])->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $equipment->installation_date = null;
+                    }
+                }
+                if (!empty($data['last_service_date'])) {
+                    try {
+                        $equipment->last_service_date = \Carbon\Carbon::parse($data['last_service_date'])->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $equipment->last_service_date = null;
+                    }
+                }
+                $equipment->save();
                 break;
             default:
                 throw new \Exception('Unsupported table type');

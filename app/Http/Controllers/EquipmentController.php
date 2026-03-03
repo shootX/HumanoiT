@@ -44,16 +44,37 @@ class EquipmentController extends Controller
             $query->byHealthStatus($request->health_status);
         }
 
-        $perPage = $request->get('per_page', 30);
+        $perPage = $request->get('per_page', 50);
         $equipment = $query->latest()->paginate($perPage)->withQueryString();
 
         $projects = Project::forWorkspace($workspaceId)->orderBy('title')->get(['id', 'title']);
         $equipmentTypes = EquipmentType::forWorkspace($workspaceId)->ordered()->get(['id', 'name']);
 
+        $baseQuery = Equipment::forWorkspace($workspaceId);
+        $byType = (clone $baseQuery)->selectRaw('equipment_type_id, count(*) as cnt')
+            ->groupBy('equipment_type_id')
+            ->get()
+            ->map(function ($r) {
+                $type = EquipmentType::find($r->equipment_type_id);
+                return ['name' => $type?->name ?? '—', 'count' => (int) $r->cnt];
+            })
+            ->values()
+            ->all();
+        $metrics = [
+            'total' => (clone $baseQuery)->count(),
+            'by_type' => $byType,
+            'by_status' => [
+                'green' => (clone $baseQuery)->where('health_status', 'green')->count(),
+                'yellow' => (clone $baseQuery)->where('health_status', 'yellow')->count(),
+                'red' => (clone $baseQuery)->where('health_status', 'red')->count(),
+            ],
+        ];
+
         return Inertia::render('equipment/Index', [
             'equipment' => $equipment,
             'projects' => $projects,
             'equipmentTypes' => $equipmentTypes,
+            'metrics' => $metrics,
             'filters' => $request->only(['search', 'project_id', 'equipment_type_id', 'health_status', 'per_page']),
             'canDelete' => $this->checkPermission('equipment_delete'),
         ]);
@@ -207,5 +228,57 @@ class EquipmentController extends Controller
         $equipment->delete();
 
         return redirect()->route('equipment.index')->with('success', __('Equipment deleted successfully!'));
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        $this->authorizePermission('equipment_delete');
+
+        $workspaceId = auth()->user()->current_workspace_id;
+
+        $validated = $request->validate([
+            'equipment_ids' => 'required|array',
+            'equipment_ids.*' => 'integer|exists:equipment,id',
+        ]);
+
+        $count = Equipment::forWorkspace($workspaceId)
+            ->whereIn('id', $validated['equipment_ids'])
+            ->delete();
+
+        return back()->with('success', __(':count equipment deleted successfully!', ['count' => $count]));
+    }
+
+    public function bulkUpdate(Request $request)
+    {
+        $this->authorizePermission('equipment_update');
+
+        $workspaceId = auth()->user()->current_workspace_id;
+
+        $validated = $request->validate([
+            'equipment_ids' => 'required|array',
+            'equipment_ids.*' => 'integer|exists:equipment,id',
+            'health_status' => 'nullable|in:green,yellow,red',
+            'last_service_date' => 'nullable|date',
+        ]);
+
+        $items = Equipment::forWorkspace($workspaceId)->whereIn('id', $validated['equipment_ids'])->get();
+
+        $updates = [];
+        if (isset($validated['health_status'])) {
+            $updates['health_status'] = $validated['health_status'];
+        }
+        if (isset($validated['last_service_date'])) {
+            $updates['last_service_date'] = $validated['last_service_date'];
+        }
+
+        if (empty($updates)) {
+            return back()->with('error', __('No updates provided'));
+        }
+
+        foreach ($items as $eq) {
+            $eq->update($updates);
+        }
+
+        return back()->with('success', __(':count equipment updated successfully!', ['count' => $items->count()]));
     }
 }
