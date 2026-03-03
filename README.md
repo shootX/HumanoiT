@@ -20,6 +20,12 @@ CRM სისტემა პროექტების, ამოცანე�
 
 ## ვერსიების ისტორია
 
+### v1.6.1 (2026-02-27)
+
+**ინვოისი – Mark Paid ფიქსი**
+- project_expenses – მოხსნილია invoice_id unique შეზღუდვა (ერთ ინვოისზე რამდენიმე ხარჯი – თითო equipment item-ზე)
+- createProjectExpenseIfPaid – $created ინიციალიზაციის ფიქსი, equipment ხარჯების დაბრუნება
+
 ### v1.6.0 (2026-02-27)
 
 **ტექნიკის მოდული (Equipment)**

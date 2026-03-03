@@ -425,6 +425,7 @@ class Invoice extends Model
             return [];
         }
 
+        $created = [];
         $amountsByProject = array_fill_keys($projectIds, 0.0);
         $primaryProjectId = $this->project_id ?? $projectIds[0];
         $tasksByProject = $this->tasks->groupBy('project_id');
@@ -494,7 +495,6 @@ class Invoice extends Model
             $amountsByProject[$projectId] += $itemAmount;
         }
 
-        $created = [];
         foreach ($projectIds as $projectId) {
             $amount = round($amountsByProject[$projectId] ?? 0, 2);
             if ($amount <= 0) {
