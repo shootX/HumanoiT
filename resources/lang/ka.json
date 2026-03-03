@@ -96,6 +96,8 @@
     "Auto-filled from selection": "ავტომატურად ივსება არჩევანიდან",
     "Please select Equipment and Service Type for all equipment consumable items": "გთხოვთ აირჩიოთ ტექნიკა და სერვისის ტიპი ყველა ტექნიკის მოხმარების პუნქტისთვის",
     "Add Schedule": "გრაფიკის დამატება",
+    "Add Multiple": "ერთიანად დამატება",
+    "Add Multiple Schedules": "ერთიანად რამდენიმე გრაფიკის დამატება",
     "Edit Schedule": "გრაფიკის რედაქტირება",
     "Add First Schedule": "პირველი გრაფიკის დამატება",
     "Advance": "წინასწარ",

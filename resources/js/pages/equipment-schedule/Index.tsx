@@ -4,10 +4,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Calendar, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Calendar, Pencil, Trash2, Layers } from 'lucide-react';
 import { PageTemplate } from '@/components/page-template';
 import { toast } from '@/components/custom-toast';
 import { CrudDeleteModal } from '@/components/CrudDeleteModal';
+import { SimpleMultiSelect } from '@/components/simple-multi-select';
 import { useTranslation } from 'react-i18next';
 
 interface Schedule {
@@ -26,7 +27,10 @@ interface Schedule {
 interface EquipmentItem {
     id: number;
     name: string;
-    project?: { title: string };
+    project_id?: number;
+    project?: { id: number; title: string };
+    equipment_type_id?: number;
+    equipmentType?: { id: number; name: string };
 }
 
 interface Props {
@@ -49,9 +53,18 @@ export default function EquipmentScheduleIndex({ schedules, projects, equipmentT
     const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
+    const [showBulkModal, setShowBulkModal] = useState(false);
 
     const { data, setData, post, put, processing, errors, reset } = useForm({
         equipment_id: '',
+        service_type_id: '',
+        interval_days: '30',
+        advance_days: '7',
+        last_service_date: ''
+    });
+
+    const bulkForm = useForm({
+        equipment_ids: [] as string[],
         service_type_id: '',
         interval_days: '30',
         advance_days: '7',
@@ -119,6 +132,27 @@ export default function EquipmentScheduleIndex({ schedules, projects, equipmentT
         });
     };
 
+    const handleBulkSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (bulkForm.data.equipment_ids.length === 0 || !bulkForm.data.service_type_id) {
+            toast.error(t('Select at least one equipment and service type'));
+            return;
+        }
+        router.post(route('equipment-schedule.bulk-store'), {
+            equipment_ids: bulkForm.data.equipment_ids.map((id) => parseInt(id, 10)),
+            service_type_id: bulkForm.data.service_type_id,
+            interval_days: bulkForm.data.interval_days,
+            advance_days: bulkForm.data.advance_days,
+            last_service_date: bulkForm.data.last_service_date || null
+        }, {
+            onSuccess: () => {
+                setShowBulkModal(false);
+                bulkForm.reset();
+            },
+            onError: () => toast.error(t('Failed to create schedules'))
+        });
+    };
+
     const breadcrumbs = [
         { title: t('Dashboard'), href: route('dashboard') },
         { title: t('Equipment'), href: route('equipment.index') },
@@ -152,9 +186,14 @@ export default function EquipmentScheduleIndex({ schedules, projects, equipmentT
                     </Select>
                     <Button type="button" variant="secondary" onClick={applyFilters}>{t('Filter')}</Button>
                     {canManage && (
-                        <Button onClick={() => { setEditingSchedule(null); reset({ equipment_id: '', service_type_id: '', interval_days: '30', advance_days: '7', last_service_date: '' }); setShowModal(true); }}>
-                            <Plus className="h-4 w-4 mr-2" />{t('Add Schedule')}
-                        </Button>
+                        <>
+                            <Button onClick={() => { setEditingSchedule(null); reset({ equipment_id: '', service_type_id: '', interval_days: '30', advance_days: '7', last_service_date: '' }); setShowModal(true); }}>
+                                <Plus className="h-4 w-4 mr-2" />{t('Add Schedule')}
+                            </Button>
+                            <Button variant="outline" onClick={() => { bulkForm.reset({ equipment_ids: [], service_type_id: '', interval_days: '30', advance_days: '7', last_service_date: '' }); setShowBulkModal(true); }}>
+                                <Layers className="h-4 w-4 mr-2" />{t('Add Multiple')}
+                            </Button>
+                        </>
                     )}
                 </div>
 
@@ -276,6 +315,57 @@ export default function EquipmentScheduleIndex({ schedules, projects, equipmentT
                 itemName={scheduleToDelete ? `${scheduleToDelete.equipment?.name} - ${scheduleToDelete.service_type}` : ''}
                 entityName={t('Schedule')}
             />
+
+            <Dialog open={showBulkModal} onOpenChange={(o) => { setShowBulkModal(o); if (!o) bulkForm.reset({ equipment_ids: [], service_type_id: '', interval_days: '30', advance_days: '7', last_service_date: '' }); }}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>{t('Add Multiple Schedules')}</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleBulkSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-2">{t('Equipment')}</label>
+                            <SimpleMultiSelect
+                                options={(equipment || []).map((e) => ({
+                                    value: String(e.id),
+                                    label: `${e.name}${e.project ? ` (${e.project.title})` : ''}`
+                                }))}
+                                selected={bulkForm.data.equipment_ids}
+                                onChange={(ids) => bulkForm.setData('equipment_ids', ids)}
+                                placeholder={t('Select equipment')}
+                            />
+                            {bulkForm.errors.equipment_ids && <p className="text-sm text-destructive mt-1">{bulkForm.errors.equipment_ids}</p>}
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2">{t('Service Type')}</label>
+                            <Select value={bulkForm.data.service_type_id} onValueChange={(v) => bulkForm.setData('service_type_id', v)} required>
+                                <SelectTrigger><SelectValue placeholder={t('Select')} /></SelectTrigger>
+                                <SelectContent>
+                                    {serviceTypes?.map((st) => <SelectItem key={st.id} value={String(st.id)}>{st.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            {bulkForm.errors.service_type_id && <p className="text-sm text-destructive mt-1">{bulkForm.errors.service_type_id}</p>}
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2">{t('Interval')} ({t('days')})</label>
+                            <Input type="number" min={1} value={bulkForm.data.interval_days} onChange={(e) => bulkForm.setData('interval_days', e.target.value)} required />
+                            {bulkForm.errors.interval_days && <p className="text-sm text-destructive mt-1">{bulkForm.errors.interval_days}</p>}
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2">{t('Advance')} ({t('days')})</label>
+                            <Input type="number" min={0} value={bulkForm.data.advance_days} onChange={(e) => bulkForm.setData('advance_days', e.target.value)} required />
+                            {bulkForm.errors.advance_days && <p className="text-sm text-destructive mt-1">{bulkForm.errors.advance_days}</p>}
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2">{t('Last Service Date')}</label>
+                            <Input type="date" value={bulkForm.data.last_service_date} onChange={(e) => bulkForm.setData('last_service_date', e.target.value)} />
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                            <Button type="button" variant="outline" onClick={() => setShowBulkModal(false)}>{t('Cancel')}</Button>
+                            <Button type="submit" disabled={bulkForm.processing}>{t('Create')}</Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </PageTemplate>
     );
 }

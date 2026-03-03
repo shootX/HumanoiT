@@ -837,6 +837,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('equipment/{equipment}', [\App\Http\Controllers\EquipmentController::class, 'destroy'])->middleware('permission:equipment_delete')->name('equipment.destroy');
         Route::get('equipment-schedule', [\App\Http\Controllers\EquipmentScheduleController::class, 'index'])->middleware('permission:equipment_view_any')->name('equipment-schedule.index');
         Route::post('equipment-schedule', [\App\Http\Controllers\EquipmentScheduleController::class, 'store'])->middleware('permission:equipment_update')->name('equipment-schedule.store');
+        Route::post('equipment-schedule/bulk', [\App\Http\Controllers\EquipmentScheduleController::class, 'bulkStore'])->middleware('permission:equipment_update')->name('equipment-schedule.bulk-store');
         Route::put('equipment-schedule/{equipmentSchedule}', [\App\Http\Controllers\EquipmentScheduleController::class, 'update'])->middleware('permission:equipment_update')->name('equipment-schedule.update');
         Route::delete('equipment-schedule/{equipmentSchedule}', [\App\Http\Controllers\EquipmentScheduleController::class, 'destroy'])->middleware('permission:equipment_update')->name('equipment-schedule.destroy');
         Route::post('equipment-consumable-limits', [\App\Http\Controllers\EquipmentConsumableLimitController::class, 'store'])->middleware('permission:equipment_type_manage')->name('equipment-consumable-limits.store');

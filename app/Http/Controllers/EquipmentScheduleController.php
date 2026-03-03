@@ -53,7 +53,7 @@ class EquipmentScheduleController extends Controller
         $projects = \App\Models\Project::forWorkspace($workspaceId)->orderBy('title')->get(['id', 'title']);
         $equipmentTypes = \App\Models\EquipmentType::forWorkspace($workspaceId)->ordered()->get(['id', 'name']);
         $serviceTypes = ServiceType::forWorkspace($workspaceId)->ordered()->get(['id', 'name']);
-        $equipment = Equipment::forWorkspace($workspaceId)->with('project')->orderBy('name')->get(['id', 'name', 'project_id']);
+        $equipment = Equipment::forWorkspace($workspaceId)->with(['project', 'equipmentType'])->orderBy('project_id')->orderBy('name')->get(['id', 'name', 'project_id', 'equipment_type_id']);
 
         return Inertia::render('equipment-schedule/Index', [
             'schedules' => $schedules,
@@ -96,6 +96,44 @@ class EquipmentScheduleController extends Controller
         );
 
         return back()->with('success', __('Schedule created successfully!'));
+    }
+
+    public function bulkStore(Request $request)
+    {
+        $this->authorizePermission('equipment_update');
+
+        $validated = $request->validate([
+            'equipment_ids' => 'required|array',
+            'equipment_ids.*' => 'integer|exists:equipment,id',
+            'service_type_id' => 'required|exists:service_types,id',
+            'interval_days' => 'required|integer|min:1',
+            'advance_days' => 'required|integer|min:0',
+            'last_service_date' => 'nullable|date',
+        ]);
+
+        $workspaceId = auth()->user()->current_workspace_id;
+        $equipmentIds = $validated['equipment_ids'];
+        $serviceTypeId = $validated['service_type_id'];
+        $intervalDays = $validated['interval_days'];
+        $advanceDays = $validated['advance_days'];
+        $lastServiceDate = $validated['last_service_date'] ?? null;
+
+        $equipment = Equipment::forWorkspace($workspaceId)->whereIn('id', $equipmentIds)->get();
+        $created = 0;
+
+        foreach ($equipment as $eq) {
+            EquipmentSchedule::updateOrCreate(
+                ['equipment_id' => $eq->id, 'service_type_id' => $serviceTypeId],
+                [
+                    'interval_days' => $intervalDays,
+                    'advance_days' => $advanceDays,
+                    'last_service_date' => $lastServiceDate,
+                ]
+            );
+            $created++;
+        }
+
+        return back()->with('success', __(':count schedule(s) created successfully!', ['count' => $created]));
     }
 
     public function update(Request $request, EquipmentSchedule $equipmentSchedule)
