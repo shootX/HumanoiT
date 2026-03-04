@@ -15,7 +15,10 @@ import { Link, useForm } from '@inertiajs/react';
 
 interface DashboardData {
   cards: Array<{
+    title: string;
     value: number;
+    format?: string;
+    icon?: string;
   }>;
   projects?: {
     total: number;
@@ -35,12 +38,39 @@ interface DashboardData {
     remaining: number;
     utilization: number;
   };
+  expenses?: {
+    total: number;
+    pending: number;
+    approved: number;
+    pendingAmount?: number;
+    approvedAmount?: number;
+  };
   invoices?: {
     total: number;
     paid: number;
     pending: number;
     overdue: number;
+    paidAmount?: number;
+    pendingAmount?: number;
+    overdueAmount?: number;
   };
+  upcomingDeadlines?: Array<{
+    id: number;
+    title: string;
+    deadline: string;
+    deadlineFormatted: string;
+    daysLeft: number;
+    status: string;
+    progress: number;
+  }>;
+  topProjects?: Array<{
+    id: number;
+    title: string;
+    progress: number;
+    status: string;
+    deadline?: string;
+  }>;
+  workspaceMembers?: number;
   recentActivities?: Array<{
     id: number;
     type: string;
@@ -600,11 +630,10 @@ export default function Dashboard({ dashboardData, isSuperAdmin, isSaasMode = tr
   ];
 
   // Use actual data from backend
-  const projects = dashboardData?.projects || { total: 0, active: 0, completed: 0, overdue: 0 };
-  const tasks = dashboardData?.tasks || { total: 0, pending: 0, inProgress: 0, completed: 0 };
   const budgets = dashboardData?.budgets || { totalBudget: 0, spent: 0, remaining: 0, utilization: 0 };
-  const invoices = dashboardData?.invoices || { total: 0, paid: 0, pending: 0, overdue: 0 };
   const recentActivities = dashboardData?.recentActivities || [];
+  const upcomingDeadlines = dashboardData?.upcomingDeadlines || [];
+  const topProjects = dashboardData?.topProjects || [];
 
   return (
     <PageTemplate 
@@ -612,38 +641,43 @@ export default function Dashboard({ dashboardData, isSuperAdmin, isSaasMode = tr
       url="/dashboard"
       actions={pageActions}
     >
-      <div className="space-y-6">
+      <div className="space-y-6 min-h-screen relative">
+        {/* Soft gradient background */}
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-background to-background pointer-events-none" />
         {/* Main Stats Cards - Dynamically rendered based on backend */}
         {dashboardData?.cards && dashboardData.cards.length > 0 && (
-          <div className={`grid gap-4 md:grid-cols-2 ${dashboardData.cards.length >= 3 ? 'lg:grid-cols-' + Math.min(dashboardData.cards.length, 4) : ''}`}>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {dashboardData.cards.map((card: any, index: number) => {
               const getCardIcon = (title: string) => {
-                if (title.includes('User')) return <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />;
-                if (title.includes('Project')) return <FolderOpen className="h-6 w-6 text-green-600 dark:text-green-400" />;
-                if (title.includes('Task')) return <CheckSquare className="h-6 w-6 text-purple-600 dark:text-purple-400" />;
-                if (title.includes('Revenue')) return <DollarSign className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />;
+                if (title?.includes('Branch') || title?.includes('Project')) return <FolderOpen className="h-6 w-6 text-green-600 dark:text-green-400" />;
+                if (title?.includes('Task')) return <CheckSquare className="h-6 w-6 text-purple-600 dark:text-purple-400" />;
+                if (title?.includes('Invoice')) return <FileText className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />;
+                if (title?.includes('Paid') || title?.includes('Amount') || title?.includes('Revenue')) return <DollarSign className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />;
+                if (title?.includes('Pending') || title?.includes('Progress')) return <Clock className="h-6 w-6 text-amber-600 dark:text-amber-400" />;
+                if (title?.includes('Expense')) return <Receipt className="h-6 w-6 text-orange-600 dark:text-orange-400" />;
+                if (title?.includes('Wallet')) return <Wallet className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />;
                 return <Activity className="h-6 w-6 text-gray-600 dark:text-gray-400" />;
               };
-              
               const getCardColor = (title: string) => {
-                if (title.includes('User')) return 'bg-blue-100 dark:bg-blue-900/20';
-                if (title.includes('Project')) return 'bg-green-100 dark:bg-green-900/20';
-                if (title.includes('Task')) return 'bg-purple-100 dark:bg-purple-900/20';
-                if (title.includes('Revenue')) return 'bg-yellow-100 dark:bg-yellow-900/20';
+                if (title?.includes('Branch') || title?.includes('Project')) return 'bg-green-100 dark:bg-green-900/20';
+                if (title?.includes('Task')) return 'bg-purple-100 dark:bg-purple-900/20';
+                if (title?.includes('Invoice')) return 'bg-indigo-100 dark:bg-indigo-900/20';
+                if (title?.includes('Paid') || title?.includes('Amount')) return 'bg-emerald-100 dark:bg-emerald-900/20';
+                if (title?.includes('Pending') || title?.includes('Progress')) return 'bg-amber-100 dark:bg-amber-900/20';
+                if (title?.includes('Expense')) return 'bg-orange-100 dark:bg-orange-900/20';
                 return 'bg-gray-100 dark:bg-gray-900/20';
               };
-              
               return (
-                <Card key={index} className="overflow-hidden hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
+                <Card key={index} className="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-card to-card/80 shadow-sm hover:shadow-lg hover:scale-[1.01] transition-all duration-300">
+                  <CardContent className="p-5">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">{t(card.title)}</p>
-                        <h3 className="mt-2 text-3xl font-bold">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-muted-foreground truncate">{t(card.title)}</p>
+                        <h3 className="mt-1 text-2xl font-bold">
                           {card.format === 'currency' ? formatCurrency(card.value) : card.value.toLocaleString()}
                         </h3>
                       </div>
-                      <div className={`rounded-full ${getCardColor(card.title)} p-3`}>
+                      <div className={`rounded-full flex-shrink-0 ${getCardColor(card.title)} p-2.5`}>
                         {getCardIcon(card.title)}
                       </div>
                     </div>
@@ -654,172 +688,138 @@ export default function Dashboard({ dashboardData, isSuperAdmin, isSaasMode = tr
           </div>
         )}
 
-        {/* Secondary Stats Grid - Only show if data exists */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* Secondary Stats Grid - Detailed Metrics */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {/* Workspace Members */}
+          {(dashboardData?.workspaceMembers ?? 0) > 0 && (
+            <Card className="rounded-2xl border-0 shadow-sm hover:shadow-md transition-all duration-300">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                  <Users className="h-4 w-4" />
+                  {t('Team Members')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{dashboardData.workspaceMembers}</p>
+                <Link href={route('workspaces.index')} className="text-xs text-primary hover:underline mt-1 block">{t('Manage Workspace')} →</Link>
+              </CardContent>
+            </Card>
+          )}
           {/* Budget Overview */}
-          {dashboardData?.budgets && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
+          {dashboardData?.budgets && (budgets.totalBudget > 0 || budgets.spent > 0) && (
+            <Card className="rounded-2xl border-0 shadow-sm hover:shadow-md transition-all duration-300">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium">
                   <Wallet className="h-4 w-4" />
                   {t('Budget Overview')}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>{t('Utilization')}</span>
-                    <span className="font-medium">{budgets.utilization}{t('%')}</span>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>{t('Utilization')}</span>
+                  <span className="font-medium">{budgets.utilization}%</span>
+                </div>
+                <Progress value={Math.min(budgets.utilization, 100)} className="h-2" />
+                <div className="grid grid-cols-2 gap-2 text-sm pt-1">
+                  <div>
+                    <span className="text-muted-foreground">{t('Spent')}</span>
+                    <p className="font-semibold">{formatCurrency(budgets.spent)}</p>
                   </div>
-                  <Progress value={budgets.utilization} className="h-2" />
+                  <div>
+                    <span className="text-muted-foreground">{t('Remaining')}</span>
+                    <p className="font-semibold text-green-600">{formatCurrency(budgets.remaining)}</p>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">{t('Spent')}</span>
-                  <span className="font-semibold">{formatCurrency(budgets.spent)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">{t('Remaining')}</span>
-                  <span className="font-semibold text-green-600">{formatCurrency(budgets.remaining)}</span>
-                </div>
-                <Link href={route('budgets.dashboard')} className="block">
-                  <div className="text-xs text-primary hover:underline mt-2">{t('View Budgets')} →</div>
-                </Link>
+                <Link href={route('budgets.dashboard')} className="text-xs text-primary hover:underline block mt-1">{t('View Budgets')} →</Link>
               </CardContent>
             </Card>
           )}
-
+          {/* Expense Details */}
+          {dashboardData?.expenses && (
+            <Card className="rounded-2xl border-0 shadow-sm hover:shadow-md transition-all duration-300">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                  <Receipt className="h-4 w-4" />
+                  {t('Expenses')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>{t('Approved')}</span>
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">{dashboardData.expenses.approved}</Badge>
+                </div>
+                <p className="font-semibold">{formatCurrency(dashboardData.expenses.approvedAmount ?? 0)}</p>
+                <div className="flex justify-between text-sm pt-1">
+                  <span>{t('Pending')}</span>
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400">{dashboardData.expenses.pending}</Badge>
+                </div>
+                <p className="font-semibold text-amber-600">{formatCurrency(dashboardData.expenses.pendingAmount ?? 0)}</p>
+                <Link href={route('expenses.index')} className="text-xs text-primary hover:underline block mt-1">{t('View Expenses')} →</Link>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
-        {/* Main Dashboard Content */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Project Status - Only show if data exists */}
-          {(dashboardData?.projects || dashboardData?.tasks || dashboardData?.taskStages) && (
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Target className="h-5 w-5" />
-                    {t('Project Status Overview')}
-                  </div>
-                  {dashboardData?.projects && (
-                    <Badge variant="outline" className="text-xs">
-                      {projects.total} {t('Total')}
-                    </Badge>
-                  )}
+        {/* Upcoming Deadlines - full width when present */}
+        {upcomingDeadlines.length > 0 && (
+          <Card className="rounded-2xl border-0 shadow-sm hover:shadow-md transition-all duration-300">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Calendar className="h-5 w-5" />
+                {t('Upcoming Deadlines')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {upcomingDeadlines.map((item: any) => (
+                  <Link key={item.id} href={route('projects.show', item.id)} className="block p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <p className="font-medium text-sm truncate flex-1">{item.title}</p>
+                      <Badge variant={item.daysLeft <= 3 ? "destructive" : "secondary"} className="ml-2 flex-shrink-0">
+                        {item.daysLeft} {t('days')}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      {item.deadlineFormatted}
+                      <span>•</span>
+                      <span>{item.progress}%</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              <Link href={route('projects.index')} className="text-xs text-primary hover:underline block mt-3">{t('View All Projects')} →</Link>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Top Projects & Recent Activities - side by side */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {topProjects.length > 0 && (
+            <Card className="rounded-2xl border-0 shadow-sm hover:shadow-md transition-all duration-300">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <TrendingUp className="h-5 w-5" />
+                  {t('Branches with Most Tasks')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  {/* Project Progress Chart */}
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {dashboardData?.projects && (
-                      <div className="space-y-4">
-                        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t('Projects')}</h4>
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center p-2 rounded-lg bg-green-50 dark:bg-green-900/10">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-green-500 rounded-full" />
-                              <span className="text-sm font-medium">{t('Active')}</span>
-                            </div>
-                            <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                              {projects.active}
-                            </Badge>
-                          </div>
-                          <div className="flex justify-between items-center p-2 rounded-lg bg-blue-50 dark:bg-blue-900/10">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-blue-500 rounded-full" />
-                              <span className="text-sm font-medium">{t('Completed')}</span>
-                            </div>
-                            <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
-                              {projects.completed}
-                            </Badge>
-                          </div>
-                          <div className="flex justify-between items-center p-2 rounded-lg bg-red-50 dark:bg-red-900/10">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-red-500 rounded-full" />
-                              <span className="text-sm font-medium">{t('Overdue')}</span>
-                            </div>
-                            <Badge variant={projects.overdue > 0 ? "destructive" : "secondary"}>
-                              {projects.overdue}
-                            </Badge>
-                          </div>
-                        </div>
+                <div className="space-y-3">
+                  {topProjects.map((item: any) => (
+                    <Link key={item.id} href={route('projects.show', item.id)} className="block p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex justify-between items-center">
+                        <p className="font-medium text-sm truncate flex-1">{item.title}</p>
+                        <span className="font-semibold text-green-600 ml-2">{item.tasksCount ?? 0} {t('tasks')}</span>
                       </div>
-                    )}
-                    
-                    {dashboardData?.taskStages && dashboardData.taskStages.length > 0 && (
-                      <div className="space-y-4">
-                        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t('Task Stages')}</h4>
-                        <div className="space-y-3">
-                          {dashboardData.taskStages.map((stage: any, index: number) => {
-                            const colors = [
-                              { bg: 'bg-blue-50 dark:bg-blue-900/10', dot: 'bg-blue-500', badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' },
-                              { bg: 'bg-yellow-50 dark:bg-yellow-900/10', dot: 'bg-yellow-500', badge: 'border-yellow-200 text-yellow-800 dark:border-yellow-800 dark:text-yellow-400' },
-                              { bg: 'bg-green-50 dark:bg-green-900/10', dot: 'bg-green-500', badge: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' },
-                              { bg: 'bg-purple-50 dark:bg-purple-900/10', dot: 'bg-purple-500', badge: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400' }
-                            ];
-                            const color = colors[index % colors.length];
-                            
-                            return (
-                              <div key={stage.name} className={`flex justify-between items-center p-2 rounded-lg ${color.bg}`}>
-                                <div className="flex items-center gap-2">
-                                  <div className={`w-3 h-3 ${color.dot} rounded-full`} />
-                                  <span className="text-sm font-medium">{stage.name}</span>
-                                </div>
-                                <Badge variant={index === 1 ? "outline" : "secondary"} className={color.badge}>
-                                  {stage.count}
-                                </Badge>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Progress Bar */}
-                  {dashboardData?.projects && dashboardData?.tasks && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{t('Overall Progress')}</span>
-                        <span className="font-medium">
-                          {(() => {
-                            const totalItems = projects.total + tasks.total;
-                            const completedItems = projects.completed + tasks.completed;
-                            return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-                          })()}{t('%')}
-                        </span>
-                      </div>
-                      <Progress value={(() => {
-                        const totalItems = projects.total + tasks.total;
-                        const completedItems = projects.completed + tasks.completed;
-                        return totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
-                      })()} className="h-2" />
-                    </div>
-                  )}
-                  
-                  {/* Action Links */}
-                  <div className="flex flex-wrap gap-3 pt-2 border-t">
-                    {dashboardData?.projects && (
-                      <Link href={route('projects.index')} className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                        <FolderOpen className="h-3 w-3" />
-                        {t('View Projects')}
-                      </Link>
-                    )}
-                    {dashboardData?.tasks && (
-                      <Link href={route('tasks.index')} className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                        <CheckSquare className="h-3 w-3" />
-                        {t('View Tasks')}
-                      </Link>
-                    )}
-                  </div>
+                      {item.deadline && <p className="text-xs text-muted-foreground mt-1">{item.deadline}</p>}
+                    </Link>
+                  ))}
                 </div>
+                <Link href={route('projects.index')} className="text-xs text-primary hover:underline block mt-3">{t('View All Projects')} →</Link>
               </CardContent>
             </Card>
           )}
-
-          {/* Recent Activities */}
-          <Card>
+          <Card className={`rounded-2xl border-0 shadow-sm hover:shadow-md transition-all duration-300 ${topProjects.length === 0 ? 'md:col-span-2' : ''}`}>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -894,46 +894,8 @@ export default function Dashboard({ dashboardData, isSuperAdmin, isSaasMode = tr
           </Card>
         </div>
 
-        {/* Financial Overview - Only show if data exists */}
-        {(dashboardData?.invoices || dashboardData?.expenses) && (
-          <div className="grid gap-6 md:grid-cols-2">
-            {dashboardData?.invoices && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    {t('Invoice Status')}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">{t('Total Invoices')}</span>
-                      <span className="font-semibold">{invoices.total}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-green-600">{t('Paid')}</span>
-                      <Badge variant="secondary" className="bg-green-100 text-green-800">{invoices.paid}</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-yellow-600">{t('Pending')}</span>
-                      <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">{invoices.pending}</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-red-600">{t('Overdue')}</span>
-                      <Badge variant="destructive">{invoices.overdue}</Badge>
-                    </div>
-                  </div>
-                  <div className="mt-4 pt-4 border-t">
-                    <Link href={route('invoices.index')} className="text-sm text-primary hover:underline">
-                      {t('Manage Invoices')} →
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <Card>
+        {/* Quick Actions */}
+        <Card className="rounded-2xl border-0 shadow-sm hover:shadow-md transition-all duration-300">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />
@@ -941,42 +903,30 @@ export default function Dashboard({ dashboardData, isSuperAdmin, isSaasMode = tr
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-3">
-                  {dashboardData?.projects && (
-                    <Link href={route('projects.index')} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 transition-colors">
-                      <FolderOpen className="h-4 w-4" />
-                      <span className="text-sm">{t('View Projects')}</span>
-                    </Link>
-                  )}
-                  {dashboardData?.tasks && (
-                    <Link href={route('tasks.index')} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 transition-colors">
-                      <CheckSquare className="h-4 w-4" />
-                      <span className="text-sm">{t('View Tasks')}</span>
-                    </Link>
-                  )}
+                <div className="flex flex-wrap gap-2">
+                  <Link href={route('projects.index')} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-sm">
+                    <FolderOpen className="h-4 w-4" />
+                    {t('View Projects')}
+                  </Link>
+                  <Link href={route('tasks.index')} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-sm">
+                    <CheckSquare className="h-4 w-4" />
+                    {t('View Tasks')}
+                  </Link>
                   {dashboardData?.expenses && (
-                    <Link href={route('expenses.create')} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted transition-colors">
+                    <Link href={route('expenses.create')} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-sm">
                       <Receipt className="h-4 w-4" />
-                      <span className="text-sm">{t('Submit Expense')}</span>
-                    </Link>
-                  )}
-                  {dashboardData?.invoices && (
-                    <Link href={route('invoices.create')} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted transition-colors">
-                      <FileText className="h-4 w-4" />
-                      <span className="text-sm">{t('Create Invoice')}</span>
+                      {t('Submit Expense')}
                     </Link>
                   )}
                   {hasRoleDashboardAccess && (
-                    <Link href={route('roles.dashboard')} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted transition-colors">
+                    <Link href={route('roles.index')} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-sm">
                       <Shield className="h-4 w-4" />
-                      <span className="text-sm">{t('Workspace Roles')}</span>
+                      {t('Workspace Roles')}
                     </Link>
                   )}
                 </div>
               </CardContent>
             </Card>
-          </div>
-        )}
       </div>
     </PageTemplate>
   );

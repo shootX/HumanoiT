@@ -11,7 +11,7 @@ return new class extends Migration
         if(!Schema::hasTable('landing_page_settings')) {
             Schema::create('landing_page_settings', function (Blueprint $table) {
             $table->id();
-            $table->string('company_name')->nullable()->default('Taskly');
+            $table->string('company_name')->nullable()->default('Humana Tasks');
             $table->string('contact_email')->nullable()->default('support@taskly.com');
             $table->string('contact_phone')->nullable()->default('+1 (555) 123-4567');
             $table->string('contact_address')->nullable()->default('San Francisco, CA');

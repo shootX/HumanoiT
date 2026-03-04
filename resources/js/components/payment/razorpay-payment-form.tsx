@@ -76,7 +76,7 @@ export function RazorpayPaymentForm({
         key: razorpayKey,
         amount: amount,
         currency: currency,
-        name: 'Taskly',
+        name: 'Humana Tasks',
         description: 'Plan Subscription',
         order_id: order_id,
         handler: function(response: any) {

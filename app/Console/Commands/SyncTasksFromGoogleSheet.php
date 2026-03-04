@@ -11,7 +11,7 @@ class SyncTasksFromGoogleSheet extends Command
 {
     protected $signature = 'tasks:sync-from-google-sheet
                             {spreadsheet_id : Google Spreadsheet ID from the URL}
-                            {workspace_id : Taskly workspace ID}
+                            {workspace_id : Humana Tasks workspace ID}
                             {--sheet=ია : Sheet tab name (default: ია)}
                             {--project= : Default project ID when row has no "მაღაზია" or project not found}
                             {--user=1 : User ID for created_by}';

@@ -1,6 +1,6 @@
 <?php
 
 return [
-    'system' => 'Taskly',
+    'system' => 'Humana Tasks',
     'system_version' => '7.3',
 ];

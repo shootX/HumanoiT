@@ -81,7 +81,7 @@ export default function Header({ settings, sectionData, customPages = [], brandC
                   onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
                   onMouseLeave={(e) => e.currentTarget.style.color = ''}
                 >
-                  {settings.company_name || 'Taskly'}
+                  {settings.company_name || 'Humana Tasks'}
                 </span>
               )}
             </Link>

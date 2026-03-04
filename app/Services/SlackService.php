@@ -38,7 +38,7 @@ class SlackService
 
         $payload = [
             'text' => $message,
-            'username' => config('app.name', 'Taskly'),
+            'username' => config('app.name', 'Humana Tasks'),
             'icon_emoji' => ':bell:'
         ];
 
@@ -74,7 +74,7 @@ class SlackService
 
         $payload = [
             'text' => $message,
-            'username' => config('app.name', 'Taskly'),
+            'username' => config('app.name', 'Humana Tasks'),
             'icon_emoji' => ':bell:'
         ];
 
@@ -144,7 +144,7 @@ class SlackService
     private static function formatMessage($templateName, $data)
     {
         $title = $data['title'] ?? ucfirst(str_replace('_', ' ', $templateName));
-        $message = $data['message'] ?? 'New notification from Taskly';
+        $message = $data['message'] ?? 'New notification from Humana Tasks';
 
         $formatted = "*{$title}*\n\n{$message}";
 
@@ -158,12 +158,12 @@ class SlackService
     public function sendTestMessage($webhookUrl)
     {
         $payload = [
-            'text' => '*Test Message from Taskly*
+            'text' => '*Test Message from Humana Tasks*
 
 This is a test message to verify your Slack integration is working correctly.
 
 If you can see this message, your webhook configuration is successful! 🎉',
-            'username' => config('app.name', 'Taskly'),
+            'username' => config('app.name', 'Humana Tasks'),
             'icon_emoji' => ':white_check_mark:'
         ];
 

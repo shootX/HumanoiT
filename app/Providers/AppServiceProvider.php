@@ -26,7 +26,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if ($this->app->environment('production') && config('app.url') && str_starts_with(config('app.url'), 'https://')) {
+        // Force HTTPS when behind proxy or when APP_URL is https
+        if (request()->secure() || (config('app.url') && str_starts_with(config('app.url'), 'https://'))) {
             URL::forceScheme('https');
         }
 

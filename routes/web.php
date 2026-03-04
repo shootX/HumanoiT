@@ -92,7 +92,7 @@ Route::post('user/update-layout-direction', [UserController::class, 'updateLayou
 Route::post('user/update-language', [UserController::class, 'updateLanguage'])->name('user.update-language');
 Route::post('languages/change', [LanguageController::class, 'changeLanguage'])->name('languages.change');
 
-Route::get('/', [LandingPageController::class, 'show'])->name('home');
+Route::get('/', fn () => redirect()->route('login'))->name('home');
 
 // Invitation routes (public access for accepting invitations)
 Route::get('invitations/{token}', [WorkspaceInvitationController::class, 'show'])

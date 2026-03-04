@@ -74,6 +74,13 @@ class ProjectExpenseController extends Controller
         $perPage = $request->get('per_page', 20);
         $expenses = $query->latest()->paginate($perPage);
 
+        // Total amounts for current filters (all matching expenses, not just current page)
+        $expenseStats = [
+            'total_amount' => (float) (clone $query)->sum('amount'),
+            'approved_amount' => (float) (clone $query)->where('status', 'approved')->sum('amount'),
+            'pending_amount' => (float) (clone $query)->where('status', 'pending')->sum('amount'),
+        ];
+
         $userWorkspaceRole = $workspace->getMemberRole($user);
 
         // Apply access control to projects dropdown
@@ -106,6 +113,7 @@ class ProjectExpenseController extends Controller
 
         return Inertia::render('expenses/Index', [
             'expenses' => $expenses,
+            'expenseStats' => $expenseStats,
             'projects' => $projects,
             'categories' => $categories,
             'members' => $members,

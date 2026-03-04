@@ -69,7 +69,7 @@ class TelegramService
     private static function formatMessage($templateName, $data)
     {
         $title = $data['title'] ?? ucfirst(str_replace('_', ' ', $templateName));
-        $message = $data['message'] ?? 'New notification from Taskly';
+        $message = $data['message'] ?? 'New notification from Humana Tasks';
 
         $formatted = "<b>{$title}</b>\n\n{$message}";
 
@@ -190,7 +190,7 @@ class TelegramService
 
     public function sendTestMessage(string $botToken, string $chatId): bool
     {
-        $message = '🤖 <b>Test Message from Taskly</b>\n\nThis is a test message to verify your Telegram integration is working correctly.\n\nIf you can see this message, your bot configuration is successful! 🎉';
+        $message = '🤖 <b>Test Message from Humana Tasks</b>\n\nThis is a test message to verify your Telegram integration is working correctly.\n\nIf you can see this message, your bot configuration is successful! 🎉';
         
         $url = "https://api.telegram.org/bot{$botToken}/sendMessage";
         

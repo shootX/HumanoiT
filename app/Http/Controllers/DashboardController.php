@@ -80,39 +80,61 @@ class DashboardController extends Controller
                 ];
             }
             
-            // Show completed tasks if user has permission
             if ($this->checkPermission('task_view_any')) {
+                $taskStats = $this->getTaskStats($workspace, $user, $role);
                 $cards[] = [
-                    'title' => __('Tasks Completed'),
-                    'value' => $this->getCompletedTasks($workspace, $user, $role),
+                    'title' => __('Total Tasks'),
+                    'value' => $taskStats['total'],
+                    'icon' => 'CheckSquare',
+                ];
+                $cards[] = [
+                    'title' => __('Tasks Done'),
+                    'value' => $taskStats['completed'],
                     'icon' => 'CheckCircle',
+                ];
+                $cards[] = [
+                    'title' => __('Tasks In Progress'),
+                    'value' => $taskStats['inProgress'],
+                    'icon' => 'Activity',
                 ];
             }
             
-            // Show total expenses 2026 for company workspace role with expense permission
+            if ($this->checkPermission('expense_view_any')) {
+                $expenseStats = $this->getExpenseStats($workspace, $user, $role);
+                if ($expenseStats['approvedAmount'] > 0 || $expenseStats['pendingAmount'] > 0) {
+                    $cards[] = [
+                        'title' => __('Total Expenses'),
+                        'value' => $expenseStats['approvedAmount'] + $expenseStats['pendingAmount'],
+                        'format' => 'currency',
+                        'icon' => 'Receipt',
+                    ];
+                }
+            }
+            
             if ($role === 'company' && $this->checkPermission('expense_view_any')) {
                 $cards[] = [
-                    'title' => __('Total Expenses 2026'),
+                    'title' => __('Expenses 2026'),
                     'value' => $this->getTotalExpenses2026($workspace, $user, $role),
                     'format' => 'currency',
-                    'icon' => 'DollarSign',
+                    'icon' => 'Wallet',
                 ];
             }
             
             $dashboardData = [
                 'cards' => $cards,
-                'projects' => $this->checkPermission('project_view_any') ? $this->getProjectStats($workspace, $user, $role) : null,
-                'tasks' => $this->checkPermission('task_view_any') ? $this->getTaskStats($workspace, $user, $role) : null,
-                'taskStages' => $this->checkPermission('task_view_any') ? $this->getTaskStages($workspace, $user, $role) : null,
                 'budgets' => $this->checkPermission('budget_view_any') ? $this->getBudgetStats($workspace, $user, $role) : null,
                 'expenses' => $this->checkPermission('expense_view_any') ? $this->getExpenseStats($workspace, $user, $role) : null,
-                'invoices' => (($role === 'company' || $role === 'client') && $this->checkPermission('invoice_view_any')) ? $this->getInvoiceStats($workspace, $user, $role) : null,
+                'upcomingDeadlines' => $this->checkPermission('project_view_any') ? $this->getUpcomingDeadlines($workspace, $user, $role) : [],
+                'topProjects' => $this->checkPermission('project_view_any') ? $this->getTopProjects($workspace, $user, $role) : [],
+                'workspaceMembers' => $this->getWorkspaceMembersCount($workspace),
                 'recentActivities' => $this->getRecentActivities($workspace, $user, $role),
                 'currentWorkspace' => $workspace
             ];
 
             return Inertia::render('dashboard', [
                 'dashboardData' => $dashboardData,
+                'isSaasMode' => config('app.is_saas', false),
+                'hasRoleDashboardAccess' => $this->checkPermission('role_view_any'),
                 'permissions' => []
             ]);
         } catch (\Exception $e) {
@@ -375,6 +397,7 @@ class DashboardController extends Controller
             $total = (clone $taskQuery)->count();
             
             $stages = \App\Models\TaskStage::where('workspace_id', $workspace->id)
+                ->orderBy('order')
                 ->withCount(['tasks' => function($q) use ($workspace, $user, $role) {
                     $q->whereHas('project', function($pq) use ($workspace) {
                         $pq->where('workspace_id', $workspace->id);
@@ -396,9 +419,12 @@ class DashboardController extends Controller
                     }
                 }])->get();
             
-            $pending = $stages->first() ? $stages->first()->tasks_count : 0;
-            $inProgress = $stages->skip(1)->first() ? $stages->skip(1)->first()->tasks_count : 0;
-            $completed = $stages->skip(2)->first() ? $stages->skip(2)->first()->tasks_count : 0;
+            $doneStages = $stages->filter(fn($s) => stripos($s->name, 'done') !== false || stripos($s->name, 'completed') !== false || stripos($s->name, 'finished') !== false);
+            $completed = $doneStages->sum('tasks_count');
+            $inProgressStages = $stages->filter(fn($s) => stripos($s->name, 'progress') !== false || stripos($s->name, 'review') !== false);
+            $inProgress = $inProgressStages->sum('tasks_count');
+            $pending = $total - $completed - $inProgress;
+            if ($pending < 0) $pending = 0;
             
             return [
                 'total' => $total,
@@ -492,7 +518,7 @@ class DashboardController extends Controller
     {
         try {
             if (!class_exists('\App\Models\Invoice') || !$workspace) {
-                return ['total' => 0, 'paid' => 0, 'pending' => 0, 'overdue' => 0];
+                return ['total' => 0, 'paid' => 0, 'pending' => 0, 'overdue' => 0, 'paidAmount' => 0, 'pendingAmount' => 0, 'overdueAmount' => 0];
             }
             
             $baseQuery = \App\Models\Invoice::whereHas('project', function($q) use ($workspace, $user, $role) {
@@ -514,14 +540,22 @@ class DashboardController extends Controller
             $overdue = (clone $baseQuery)->where('due_date', '<', now())
                 ->where('status', '!=', 'paid')->count();
             
+            $paidAmount = (float) (clone $baseQuery)->where('status', 'paid')->sum('paid_amount');
+            $pendingAmount = (float) (clone $baseQuery)->whereIn('status', ['draft', 'sent', 'viewed'])->sum('total_amount');
+            $overdueAmount = (float) (clone $baseQuery)->where('due_date', '<', now())
+                ->where('status', '!=', 'paid')->sum('total_amount');
+            
             return [
                 'total' => $total,
                 'paid' => $paid,
                 'pending' => $pending,
-                'overdue' => $overdue
+                'overdue' => $overdue,
+                'paidAmount' => $paidAmount,
+                'pendingAmount' => $pendingAmount,
+                'overdueAmount' => $overdueAmount
             ];
         } catch (\Exception $e) {
-            return ['total' => 0, 'paid' => 0, 'pending' => 0, 'overdue' => 0];
+            return ['total' => 0, 'paid' => 0, 'pending' => 0, 'overdue' => 0, 'paidAmount' => 0, 'pendingAmount' => 0, 'overdueAmount' => 0];
         }
     }
     
@@ -529,7 +563,7 @@ class DashboardController extends Controller
     {
         try {
             if (!class_exists('\App\Models\ProjectExpense') || !$workspace) {
-                return ['pending' => 0, 'approved' => 0, 'total' => 0];
+                return ['pending' => 0, 'approved' => 0, 'total' => 0, 'pendingAmount' => 0, 'approvedAmount' => 0];
             }
             
             $baseQuery = \App\Models\ProjectExpense::whereHas('project', function($q) use ($workspace, $user, $role) {
@@ -548,14 +582,18 @@ class DashboardController extends Controller
             $total = (clone $baseQuery)->count();
             $pending = (clone $baseQuery)->where('status', 'pending')->count();
             $approved = (clone $baseQuery)->where('status', 'approved')->count();
+            $pendingAmount = (float) (clone $baseQuery)->where('status', 'pending')->sum('amount');
+            $approvedAmount = (float) (clone $baseQuery)->where('status', 'approved')->sum('amount');
             
             return [
                 'total' => $total,
                 'pending' => $pending,
-                'approved' => $approved
+                'approved' => $approved,
+                'pendingAmount' => $pendingAmount,
+                'approvedAmount' => $approvedAmount
             ];
         } catch (\Exception $e) {
-            return ['pending' => 0, 'approved' => 0, 'total' => 0];
+            return ['pending' => 0, 'approved' => 0, 'total' => 0, 'pendingAmount' => 0, 'approvedAmount' => 0];
         }
     }
     
@@ -607,6 +645,84 @@ class DashboardController extends Controller
             return $activities->toArray();
         } catch (\Exception $e) {
             return config('app.demo_mode', false) ? $this->getDefaultActivities() : [];
+        }
+    }
+    
+    private function getUpcomingDeadlines($workspace, $user, $role)
+    {
+        try {
+            if (!class_exists('\App\Models\Project') || !$workspace) {
+                return [];
+            }
+            
+            $query = \App\Models\Project::where('workspace_id', $workspace->id)
+                ->whereNotNull('deadline')
+                ->where('deadline', '>=', now()->toDateString())
+                ->whereNotIn('status', ['completed', 'cancelled'])
+                ->orderBy('deadline')
+                ->limit(5);
+            
+            if ($role === 'client') {
+                $query->whereHas('clients', fn($q) => $q->where('user_id', $user->id));
+            } elseif ($role !== 'company') {
+                $query->whereHas('members', fn($q) => $q->where('user_id', $user->id));
+            }
+            
+            return $query->get(['id', 'title', 'deadline', 'status', 'progress'])->map(fn($p) => [
+                'id' => $p->id,
+                'title' => $p->title,
+                'deadline' => $p->deadline->format('Y-m-d'),
+                'deadlineFormatted' => $p->deadline->format('M d, Y'),
+                'daysLeft' => now()->diffInDays($p->deadline, false),
+                'status' => $p->status,
+                'progress' => $p->progress ?? 0
+            ])->toArray();
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+    
+    private function getTopProjects($workspace, $user, $role)
+    {
+        try {
+            if (!class_exists('\App\Models\Project') || !$workspace) {
+                return [];
+            }
+            
+            $query = \App\Models\Project::where('workspace_id', $workspace->id)
+                ->whereNotIn('status', ['completed', 'cancelled'])
+                ->withCount('tasks')
+                ->orderByDesc('tasks_count')
+                ->limit(5);
+            
+            if ($role === 'client') {
+                $query->whereHas('clients', fn($q) => $q->where('user_id', $user->id));
+            } elseif ($role !== 'company') {
+                $query->whereHas('members', fn($q) => $q->where('user_id', $user->id));
+            }
+            
+            return $query->get(['id', 'title', 'progress', 'status', 'deadline'])->map(fn($p) => [
+                'id' => $p->id,
+                'title' => $p->title,
+                'tasksCount' => $p->tasks_count ?? 0,
+                'progress' => $p->progress ?? 0,
+                'status' => $p->status,
+                'deadline' => $p->deadline?->format('M d, Y')
+            ])->toArray();
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+    
+    private function getWorkspaceMembersCount($workspace)
+    {
+        try {
+            if (!$workspace || !class_exists('\App\Models\WorkspaceMember')) {
+                return 0;
+            }
+            return \App\Models\WorkspaceMember::where('workspace_id', $workspace->id)->count();
+        } catch (\Exception $e) {
+            return 0;
         }
     }
     
@@ -722,6 +838,8 @@ class DashboardController extends Controller
             return Inertia::render('dashboard', [
                 'dashboardData' => $dashboardData,
                 'isSuperAdmin' => true,
+                'isSaasMode' => config('app.is_saas', false),
+                'hasRoleDashboardAccess' => true,
                 'permissions' => []
             ]);
         } catch (\Exception $e) {

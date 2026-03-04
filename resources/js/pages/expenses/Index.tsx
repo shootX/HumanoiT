@@ -47,7 +47,7 @@ interface Expense {
 
 export default function ExpenseIndex() {
     const { t } = useTranslation();
-    const { expenses, projects, categories, filters, auth, project_name, userWorkspaceRole, workspace, budget_id, flash, permissions: pagePermissions } = usePage().props as any;
+    const { expenses, expenseStats, projects, categories, filters, auth, project_name, userWorkspaceRole, workspace, budget_id, flash, permissions: pagePermissions } = usePage().props as any;
     const expensePermissions = pagePermissions;
     
     const formatText = (text: string) => {
@@ -215,17 +215,7 @@ export default function ExpenseIndex() {
                     </div>
                     <div className="text-center">
                         <div className="text-2xl font-bold text-purple-600">
-                            {(() => {
-                                if (!expenses?.data || expenses.data.length === 0) {
-                                    return formatCurrency(0);
-                                }
-                                const total = expenses.data.reduce((sum: number, exp: Expense) => {
-                                    return sum + (parseFloat(exp.amount?.toString()) || 0);
-                                }, 0);
-                                const currency = workspace?.currency || expenses.data[0]?.currency || 'USD';
-                                return formatCurrency(total);
-                            })()
-                            }
+                            {formatCurrency(expenseStats?.total_amount ?? 0)}
                         </div>
                         <div className="text-sm text-gray-600">{t('Total Amount')}</div>
                     </div>

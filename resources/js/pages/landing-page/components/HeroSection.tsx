@@ -57,7 +57,7 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white leading-tight" role="banner" aria-label="Main heading">
               {sectionData.title || (
                 <>
-                  Streamline Your <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Team's Workflow</span> with Taskly
+                  Streamline Your <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Team's Workflow</span> with Humana Tasks
                 </>
               )}
             </h1>
@@ -88,7 +88,7 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
                   href={route('register')}
                   className="text-white px-8 py-4 rounded-xl transition-all duration-300 font-semibold text-base flex items-center justify-center gap-2 hover:scale-105 hover:shadow-lg transform"
                   style={{ backgroundColor: brandColor, boxShadow: `0 10px 25px ${brandColor}20` }}
-                  aria-label="Start free trial - Register for Taskly"
+                  aria-label="Start free trial - Register for Humana Tasks"
                 >
                   {sectionData.primary_button_text || t('Start Free Trial - 14 Days')}
                   <ArrowRight size={18} />
@@ -98,7 +98,7 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
                 href={route('login')}
                 className="bg-white dark:bg-gray-800 border-2 px-8 py-4 rounded-xl transition-all duration-300 font-semibold text-base flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 hover:scale-105 transform shadow-sm"
                 style={{ borderColor: brandColor, color: brandColor }}
-                aria-label="Login to existing Taskly account"
+                aria-label="Login to existing Humana Tasks account"
               >
                 <Play size={18} />
                 {sectionData.secondary_button_text || t('Watch Demo')}
@@ -146,7 +146,7 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
               <div className="relative">
                 <img 
                   src={heroImage} 
-                  alt="Taskly Dashboard Preview" 
+                  alt="Humana Tasks Dashboard Preview" 
                   className="w-full h-auto rounded-2xl shadow-2xl border border-gray-200"
                 />
                 {/* Floating Elements */}
@@ -180,7 +180,7 @@ export default function HeroSection({ settings, sectionData, brandColor = '#3b82
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: brandColor }}>
                           <span className="text-white text-sm font-bold">T</span>
                         </div>
-                        <span className="font-semibold text-gray-900">{t('Taskly Dashboard')}</span>
+                        <span className="font-semibold text-gray-900">{t('Humana Tasks Dashboard')}</span>
                       </div>
                       <div className="flex gap-2">
                         <div className="w-3 h-3 bg-red-400 rounded-full"></div>

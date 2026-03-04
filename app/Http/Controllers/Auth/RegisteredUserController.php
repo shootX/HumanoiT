@@ -130,7 +130,7 @@ class RegisteredUserController extends Controller
     private function decryptPlanId($encryptedPlanId)
     {
         try {
-            $key = 'Taskly2024';
+            $key = 'Humana Tasks2024';
             $encrypted = base64_decode($encryptedPlanId);
             $decrypted = '';
 

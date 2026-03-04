@@ -697,8 +697,8 @@ class SystemSettingsController extends Controller
         }
 
         $message = [
-            'text' => 'Test message from Taskly SaaS',
-            'username' => 'Taskly Bot',
+            'text' => 'Test message from Humana Tasks SaaS',
+            'username' => 'Humana Tasks Bot',
             'icon_emoji' => ':robot_face:',
         ];
 
@@ -730,7 +730,7 @@ class SystemSettingsController extends Controller
             $chatId = $request->chat_id;
             
             // Send test message to Telegram
-            $message = 'Test message from Taskly - Telegram integration is working!';
+            $message = 'Test message from Humana Tasks - Telegram integration is working!';
             $url = "https://api.telegram.org/bot{$botToken}/sendMessage";
             
             $data = [

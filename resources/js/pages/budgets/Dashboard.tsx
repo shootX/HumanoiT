@@ -4,7 +4,7 @@ import BudgetOverview from '@/components/budgets/BudgetOverview';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, TrendingUp, Eye } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Eye, FolderOpen } from 'lucide-react';
 import { router } from '@inertiajs/react';
 import { formatCurrency } from '@/utils/currency';
 import { useTranslation } from 'react-i18next';
@@ -82,6 +82,52 @@ export default function BudgetDashboard({ initialData }: BudgetDashboardProps) {
             noPadding
         >
             <div className="space-y-8">
+                {/* Metrics explanation */}
+                <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
+                    <strong>{t('How metrics differ:')}</strong> {t('Total Spent')} = {t('approved expenses from projects with budget only')}. {t('Expenses')} = {t('all expenses (approved + pending) from all projects')}. {t('Invoices')} = {t('amounts billed to clients, not expenses')}.
+                </div>
+
+                {/* Branches without budget */}
+                {dashboardData?.projects_without_budget?.length > 0 && (
+                    <Card className="shadow-sm hover:shadow-md transition-shadow border-amber-200 dark:border-amber-800">
+                        <CardHeader className="bg-amber-50 dark:bg-amber-950/20 rounded-t-lg">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+                                    <AlertTriangle className="h-5 w-5" />
+                                    {t('Branches without budget')}
+                                </CardTitle>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="border-amber-200 text-amber-700 hover:bg-amber-50"
+                                    onClick={() => router.get(route('budgets.index'))}
+                                >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    {t('Manage Budgets')}
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            <div className="space-y-2">
+                                {dashboardData.projects_without_budget.map((project: any) => (
+                                    <div 
+                                        key={project.id} 
+                                        className="flex items-center justify-between p-3 bg-amber-50/50 dark:bg-amber-950/10 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors cursor-pointer"
+                                        onClick={() => router.get(route('projects.show', project.id))}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <FolderOpen className="h-4 w-4 text-amber-600" />
+                                            <span className="font-medium">{project.title}</span>
+                                        </div>
+                                        <Badge variant="outline" className="text-amber-700 border-amber-300">
+                                            {project.status}
+                                        </Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
                 {/* Budget Overview */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl p-6">
                     <BudgetOverview summary={dashboardData?.summary} />

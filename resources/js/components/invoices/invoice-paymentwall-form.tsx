@@ -91,7 +91,7 @@ export function InvoicePaymentWallForm({
         currency: configData.brick_config.currency,
         container: 'brick-container',
         form: {
-          merchant: 'Taskly',
+          merchant: 'Humana Tasks',
           product: configData.brick_config.description,
           pay_button: t('Pay Now'),
           show_zip: false,

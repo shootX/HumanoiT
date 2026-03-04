@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ProjectBudget;
 use App\Models\ProjectExpense;
+use App\Models\Project;
 use App\Models\BudgetCategory;
 use App\Traits\HasPermissionChecks;
 use Illuminate\Http\Request;
@@ -110,6 +111,19 @@ class BudgetDashboardController extends Controller
                 ];
             })->values();
 
+            // Projects without budget (branches/filials)
+            $projectsWithoutBudget = Project::where('workspace_id', $workspaceId)
+                ->whereNotIn('status', ['completed', 'cancelled'])
+                ->whereDoesntHave('budget')
+                ->orderBy('title')
+                ->get(['id', 'title', 'status'])
+                ->map(fn($p) => [
+                    'id' => $p->id,
+                    'title' => $p->title,
+                    'status' => $p->status,
+                ])
+                ->toArray();
+
             return [
                 'summary' => [
                     'total_budget' => $totalBudget,
@@ -121,7 +135,8 @@ class BudgetDashboardController extends Controller
                 ],
                 'recent_expenses' => $recentExpenses,
                 'budget_alerts' => $budgetAlerts,
-                'top_categories' => $this->getTopCategories($workspaceId)
+                'top_categories' => $this->getTopCategories($workspaceId),
+                'projects_without_budget' => $projectsWithoutBudget
             ];
         } catch (\Exception $e) {
             return $this->getEmptyData();
@@ -141,7 +156,8 @@ class BudgetDashboardController extends Controller
             ],
             'recent_expenses' => [],
             'budget_alerts' => [],
-            'top_categories' => []
+            'top_categories' => [],
+            'projects_without_budget' => []
         ];
     }
 

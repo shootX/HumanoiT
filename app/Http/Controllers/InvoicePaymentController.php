@@ -31,7 +31,7 @@ class InvoicePaymentController extends Controller
             ->toArray();
             
         $favicon = $settings['favicon'] ?? null;
-        $appName = $settings['app_name'] ?? 'Taskly SaaS';
+        $appName = $settings['app_name'] ?? 'Humana Tasks';
         $enabledGateways = $this->getEnabledPaymentGateways($invoice->created_by, $invoice->workspace_id);
         
         $paymentSettings = PaymentSetting::where('user_id', $invoice->created_by)

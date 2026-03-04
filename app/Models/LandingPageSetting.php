@@ -28,7 +28,7 @@ class LandingPageSetting extends Model
     public static function getSettings()
     {
         $settings = self::first();
-        $app_name = isSaasMode() ? 'Taskly SaaS' : 'Taskly';
+        $app_name = isSaasMode() ? 'Humana Tasks SaaS' : 'Humana Tasks';
 
         if (!$settings) {
             $defaultConfig = isSaasMode() ? self::getSaasConfig($app_name) : self::getNonSaasConfig($app_name);

@@ -1139,8 +1139,8 @@ if (! function_exists('defaultSettings')) {
             'logoDark' => '/images/logos/logo-dark.png',
             'logoLight' => '/images/logos/logo-light.png',
             'favicon' => '/images/logos/favicon.png',
-            'titleText' => 'Taskly',
-            'footerText' => '© 2024 Taskly. All rights reserved.',
+            'titleText' => 'Humana Tasks',
+            'footerText' => '© 2024 Humana Tasks. All rights reserved.',
             'themeColor' => 'green',
             'customColor' => '#10B77F',
             'sidebarVariant' => 'inset',
@@ -1472,7 +1472,7 @@ if (! function_exists('getCompanyName')) {
         if ($company) {
             return $company->name;
         } else {
-            return 'Taskly';
+            return 'Humana Tasks';
         }
     }
 }
