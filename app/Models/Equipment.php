@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 class Equipment extends Model
 {
     protected $fillable = [
-        'workspace_id', 'project_id', 'equipment_type_id', 'name', 'qr_token',
+        'workspace_id', 'project_id', 'equipment_type_id', 'name', 'code', 'qr_token',
         'installation_date', 'last_service_date', 'health_status', 'notes'
     ];
 
@@ -64,6 +64,18 @@ class Equipment extends Model
         return $query->where('health_status', $status);
     }
 
+    public static function generateUniqueCode(int $workspaceId): string
+    {
+        $prefix = 'EQ-';
+        $last = static::forWorkspace($workspaceId)
+            ->where('code', 'like', $prefix . '%')
+            ->get()
+            ->map(fn ($e) => (int) preg_replace('/^' . preg_quote($prefix, '/') . '/', '', $e->code ?? '0'))
+            ->max() ?? 0;
+
+        return $prefix . str_pad((string) ($last + 1), 4, '0', STR_PAD_LEFT);
+    }
+
     public function ensureQrToken(): string
     {
         if (!$this->qr_token) {
@@ -86,6 +98,9 @@ class Equipment extends Model
         static::creating(function (Equipment $equipment) {
             if (!$equipment->qr_token) {
                 $equipment->qr_token = Str::random(32);
+            }
+            if (!$equipment->code) {
+                $equipment->code = static::generateUniqueCode($equipment->workspace_id);
             }
         });
     }

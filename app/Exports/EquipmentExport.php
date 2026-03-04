@@ -28,7 +28,9 @@ class EquipmentExport implements FromQuery, WithHeadings, WithMapping
         if ($this->request) {
             if ($this->request->filled('search')) {
                 $search = $this->request->search;
-                $query->where('name', 'like', "%{$search}%");
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%");
+                });
             }
             if ($this->request->filled('project_id') && $this->request->project_id !== 'all') {
                 $query->forProject($this->request->project_id);
@@ -47,6 +49,7 @@ class EquipmentExport implements FromQuery, WithHeadings, WithMapping
     public function headings(): array
     {
         return [
+            'კოდი',
             'სახელი',
             'ფილიალი (პროექტი)',
             'ტიპი',
@@ -60,6 +63,7 @@ class EquipmentExport implements FromQuery, WithHeadings, WithMapping
     public function map($equipment): array
     {
         return [
+            $equipment->code ?? '',
             $equipment->name,
             $equipment->project?->title ?? '',
             $equipment->equipmentType?->name ?? '',

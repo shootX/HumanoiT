@@ -825,6 +825,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('equipment', [\App\Http\Controllers\EquipmentController::class, 'index'])->middleware('permission:equipment_view_any')->name('equipment.index');
         Route::get('equipment/create', [\App\Http\Controllers\EquipmentController::class, 'create'])->middleware('permission:equipment_create')->name('equipment.create');
         Route::get('equipment/export', [\App\Http\Controllers\ExportImportController::class, 'export'])->middleware('permission:equipment_view_any')->name('equipment.export');
+        Route::get('equipment/qr-download', [\App\Http\Controllers\EquipmentController::class, 'downloadQrCodes'])->middleware('permission:equipment_view_any')->name('equipment.qr-download');
         Route::get('equipment/template', [\App\Http\Controllers\ExportImportController::class, 'getTemplate'])->middleware('permission:equipment_view_any')->name('equipment.template');
         Route::post('equipment/import', [\App\Http\Controllers\ExportImportController::class, 'import'])->middleware('permission:equipment_create')->name('equipment.import');
         Route::post('equipment/import/data', [\App\Http\Controllers\ExportImportController::class, 'importData'])->middleware('permission:equipment_create')->name('equipment.import.data');

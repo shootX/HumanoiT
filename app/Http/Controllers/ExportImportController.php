@@ -448,7 +448,7 @@ class ExportImportController extends Controller
                 $tableFields = ['type', 'name', 'company_name', 'brand_name', 'identification_code', 'email', 'phone', 'address', 'notes'];
                 break;
             case 'equipment':
-                $tableFields = ['name', 'project', 'equipment_type', 'installation_date', 'last_service_date', 'health_status', 'notes'];
+                $tableFields = ['code', 'name', 'project', 'equipment_type', 'installation_date', 'last_service_date', 'health_status', 'notes'];
                 break;
             default:
                 $error = 'Something went wrong!';
@@ -481,6 +481,10 @@ class ExportImportController extends Controller
                 return strtolower(trim($data['name'] ?? '')) . '_' . strtolower(trim($data['email'] ?? '')) . '_' . $workspaceId;
             case 'equipment':
                 $workspaceId = auth()->user()->current_workspace_id ?? 0;
+                $code = strtolower(trim($data['code'] ?? ''));
+                if ($code) {
+                    return $code . '_' . $workspaceId;
+                }
                 return strtolower(trim($data['name'] ?? '')) . '_' . strtolower(trim($data['project'] ?? '')) . '_' . strtolower(trim($data['equipment_type'] ?? '')) . '_' . $workspaceId;
             default:
                 return '';
@@ -522,7 +526,12 @@ class ExportImportController extends Controller
                 return $q->exists();
             case 'equipment':
                 $workspaceId = auth()->user()->current_workspace_id;
-                if (!$workspaceId || empty(trim($data['name'] ?? ''))) return false;
+                if (!$workspaceId) return false;
+                $code = trim($data['code'] ?? '');
+                if ($code && \App\Models\Equipment::where('workspace_id', $workspaceId)->where('code', $code)->exists()) {
+                    return true;
+                }
+                if (empty(trim($data['name'] ?? ''))) return false;
                 $projectTitle = trim($data['project'] ?? '');
                 $typeName = trim($data['equipment_type'] ?? '');
                 if (empty($projectTitle) || empty($typeName)) return false;
@@ -746,6 +755,7 @@ class ExportImportController extends Controller
                 $equipment->project_id = $project->id;
                 $equipment->equipment_type_id = $equipmentType->id;
                 $equipment->name = $name;
+                $equipment->code = !empty($data['code']) ? trim($data['code']) : null;
                 $equipment->health_status = $healthStatus;
                 $equipment->notes = !empty($data['notes']) ? trim($data['notes']) : null;
                 if (!empty($data['installation_date'])) {

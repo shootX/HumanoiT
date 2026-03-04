@@ -16,6 +16,7 @@ export default function EquipmentCreate({ projects, equipmentTypes }: Props) {
     const { t } = useTranslation();
     const { data, setData, post, processing, errors } = useForm({
         name: '',
+        code: '',
         project_id: '',
         equipment_type_id: '',
         installation_date: '',
@@ -58,6 +59,11 @@ export default function EquipmentCreate({ projects, equipmentTypes }: Props) {
                     <label className="block text-sm font-medium mb-2">{t('Name')}</label>
                     <Input value={data.name} onChange={(e) => setData('name', e.target.value)} required />
                     {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
+                </div>
+                <div>
+                    <label className="block text-sm font-medium mb-2">{t('Code')}</label>
+                    <Input value={data.code} onChange={(e) => setData('code', e.target.value)} placeholder="EQ-0001 (auto)" />
+                    {errors.code && <p className="text-sm text-destructive mt-1">{errors.code}</p>}
                 </div>
                 <div>
                     <label className="block text-sm font-medium mb-2">{t('Branch')}</label>

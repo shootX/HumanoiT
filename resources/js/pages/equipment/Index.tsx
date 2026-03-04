@@ -3,7 +3,7 @@ import { router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Eye, Wrench, Circle, Trash2, Download, Upload, BarChart3, X, Pencil, Calendar } from 'lucide-react';
+import { Plus, Search, Eye, Wrench, Circle, Trash2, Download, Upload, BarChart3, X, Pencil, Calendar, QrCode } from 'lucide-react';
 import { PageTemplate } from '@/components/page-template';
 import { toast } from '@/components/custom-toast';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 
 interface Equipment {
     id: number;
+    code?: string;
     name: string;
     health_status: string;
     project?: { id: number; title: string };
@@ -127,6 +128,31 @@ export default function EquipmentIndex({ equipment, projects, equipmentTypes, me
 
     const pageActions = [];
     if (hasPermission(permissions, 'equipment_view_any')) {
+        pageActions.push({
+            label: t('Download QR Codes'),
+            icon: <QrCode className="h-4 w-4 mr-2" />,
+            variant: 'outline' as const,
+            onClick: async () => {
+                try {
+                    const params = new URLSearchParams();
+                    if (search) params.set('search', search);
+                    if (projectId !== 'all') params.set('project_id', projectId);
+                    if (typeId !== 'all') params.set('equipment_type_id', typeId);
+                    const url = route('equipment.qr-download') + (params.toString() ? '?' + params.toString() : '');
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Download failed');
+                    const blob = await response.blob();
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `equipment_qr_codes_${new Date().toISOString().split('T')[0]}.pdf`;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    toast.success(t('QR codes downloaded'));
+                } catch {
+                    toast.error(t('Download failed'));
+                }
+            },
+        });
         pageActions.push({
             label: t('Export'),
             icon: <Download className="h-4 w-4 mr-2" />,
@@ -294,7 +320,12 @@ export default function EquipmentIndex({ equipment, projects, equipmentTypes, me
                                 )}
                                 <Wrench className="h-5 w-5 text-gray-400" />
                                 <div>
-                                    <p className="font-medium">{eq.name}</p>
+                                    <p className="font-medium flex items-center gap-2 flex-wrap">
+                                        {eq.code && (
+                                            <span className="text-xs font-mono px-2 py-0.5 rounded bg-muted text-muted-foreground">{eq.code}</span>
+                                        )}
+                                        <span>{eq.name}</span>
+                                    </p>
                                     <p className="text-sm text-muted-foreground">
                                         {eq.project?.title} | {eq.equipment_type?.name}
                                     </p>

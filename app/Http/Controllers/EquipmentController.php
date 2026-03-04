@@ -8,6 +8,8 @@ use App\Models\Project;
 use App\Models\ServiceType;
 use App\Models\Task;
 use App\Traits\HasPermissionChecks;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,7 +30,8 @@ class EquipmentController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%");
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
@@ -114,8 +117,7 @@ class EquipmentController extends Controller
         $completedServices = Task::where('equipment_id', $equipment->id)
             ->where('progress', 100)
             ->with(['project', 'taskStage', 'assignedTo', 'equipmentSchedule.serviceType'])
-            ->orderBy('end_date', 'desc')
-            ->limit(20)
+            ->orderByRaw('end_date IS NULL ASC, end_date DESC')
             ->get();
 
         $upcomingSchedules = $equipment->schedules->map(function ($s) {
@@ -127,11 +129,15 @@ class EquipmentController extends Controller
             ];
         });
 
+        $serviceTypes = ServiceType::forWorkspace($equipment->workspace_id)->ordered()->get(['id', 'name']);
+
         return Inertia::render('equipment/Show', [
             'equipment' => $equipment,
             'completedServices' => $completedServices,
             'upcomingSchedules' => $upcomingSchedules,
+            'serviceTypes' => $serviceTypes,
             'canDelete' => $this->checkPermission('equipment_delete'),
+            'canManage' => $this->checkPermission('equipment_update'),
         ]);
     }
 
@@ -168,6 +174,7 @@ class EquipmentController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'code' => 'nullable|string|max:32|unique:equipment,code',
             'project_id' => 'required|exists:projects,id',
             'equipment_type_id' => 'required|exists:equipment_types,id',
             'installation_date' => 'nullable|date',
@@ -181,8 +188,9 @@ class EquipmentController extends Controller
             abort(403);
         }
 
+        $createData = collect($validated)->filter(fn ($v) => $v !== null && $v !== '')->all();
         Equipment::create([
-            ...$validated,
+            ...$createData,
             'workspace_id' => $workspaceId,
         ]);
 
@@ -199,6 +207,7 @@ class EquipmentController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'code' => 'nullable|string|max:32|unique:equipment,code,' . $equipment->id,
             'project_id' => 'required|exists:projects,id',
             'equipment_type_id' => 'required|exists:equipment_types,id',
             'installation_date' => 'nullable|date',
@@ -212,7 +221,8 @@ class EquipmentController extends Controller
             abort(403);
         }
 
-        $equipment->update($validated);
+        $updateData = collect($validated)->filter(fn ($v) => $v !== null && $v !== '')->all();
+        $equipment->update($updateData);
 
         return back()->with('success', __('Equipment updated successfully!'));
     }
@@ -280,5 +290,80 @@ class EquipmentController extends Controller
         }
 
         return back()->with('success', __(':count equipment updated successfully!', ['count' => $items->count()]));
+    }
+
+    public function downloadQrCodes(Request $request)
+    {
+        $this->authorizePermission('equipment_view_any');
+
+        $workspaceId = auth()->user()->current_workspace_id;
+        $query = Equipment::forWorkspace($workspaceId)->with(['project', 'equipmentType']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+        if ($request->filled('project_id') && $request->project_id !== 'all') {
+            $query->forProject($request->project_id);
+        }
+        if ($request->filled('equipment_type_id') && $request->equipment_type_id !== 'all') {
+            $query->byType($request->equipment_type_id);
+        }
+
+        $equipment = $query->orderBy('code')->get();
+        if ($equipment->isEmpty()) {
+            return back()->with('error', __('No equipment to export'));
+        }
+
+        $cards = [];
+        foreach ($equipment as $eq) {
+            $eq->ensureQrToken();
+            $url = url(route('equipment.show-by-qr', $eq->qr_token));
+            if (!$url) {
+                continue;
+            }
+            $builder = new Builder(writer: new PngWriter(), data: $url, size: 120, margin: 4);
+            $result = $builder->build();
+            $cards[] = [
+                'dataUri' => $result->getDataUri(),
+                'code' => $eq->code ?? ('ID-' . $eq->id),
+                'name' => $eq->name,
+            ];
+        }
+
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+            body{font-family:DejaVu Sans,sans-serif;margin:12px}
+            table{width:100%;border-collapse:collapse}
+            td{width:33%;padding:10px;vertical-align:top;border:1px solid #ddd;text-align:center}
+            td img{display:block;margin:0 auto 6px}
+            .code{font-weight:bold;font-size:11pt;margin-bottom:2px}
+            .name{font-size:9pt;color:#666}
+        </style></head><body><table>';
+
+        $cols = 3;
+        $i = 0;
+        foreach ($cards as $c) {
+            if ($i % $cols === 0) {
+                $html .= '<tr>';
+            }
+            $html .= '<td><img src="' . $c['dataUri'] . '" width="120" height="120"/><div class="code">' . htmlspecialchars($c['code']) . '</div><div class="name">' . htmlspecialchars($c['name']) . '</div></td>';
+            $i++;
+            if ($i % $cols === 0) {
+                $html .= '</tr>';
+            }
+        }
+        if ($i % $cols !== 0) {
+            while ($i % $cols !== 0) {
+                $html .= '<td></td>';
+                $i++;
+            }
+            $html .= '</tr>';
+        }
+        $html .= '</table></body></html>';
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+        return $pdf->download('equipment_qr_codes_' . date('Y-m-d') . '.pdf');
     }
 }

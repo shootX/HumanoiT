@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 interface Equipment {
     id: number;
+    code?: string;
     name: string;
     project_id: number;
     equipment_type_id: number;
@@ -26,6 +27,7 @@ export default function EquipmentEdit({ equipment, projects, equipmentTypes }: P
     const { t } = useTranslation();
     const { data, setData, put, processing, errors } = useForm({
         name: equipment.name,
+        code: equipment.code || '',
         project_id: String(equipment.project_id),
         equipment_type_id: String(equipment.equipment_type_id),
         installation_date: equipment.installation_date?.slice(0, 10) || '',
@@ -53,6 +55,11 @@ export default function EquipmentEdit({ equipment, projects, equipmentTypes }: P
                     <label className="block text-sm font-medium mb-2">{t('Name')}</label>
                     <Input value={data.name} onChange={(e) => setData('name', e.target.value)} required />
                     {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
+                </div>
+                <div>
+                    <label className="block text-sm font-medium mb-2">{t('Code')}</label>
+                    <Input value={data.code} onChange={(e) => setData('code', e.target.value)} placeholder="EQ-0001" />
+                    {errors.code && <p className="text-sm text-destructive mt-1">{errors.code}</p>}
                 </div>
                 <div>
                     <label className="block text-sm font-medium mb-2">{t('Branch')}</label>

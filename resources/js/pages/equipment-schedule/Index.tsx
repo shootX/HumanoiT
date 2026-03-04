@@ -212,7 +212,7 @@ export default function EquipmentScheduleIndex({ schedules, projects, equipmentT
                         <tbody>
                             {schedules?.map((s) => (
                                 <tr key={s.id} className="border-t hover:bg-gray-50">
-                                    <td className="p-3">{s.equipment?.name} ({s.equipment?.project?.title})</td>
+                                    <td className="p-3">{s.equipment?.code ? `${s.equipment.code} – ` : ''}{s.equipment?.name} ({s.equipment?.project?.title})</td>
                                     <td className="p-3">{s.service_type}</td>
                                     <td className="p-3">{s.interval_days} {t('days')}</td>
                                     <td className="p-3">{s.next_service_date || '-'}</td>
@@ -327,7 +327,7 @@ export default function EquipmentScheduleIndex({ schedules, projects, equipmentT
                             <SimpleMultiSelect
                                 options={(equipment || []).map((e) => ({
                                     value: String(e.id),
-                                    label: `${e.name}${e.project ? ` (${e.project.title})` : ''}`
+                                    label: `${e.code ? e.code + ' – ' : ''}${e.name}${e.project ? ` (${e.project.title})` : ''}`
                                 }))}
                                 selected={bulkForm.data.equipment_ids}
                                 onChange={(ids) => bulkForm.setData('equipment_ids', ids)}

@@ -53,7 +53,7 @@ class EquipmentScheduleController extends Controller
         $projects = \App\Models\Project::forWorkspace($workspaceId)->orderBy('title')->get(['id', 'title']);
         $equipmentTypes = \App\Models\EquipmentType::forWorkspace($workspaceId)->ordered()->get(['id', 'name']);
         $serviceTypes = ServiceType::forWorkspace($workspaceId)->ordered()->get(['id', 'name']);
-        $equipment = Equipment::forWorkspace($workspaceId)->with(['project', 'equipmentType'])->orderBy('project_id')->orderBy('name')->get(['id', 'name', 'project_id', 'equipment_type_id']);
+        $equipment = Equipment::forWorkspace($workspaceId)->with(['project', 'equipmentType'])->orderBy('project_id')->orderBy('name')->get(['id', 'name', 'code', 'project_id', 'equipment_type_id']);
 
         return Inertia::render('equipment-schedule/Index', [
             'schedules' => $schedules,
