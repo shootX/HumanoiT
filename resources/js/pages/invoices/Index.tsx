@@ -236,6 +236,12 @@ export default function InvoiceIndex() {
     
     if (['owner', 'manager','member'].includes(userWorkspaceRole)) {
         pageActions.push({
+            label: t('Import from purchase'),
+            icon: <FileText className="h-4 w-4 mr-2" />,
+            variant: 'outline',
+            onClick: () => router.get(route('invoices.import-from-purchase'))
+        });
+        pageActions.push({
             label: t('Create Invoice'),
             icon: <Plus className="h-4 w-4 mr-2" />,
             variant: 'default',

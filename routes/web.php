@@ -954,6 +954,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Invoice routes
         Route::get('invoices', [\App\Http\Controllers\InvoiceController::class, 'index'])->middleware('permission:invoice_view_any')->name('invoices.index');
         Route::get('invoices/create', [\App\Http\Controllers\InvoiceController::class, 'create'])->middleware('permission:invoice_create')->name('invoices.create');
+        Route::get('invoices/import-from-purchase', [\App\Http\Controllers\PurchaseReportImportController::class, 'index'])->middleware('permission:invoice_create')->name('invoices.import-from-purchase');
+        Route::post('invoices/import-from-purchase/preview', [\App\Http\Controllers\PurchaseReportImportController::class, 'preview'])->middleware('permission:invoice_create')->name('invoices.import-from-purchase.preview');
+        Route::post('invoices/import-from-purchase', [\App\Http\Controllers\PurchaseReportImportController::class, 'import'])->middleware('permission:invoice_create')->name('invoices.import-from-purchase.import');
         Route::post('invoices', [\App\Http\Controllers\InvoiceController::class, 'store'])->middleware('permission:invoice_create')->name('invoices.store');
         Route::get('invoices/{invoice}', [\App\Http\Controllers\InvoiceController::class, 'show'])->middleware('permission:invoice_view')->name('invoices.show');
         Route::get('invoices/{invoice}/edit', [\App\Http\Controllers\InvoiceController::class, 'edit'])->middleware('permission:invoice_update')->name('invoices.edit');
