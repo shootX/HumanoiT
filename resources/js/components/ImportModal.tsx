@@ -120,16 +120,19 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     try {
       const response = await fetch(route(`${type}.import`), {
         method: 'POST',
+        credentials: 'same-origin',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+          'X-Requested-With': 'XMLHttpRequest',
         },
         body: JSON.stringify({
           data: mapping
         }),
       });
 
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
 
       if (result.success) {
         setImportResult(result.data || null);
@@ -137,10 +140,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         setShowResult(true);
         toast.success(result.message);
       } else {
-        setImportResult(result.data || null);
-        setShowMapping(false);
-        setShowResult(true);
-        toast.error(result.message || result.error || 'Import failed');
+        const errMsg = result.error || result.message || (result.errors && Object.values(result.errors).flat().join(', ')) || 'Import failed';
+        toast.error(errMsg);
+        if (response.status === 400 && errMsg.includes('upload a file first')) {
+          setShowMapping(false);
+          setFile(null);
+        }
       }
     } catch (error) {
       toast.error(t('Import failed'));

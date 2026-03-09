@@ -76,13 +76,20 @@ class ExportImportController extends Controller
         }
         
         $this->checkPermissions($type, 'create');
-        
-        $validator = Validator::make($request->all(), [
-            'file' => 'nullable|mimes:xlsx,xls,csv|max:2048',
-        ]);
+
+        // Step 1: file upload – validate file. Step 2: mapping – validate data, no file
+        if ($request->hasFile('file')) {
+            $validator = Validator::make($request->all(), [
+                'file' => 'required|mimes:xlsx,xls,csv|max:2048',
+            ]);
+        } else {
+            $validator = Validator::make($request->all(), [
+                'data' => 'required|array',
+            ]);
+        }
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json(['errors' => $validator->errors(), 'error' => $validator->errors()->first()], 422);
         }
 
         // Handle import from session data (assets use fileImport flow) (from previous file upload)
@@ -438,7 +445,7 @@ class ExportImportController extends Controller
                 $tableFields = ['name', 'email', 'password', 'status', 'plan', 'created_at', 'updated_at'];
                 break;
             case 'projects':
-                $tableFields = ['title', 'description', 'status', 'priority', 'start_date', 'deadline', 'estimated_hours', 'is_public', 'created_at', 'updated_at'];
+                $tableFields = ['title', 'description', 'status', 'priority', 'start_date', 'estimated_hours', 'is_public', 'created_at', 'updated_at'];
                 break;
             case 'assets':
                 $tableFields = ['name', 'quantity', 'asset_code', 'category', 'location', 'project', 'purchase_date', 'warranty_until', 'status', 'notes'];
@@ -626,7 +633,7 @@ class ExportImportController extends Controller
                 $project->status = $this->validateProjectStatus($data['status'] ?? 'planning');
                 $project->priority = $this->validateProjectPriority($data['priority'] ?? 'medium');
                 $project->start_date = $this->parseProjectDate($data['start_date'] ?? null);
-                $project->deadline = $this->parseProjectDate($data['deadline'] ?? null);
+                $project->deadline = null;
                 $project->estimated_hours = is_numeric($data['estimated_hours'] ?? null) ? (int)$data['estimated_hours'] : null;
                 $project->is_public = $this->parseProjectBoolean($data['is_public'] ?? 'No');
                 $project->created_by = $currentUser->id;
