@@ -7,7 +7,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 class PurchaseReportImportService
 {
     /**
-     * Parse XLS purchase report. Uses columns: B (name), D (qty), E (rate), F (amount), K (seller).
+     * Parse XLS purchase report. Uses columns: B (name), C (unit, optional), D (qty), E (rate), F (amount), K (seller).
      */
     public function parse(string $path): array
     {
@@ -26,6 +26,7 @@ class PurchaseReportImportService
             }
 
             $description = trim($row['B'] ?? '');
+            $unitLabel = trim((string) ($row['C'] ?? ''));
             $quantity = (float) str_replace(',', '.', $row['D'] ?? 1);
             $rate = (float) str_replace(',', '.', $row['E'] ?? 0);
             $amount = (float) str_replace(',', '.', $row['F'] ?? 0);
@@ -51,6 +52,7 @@ class PurchaseReportImportService
 
             $items[] = [
                 'description' => $description,
+                'unit_label' => $unitLabel !== '' ? $unitLabel : null,
                 'quantity' => $quantity,
                 'rate' => $rate,
                 'amount' => $amount,

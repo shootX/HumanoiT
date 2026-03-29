@@ -22,7 +22,7 @@ class PurchasesReportExport implements FromCollection, WithHeadings, WithMapping
 
     public function collection(): Collection
     {
-        $query = InvoiceItem::with(['invoice.project', 'task.project'])
+        $query = InvoiceItem::with(['invoice.project', 'task.project', 'unit'])
             ->where('type', 'asset')
             ->whereHas('invoice', fn($q) => $q->forWorkspace($this->workspaceId));
 
@@ -55,6 +55,7 @@ class PurchasesReportExport implements FromCollection, WithHeadings, WithMapping
     {
         return [
             'ნივთის დასახელება',
+            'ერთეული',
             'ერთეულის რაოდენობა',
             'ერთეულის ფასი',
             'სრული ფასი',
@@ -69,6 +70,7 @@ class PurchasesReportExport implements FromCollection, WithHeadings, WithMapping
 
         return [
             $item->description,
+            $item->unit?->short_name ?? '',
             $item->quantity ?: 1,
             $item->rate,
             $item->amount,

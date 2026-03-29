@@ -22,16 +22,18 @@ interface Props {
     asset?: Asset;
     projects: Project[];
     assetCategories?: AssetCategory[];
+    units?: { id: number; name: string; short_name: string }[];
     onSubmit: (data: Record<string, unknown>) => void;
 }
 
-export default function AssetFormModal({ isOpen, onClose, asset, projects, assetCategories = [], onSubmit }: Props) {
+export default function AssetFormModal({ isOpen, onClose, asset, projects, assetCategories = [], units = [], onSubmit }: Props) {
     const { t } = useTranslation();
     const [formData, setFormData] = useState({
         name: '',
         quantity: '1',
         asset_code: '',
         asset_category_id: '' as string,
+        unit_id: '' as string,
         location: '',
         project_id: '' as string,
         purchase_date: '',
@@ -47,6 +49,7 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, asset
                 quantity: String(asset.quantity ?? 1),
                 asset_code: asset.asset_code || '',
                 asset_category_id: asset.asset_category_id?.toString() || 'none',
+                unit_id: asset.unit_id?.toString() || 'none',
                 location: asset.location || '',
                 project_id: asset.project_id?.toString() || 'none',
                 purchase_date: asset.purchase_date ? String(asset.purchase_date).split('T')[0] : '',
@@ -60,6 +63,7 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, asset
                 quantity: '1',
                 asset_code: '',
                 asset_category_id: 'none',
+                unit_id: 'none',
                 location: '',
                 project_id: 'none',
                 purchase_date: '',
@@ -74,9 +78,10 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, asset
         e.preventDefault();
         const data: Record<string, unknown> = {
             name: formData.name,
-            quantity: parseInt(formData.quantity, 10) || 1,
+            quantity: parseFloat(formData.quantity) || 0,
             asset_code: formData.asset_code || null,
             asset_category_id: formData.asset_category_id && formData.asset_category_id !== 'none' ? formData.asset_category_id : null,
+            unit_id: formData.unit_id && formData.unit_id !== 'none' ? formData.unit_id : null,
             location: formData.location || null,
             project_id: formData.project_id && formData.project_id !== 'none' ? formData.project_id : null,
             purchase_date: formData.purchase_date || null,
@@ -104,16 +109,33 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, asset
                             className="mt-1"
                         />
                     </div>
-                    <div>
-                        <Label htmlFor="quantity">{t('Quantity')}</Label>
-                        <Input
-                            id="quantity"
-                            type="number"
-                            min={1}
-                            value={formData.quantity}
-                            onChange={(e) => setFormData({ ...formData, quantity: e.target.value || '1' })}
-                            className="mt-1"
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <Label htmlFor="quantity">{t('Quantity')}</Label>
+                            <Input
+                                id="quantity"
+                                type="number"
+                                step="0.01"
+                                min={0}
+                                value={formData.quantity}
+                                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                                className="mt-1"
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="unit_id">{t('Unit')}</Label>
+                            <Select value={formData.unit_id || 'none'} onValueChange={(v) => setFormData({ ...formData, unit_id: v })}>
+                                <SelectTrigger className="mt-1">
+                                    <SelectValue placeholder={t('Select unit')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">{t('None')}</SelectItem>
+                                    {units.map((u) => (
+                                        <SelectItem key={u.id} value={String(u.id)}>{u.name} ({u.short_name})</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                     <div>
                         <Label htmlFor="asset_code">{t('Asset Code')}</Label>

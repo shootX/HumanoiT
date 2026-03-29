@@ -187,7 +187,6 @@ function ProjectLinkContent({ project, encryptedId }: { project: any; encryptedI
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     {[
                                         { label: t('Team Members'), value: (currentProject?.members?.length || 0) + (currentProject?.clients?.length || 0), icon: Users, gradient: 'from-purple-50 to-pink-50', iconGradient: 'from-purple-100 to-pink-100', iconColor: 'text-purple-600' },
-                                        { label: t('Deadline'), value: currentProject?.deadline ? new Date(currentProject.deadline).toLocaleDateString() : t('Not set'), icon: Calendar, gradient: 'from-orange-50 to-red-50', iconGradient: 'from-orange-100 to-red-100', iconColor: 'text-orange-600' },
                                         { label: t('Budget'), value: formatCurrency(currentProject?.budget?.total_budget || 0), icon: DollarSign, gradient: 'from-green-50 to-emerald-50', iconGradient: 'from-green-100 to-emerald-100', iconColor: 'text-green-600' }
                                     ].map((item, i) => (
                                         <Card key={i} className={`group hover:shadow-lg transition-all duration-200 border-0 shadow-md hover:scale-[1.02] bg-gradient-to-br ${item.gradient}`}>

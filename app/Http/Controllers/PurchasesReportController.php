@@ -88,7 +88,7 @@ class PurchasesReportController extends Controller
 
     private function getItemsQuery(int $workspaceId, Request $request)
     {
-        $query = InvoiceItem::with(['invoice.project', 'task.project'])
+        $query = InvoiceItem::with(['invoice.project', 'task.project', 'unit'])
             ->where('type', 'asset')
             ->whereHas('invoice', fn($q) => $q->forWorkspace($workspaceId));
 
@@ -127,6 +127,7 @@ class PurchasesReportController extends Controller
             'quantity' => (float) ($item->quantity ?: 1),
             'rate' => (float) $item->rate,
             'amount' => (float) $item->amount,
+            'unit' => $item->unit ? ['short_name' => $item->unit->short_name, 'name' => $item->unit->name] : null,
             'task' => $item->task ? ['id' => $item->task->id, 'title' => $item->task->title] : null,
             'project' => $project ? ['id' => $project->id, 'title' => $project->title] : null,
         ];

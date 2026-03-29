@@ -812,6 +812,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('asset-categories/{assetCategory}', [\App\Http\Controllers\AssetCategoryController::class, 'destroy'])->middleware('permission:asset_manage_categories')->name('asset-categories.destroy');
         Route::post('asset-categories/reorder', [\App\Http\Controllers\AssetCategoryController::class, 'reorder'])->middleware('permission:asset_manage_categories')->name('asset-categories.reorder');
 
+        Route::get('units', [\App\Http\Controllers\UnitController::class, 'index'])->middleware('workspace.units.manage')->name('units.index');
+        Route::post('units', [\App\Http\Controllers\UnitController::class, 'store'])->middleware('workspace.units.manage')->name('units.store');
+        Route::put('units/{unit}', [\App\Http\Controllers\UnitController::class, 'update'])->middleware('workspace.units.manage')->name('units.update');
+        Route::patch('units/{unit}', [\App\Http\Controllers\UnitController::class, 'update'])->middleware('workspace.units.manage');
+        Route::delete('units/{unit}', [\App\Http\Controllers\UnitController::class, 'destroy'])->middleware('workspace.units.manage')->name('units.destroy');
+
         // Equipment
         Route::get('equipment/qr/{token}', [\App\Http\Controllers\EquipmentController::class, 'showByQr'])->middleware('permission:equipment_view')->name('equipment.show-by-qr');
         Route::get('equipment-types', [\App\Http\Controllers\EquipmentTypeController::class, 'index'])->middleware('permission:equipment_type_manage')->name('equipment-types.index');

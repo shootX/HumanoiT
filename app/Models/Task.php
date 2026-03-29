@@ -66,7 +66,10 @@ class Task extends Model
     {
         return $this->belongsToMany(Asset::class, 'asset_task')
             ->withPivot('quantity')
-            ->withTimestamps();
+            ->withTimestamps()
+            ->using(new class extends \Illuminate\Database\Eloquent\Relations\Pivot {
+                protected $casts = ['quantity' => 'float'];
+            });
     }
 
     public function assignedTo(): BelongsTo

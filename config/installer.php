@@ -13,11 +13,11 @@ return [
     |
     */
     'core' => [
-        'minPhpVersion' => '8.2.0',
+        'minPhpVersion' => '7.0.0',
     ],
     'final' => [
         'key' => true,
-        'publish' => true,
+        'publish' => false,
     ],
     'requirements' => [
         'php' => [
@@ -27,10 +27,6 @@ return [
             'tokenizer',
             'JSON',
             'cURL',
-            'fileinfo',
-            'gd',
-            'zip',
-            'xml',
         ],
         'apache' => [
             'mod_rewrite',
@@ -49,12 +45,7 @@ return [
     'permissions' => [
         'storage/framework/'     => '775',
         'storage/logs/'          => '775',
-        'storage/app/'           => '775',
-        'storage/app/public/'    => '775',
         'bootstrap/cache/'       => '775',
-        'public/storage/'        => '775',
-        // 'storage/uploads/'       => '775',
-        'resources/lang/'        => '775',
     ],
 
     /*
@@ -112,7 +103,7 @@ return [
     'installed' => [
         'redirectOptions' => [
             'route' => [
-                'name' => 'dashboard',
+                'name' => 'welcome',
                 'data' => [],
             ],
             'abort' => [
@@ -134,7 +125,7 @@ return [
     | route, abort, dump, 404, default, ''
     |
     */
-    'installedAlreadyAction' => 'route',
+    'installedAlreadyAction' => '',
 
     /*
     |--------------------------------------------------------------------------

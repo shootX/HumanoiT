@@ -28,6 +28,7 @@ interface InvoiceItem {
     asset_name: string;
     equipment_id: number | null;
     service_type_id: number | null;
+    unit_id: number | null;
 }
 
 interface Props {
@@ -38,14 +39,15 @@ interface Props {
     currencies: any[];
     taxes: any[];
     assetCategories?: any[];
-    assets?: { id: number; name: string; asset_code?: string; quantity?: number }[];
+    assets?: { id: number; name: string; asset_code?: string; quantity?: number; unit_id?: number | null }[];
     equipment?: { id: number; name: string; project?: { title: string } }[];
     serviceTypes?: { id: number; name: string }[];
+    units?: { id: number; name: string; short_name: string }[];
 }
 
 const defaultVatTaxId = (taxes: any[]) => taxes?.find((x: any) => Math.abs(parseFloat(x.rate) - 18) < 0.01 && !!x.is_inclusive)?.id ?? null;
 
-export default function InvoiceForm({ invoice, projects, clients, crmContacts = [], currencies, taxes, assetCategories: initialAssetCategories = [], assets = [], equipment = [], serviceTypes = [] }: Props) {
+export default function InvoiceForm({ invoice, projects, clients, crmContacts = [], currencies, taxes, assetCategories: initialAssetCategories = [], assets = [], equipment = [], serviceTypes = [], units = [] }: Props) {
     const { t } = useTranslation();
     const isEdit = !!invoice;
     const defaultTaxId = defaultVatTaxId(taxes || []);
@@ -82,6 +84,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             asset_name: item.asset_name || '',
             equipment_id: item.equipment_id ?? null,
             service_type_id: item.service_type_id ?? null,
+            unit_id: item.unit_id ?? null,
         })) || [{
             type: 'asset',
             description: '',
@@ -94,6 +97,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             asset_name: '',
             equipment_id: null,
             service_type_id: null,
+            unit_id: null,
         }]
     );
 
@@ -242,11 +246,16 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             if (value === 'asset') { item.equipment_id = null; item.service_type_id = null; }
             if (value === 'equipment') { item.asset_id = null; item.asset_category_id = null; item.asset_name = ''; }
         }
-        if (field === 'asset_id' && value) {
-            const a = assets.find((x: any) => x.id === parseInt(value, 10));
-            if (a) {
-                item.description = a.name;
-                item.asset_category_id = a.asset_category_id ?? null;
+        if (field === 'asset_id') {
+            if (value) {
+                const a = assets.find((x: any) => x.id === parseInt(value, 10));
+                if (a) {
+                    item.description = a.name;
+                    item.asset_category_id = a.asset_category_id ?? null;
+                    item.unit_id = a.unit_id ?? null;
+                }
+            } else {
+                item.unit_id = null;
             }
         }
         if (field === 'equipment_id' || field === 'service_type_id') {
@@ -287,6 +296,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             asset_name: '',
             equipment_id: null,
             service_type_id: null,
+            unit_id: null,
         }]);
     };
 
@@ -296,7 +306,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
         }
     };
 
-    const handleAssetSelect = (index: number, asset: { id: number; name: string; asset_category_id?: number | null }) => {
+    const handleAssetSelect = (index: number, asset: { id: number; name: string; asset_category_id?: number | null; unit_id?: number | null }) => {
         const updatedItems = [...items];
         updatedItems[index] = {
             ...updatedItems[index],
@@ -304,6 +314,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
             asset_id: asset.id,
             asset_category_id: asset.asset_category_id ?? null,
             asset_name: asset.name,
+            unit_id: asset.unit_id ?? null,
         };
         setItems(updatedItems);
         setAssetDropdownIndex(null);
@@ -374,6 +385,7 @@ export default function InvoiceForm({ invoice, projects, clients, crmContacts = 
                 description: item.description,
                 quantity: parseItemNum(item.quantity) || 1,
                 rate: parseItemNum(item.rate) || 0,
+                unit_id: item.unit_id ?? null,
             }))
         };
 
@@ -556,7 +568,7 @@ setErrors(errors);
                             <div>
                                 <CardTitle>{t('Invoice Items')}</CardTitle>
                                 <p className="text-sm text-muted-foreground mt-1">
-                                    {t('Type')} · {t('Name')} · {t('Quantity')} · {t('Unit Price')} · {t('Tax Type')} · {t('Total')}
+                                    {t('Type')} · {t('Name')} · {t('Quantity')} · {t('Unit')} · {t('Unit Price')} · {t('Tax Type')} · {t('Total')}
                                 </p>
                             </div>
                             <Button type="button" onClick={addItem} size="sm">
@@ -620,7 +632,7 @@ setErrors(errors);
                                                 </div>
                                             </>
                                         )}
-                                        <div className={item.type === 'equipment' ? 'md:col-span-2' : 'md:col-span-3'} relative>
+                                        <div className={item.type === 'equipment' ? 'md:col-span-2' : 'md:col-span-2'} relative>
                                             <Label>{t('Name')}</Label>
                                             <Input
                                                 value={item.description}
@@ -653,19 +665,38 @@ setErrors(errors);
                                                 );
                                             })()}
                                         </div>
-                                        <div className="md:col-span-1">
-                                            <Label>{t('Quantity')}</Label>
-                                            <Input
-                                                type="text"
-                                                inputMode="decimal"
-                                                value={item.quantity ?? ''}
-                                                onChange={(e) => {
-                                                    const v = e.target.value.replace(',', '.');
-                                                    const valid = /^\d*\.?\d*$/.test(v) ? v : String(item.quantity ?? '');
-                                                    handleItemChange(index, 'quantity', valid);
-                                                }}
-                                                placeholder="1"
-                                            />
+                                        <div className="md:col-span-3 flex flex-col sm:flex-row gap-2 items-end">
+                                            <div className="flex-1 min-w-0">
+                                                <Label>{t('Quantity')}</Label>
+                                                <Input
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={item.quantity ?? ''}
+                                                    onChange={(e) => {
+                                                        const v = e.target.value.replace(',', '.');
+                                                        const valid = /^\d*\.?\d*$/.test(v) ? v : String(item.quantity ?? '');
+                                                        handleItemChange(index, 'quantity', valid);
+                                                    }}
+                                                    placeholder="1"
+                                                />
+                                            </div>
+                                            <div className="flex-1 min-w-[7rem]">
+                                                <Label>{t('Unit')}</Label>
+                                                <Select
+                                                    value={item.unit_id != null ? String(item.unit_id) : 'none'}
+                                                    onValueChange={(v) => handleItemChange(index, 'unit_id', v && v !== 'none' ? parseInt(v, 10) : null)}
+                                                >
+                                                    <SelectTrigger><SelectValue placeholder={t('—')} /></SelectTrigger>
+                                                    <SelectContent className="z-[9999]">
+                                                        <SelectItem value="none">{t('—')}</SelectItem>
+                                                        {(units || []).map((u) => (
+                                                            <SelectItem key={u.id} value={String(u.id)}>
+                                                                {u.short_name}{u.name ? ` (${u.name})` : ''}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         </div>
                                         <div className="md:col-span-2">
                                             <Label>{t('Unit Price')}</Label>

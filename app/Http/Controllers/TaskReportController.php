@@ -10,6 +10,7 @@ use App\Exports\TaskReportExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -28,10 +29,14 @@ class TaskReportController extends Controller
         $users = User::whereHas('workspaces', fn($q) => $q->where('workspace_id', $workspace->id)->where('status', 'active'))->get(['id', 'name']);
         $stages = TaskStage::where('workspace_id', $workspace->id)->orderBy('order')->get(['id', 'name', 'color']);
 
-        $stats = $this->calculateStats($workspace->id);
+        $stats = $this->calculateStats($workspace->id, $request);
+        $perPage = (int) $request->input('per_page', 15);
+        if ($perPage <= 0) {
+            $perPage = 15;
+        }
 
         $initialTasks = $this->getTasksQuery($workspace->id, $request)
-            ->limit(15)
+            ->limit($perPage)
             ->get()
             ->map(fn($task) => $this->transformTask($task));
 
@@ -44,7 +49,7 @@ class TaskReportController extends Controller
                 'data' => $initialTasks,
                 'total' => $this->getTasksQuery($workspace->id, $request)->count()
             ],
-            'filters' => $request->only(['search', 'project_id', 'user_id', 'status', 'priority', 'per_page'])
+            'filters' => $request->only(['search', 'project_id', 'user_id', 'status', 'priority', 'per_page', 'date_from', 'date_to', 'date_basis'])
         ]);
     }
 
@@ -66,6 +71,7 @@ class TaskReportController extends Controller
 
         return response()->json([
             'data' => $transformed,
+            'stats' => $this->calculateStats($workspace->id, $request),
             'pagination' => [
                 'current_page' => $tasks->currentPage(),
                 'last_page' => $tasks->lastPage(),
@@ -86,21 +92,21 @@ class TaskReportController extends Controller
             return response()->json(['error' => 'No workspace'], 403);
         }
 
-        $filters = $request->only(['search', 'project_id', 'user_id', 'status', 'priority']);
+        $filters = $request->only(['search', 'project_id', 'user_id', 'status', 'priority', 'date_from', 'date_to', 'date_basis']);
         $export = new TaskReportExport($workspace->id, $filters);
         $filename = 'task_report_' . date('Y-m-d') . '.xlsx';
         return Excel::download($export, $filename);
     }
 
-    private function getTasksQuery(int $workspaceId, Request $request)
+    private function getFilteredTasksBaseQuery(int $workspaceId, Request $request)
     {
-        $query = Task::whereHas('project', fn($q) => $q->where('workspace_id', $workspaceId))
-            ->with(['taskStage', 'members', 'milestone', 'assignedUser', 'project']);
+        $query = Task::whereHas('project', fn($q) => $q->where('workspace_id', $workspaceId));
 
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")->orWhere('description', 'like', "%{$search}%");
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
         if ($request->filled('project_id') && $request->project_id !== 'all') {
@@ -119,12 +125,61 @@ class TaskReportController extends Controller
             $query->where('priority', $request->priority);
         }
 
+        $this->applyTaskDateFilters($query, $request);
+
+        return $query;
+    }
+
+    private function getTasksQuery(int $workspaceId, Request $request)
+    {
+        $query = $this->getFilteredTasksBaseQuery($workspaceId, $request)
+            ->with(['taskStage', 'members', 'milestone', 'assignedUser', 'project']);
+
+        if (Schema::hasTable('timesheet_entries')) {
+            $query->select('tasks.*')->selectSub(function ($sub) {
+                $sub->from('timesheet_entries')
+                    ->selectRaw('COALESCE(SUM(hours), 0)')
+                    ->whereColumn('timesheet_entries.task_id', 'tasks.id');
+            }, 'logged_hours');
+        }
+
         return $query->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Filter by task dates: date_basis=due (default) uses COALESCE(end_date, due_date); date_basis=start uses start_date.
+     */
+    private function applyTaskDateFilters($query, Request $request): void
+    {
+        $hasFrom = $request->filled('date_from');
+        $hasTo = $request->filled('date_to');
+        if (!$hasFrom && !$hasTo) {
+            return;
+        }
+
+        $basis = $request->get('date_basis', 'due');
+        if ($basis === 'start') {
+            if ($hasFrom) {
+                $query->whereDate('start_date', '>=', $request->date_from);
+            }
+            if ($hasTo) {
+                $query->whereDate('start_date', '<=', $request->date_to);
+            }
+
+            return;
+        }
+
+        if ($hasFrom) {
+            $query->whereRaw('DATE(COALESCE(end_date, due_date)) >= ?', [$request->date_from]);
+        }
+        if ($hasTo) {
+            $query->whereRaw('DATE(COALESCE(end_date, due_date)) <= ?', [$request->date_to]);
+        }
     }
 
     private function transformTask(Task $task): array
     {
-        $loggedHours = 0;
+        $loggedHours = is_numeric($task->logged_hours ?? null) ? (float) $task->logged_hours : 0.0;
         $assignedUsers = collect();
         if ($task->assignedUser) $assignedUsers->push($task->assignedUser);
         if ($task->members?->count() > 0) $assignedUsers = $assignedUsers->merge($task->members);
@@ -150,25 +205,36 @@ class TaskReportController extends Controller
         ];
     }
 
-    private function calculateStats(int $workspaceId): array
+    private function calculateStats(int $workspaceId, Request $request): array
     {
-        $baseQuery = Task::whereHas('project', fn($q) => $q->where('workspace_id', $workspaceId));
+        $baseQuery = $this->getFilteredTasksBaseQuery($workspaceId, $request);
         $total = $baseQuery->count();
-        $completed = (clone $baseQuery)->where('progress', 100)->count();
-        $doneStageId = TaskStage::where('workspace_id', $workspaceId)->where('name', 'Done')->value('id');
-        $inDone = $doneStageId ? (clone $baseQuery)->where('task_stage_id', $doneStageId)->count() : $completed;
+
+        $doneStageId = TaskStage::where('workspace_id', $workspaceId)
+            ->whereRaw('LOWER(name) = ?', ['done'])
+            ->value('id');
+
+        $doneCount = $doneStageId
+            ? (clone $baseQuery)->where('task_stage_id', $doneStageId)->count()
+            : (clone $baseQuery)->where('progress', 100)->count();
 
         $priorityStats = (clone $baseQuery)->select('priority', DB::raw('count(*) as count'))
             ->groupBy('priority')->pluck('count', 'priority')->toArray();
 
-        $taskIds = (clone $baseQuery)->pluck('id');
-        $totalHours = 0;
+        $totalHours = 0.0;
+        if (Schema::hasTable('timesheet_entries')) {
+            $taskIdSubquery = (clone $baseQuery)->select('tasks.id');
+            $totalHours = (float) DB::table('timesheet_entries')
+                ->whereIn('task_id', $taskIdSubquery)
+                ->sum('hours');
+        }
 
         return [
             'total_tasks' => $total,
-            'completed_tasks' => $completed,
-            'in_done_stage' => $inDone,
-            'completion_percentage' => $total > 0 ? round(($completed / $total) * 100) : 0,
+            // "completed" is interpreted as "Done" stage for reports
+            'completed_tasks' => $doneCount,
+            'remaining_tasks' => max(0, $total - $doneCount),
+            'completion_percentage' => $total > 0 ? round(($doneCount / $total) * 100) : 0,
             'total_logged_hours' => round($totalHours, 2),
             'priority_stats' => $priorityStats,
         ];

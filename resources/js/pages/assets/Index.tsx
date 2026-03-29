@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, Search, Eye, Edit, Trash2, Package, Settings, Download, Upload } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, Package, Settings, Download, Upload, Ruler } from 'lucide-react';
 import { PageTemplate } from '@/components/page-template';
 import { CrudDeleteModal } from '@/components/CrudDeleteModal';
 import AssetFormModal from '@/components/assets/AssetFormModal';
@@ -22,7 +22,9 @@ const ASSET_STATUSES = ['active', 'used', 'maintenance', 'retired'] as const;
 
 export default function AssetsIndex() {
     const { t } = useTranslation();
-    const { auth, assets, projects, assetCategories = [], filters: pageFilters = {}, flash } = usePage().props as any;
+    const { auth, assets, projects, assetCategories = [], units = [], filters: pageFilters = {}, flash } = usePage().props as any;
+    const canManageWorkspaceUnits =
+        auth?.user?.can_manage_workspace_units === true || auth?.can_manage_workspace_units === true;
     const permissions = auth?.permissions || [];
 
     const [searchTerm, setSearchTerm] = useState(pageFilters.search || '');
@@ -139,6 +141,14 @@ export default function AssetsIndex() {
             onClick: () => setIsImportModalOpen(true),
         });
     }
+    if (canManageWorkspaceUnits) {
+        pageActions.push({
+            label: t('Units'),
+            icon: <Ruler className="h-4 w-4 mr-2" />,
+            variant: 'outline' as const,
+            onClick: () => router.get(route('units.index')),
+        });
+    }
     if (hasPermission(permissions, 'asset_manage_categories')) {
         pageActions.push({
             label: t('Asset Categories'),
@@ -234,7 +244,7 @@ export default function AssetsIndex() {
                                 <TableRow>
                                     <TableHead className="w-[40px]">#</TableHead>
                                     <TableHead>{t('Name')}</TableHead>
-                                    <TableHead className="text-center w-[90px]">{t('Quantity')}</TableHead>
+                                    <TableHead className="text-center w-[120px]">{t('Quantity')}</TableHead>
                                     <TableHead>{t('Asset Code')}</TableHead>
                                     <TableHead>{t('Category')}</TableHead>
                                     <TableHead>{t('Project')}</TableHead>
@@ -254,7 +264,9 @@ export default function AssetsIndex() {
                                                 <span className="font-medium">{asset.name}</span>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-center font-medium">{asset.quantity ?? 1}</TableCell>
+                                        <TableCell className="text-center font-medium">
+                                            {asset.quantity ?? 1} {asset.unit?.short_name || ''}
+                                        </TableCell>
                                         <TableCell className="text-muted-foreground">{asset.asset_code || '—'}</TableCell>
                                         <TableCell>
                                             {asset.asset_category ? asset.asset_category.name : (asset.type ? getTypeLabel(asset.type) : '—')}
@@ -344,6 +356,7 @@ export default function AssetsIndex() {
                 asset={editingAsset ?? undefined}
                 projects={projects || []}
                 assetCategories={assetCategories || []}
+                units={units || []}
                 onSubmit={handleFormSubmit}
             />
 

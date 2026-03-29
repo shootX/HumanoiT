@@ -142,10 +142,11 @@ class TaskController extends Controller
         $projects = $projectsQuery->get();
         $stages = TaskStage::forWorkspace($user->current_workspace_id)->ordered()->get();
         $assets = Asset::forWorkspace($workspace->id)
+            ->with('unit')
             ->where('status', 'active')
             ->whereRaw('COALESCE(quantity, 1) > 0')
             ->orderBy('name')
-            ->get(['id', 'name', 'asset_code', 'quantity', 'status']);
+            ->get(['id', 'name', 'asset_code', 'quantity', 'status', 'unit_id']);
         $workspaceMemberIds = User::whereHas('workspaces', function ($q) use ($workspace) {
             $q->where('workspace_id', $workspace->id)->where('status', 'active');
         })->whereNotIn('type', ['superadmin'])->pluck('id');
@@ -204,8 +205,8 @@ class TaskController extends Controller
             'assignedTo',
             'creator',
             'milestone',
-            'asset',
-            'assets',
+            'asset.unit',
+            'assets.unit',
             'members',
             'comments.user',
             'checklists.assignedTo',
@@ -285,7 +286,7 @@ class TaskController extends Controller
             'milestone_id' => 'nullable|exists:project_milestones,id',
             'asset_items' => 'nullable|array',
             'asset_items.*.asset_id' => 'required_with:asset_items|exists:assets,id',
-            'asset_items.*.quantity' => 'required_with:asset_items|integer|min:1',
+            'asset_items.*.quantity' => 'required_with:asset_items|numeric|min:0.01',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'required|in:low,medium,high,critical',
@@ -383,7 +384,7 @@ class TaskController extends Controller
             'milestone_id' => 'nullable|exists:project_milestones,id',
             'asset_items' => 'nullable|array',
             'asset_items.*.asset_id' => 'required_with:asset_items|exists:assets,id',
-            'asset_items.*.quantity' => 'required_with:asset_items|integer|min:1',
+            'asset_items.*.quantity' => 'required_with:asset_items|numeric|min:0.01',
             'is_googlecalendar_sync' => 'nullable|boolean'
         ]);
 

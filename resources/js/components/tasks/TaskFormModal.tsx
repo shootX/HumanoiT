@@ -126,9 +126,9 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
         const submitData = {
             ...formData,
             milestone_id: formData.milestone_id === 'none' ? '' : formData.milestone_id,
-            asset_items: formData.asset_items.filter(x => x.asset_id && parseInt(x.quantity, 10) > 0).map(x => ({
+            asset_items: formData.asset_items.filter(x => x.asset_id && parseFloat(x.quantity) > 0).map(x => ({
                 asset_id: x.asset_id,
-                quantity: parseInt(x.quantity, 10) || 1
+                quantity: parseFloat(x.quantity) || 0
             })),
             assigned_user_ids: formData.assigned_user_ids
         };
@@ -162,9 +162,9 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl sm:w-full">
                 <DialogHeader>
-                    <DialogTitle>{isEditing ? t('Edit Task') : t('Create Task')}</DialogTitle>
+                    <DialogTitle className="pr-8 text-left">{isEditing ? t('Edit Task') : t('Create Task')}</DialogTitle>
                 </DialogHeader>
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -227,9 +227,9 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                                     const availableForRow = [...assets, ...assetsFromTask.filter((a: any) => String(a.id) === item.asset_id)];
                                     const selectedAsset = availableForRow.find((a: any) => String(a.id) === item.asset_id);
                                     const maxQty = selectedAsset ? getAvailable(selectedAsset) - formData.asset_items.reduce((sum, itm, i) =>
-                                        i !== idx && itm.asset_id === item.asset_id ? sum + (parseInt(itm.quantity, 10) || 0) : sum, 0) : 999;
+                                        i !== idx && itm.asset_id === item.asset_id ? sum + (parseFloat(itm.quantity) || 0) : sum, 0) : 999999;
                                     return (
-                                    <div key={idx} className="flex gap-2 items-center">
+                                    <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-center">
                                         <select
                                             value={item.asset_id || ''}
                                             onChange={(e) => {
@@ -238,44 +238,49 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                                                 setFormData({ ...formData, asset_items: next });
                                             }}
                                             className={cn(
-                                                'flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
+                                                'min-h-10 w-full min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
                                                 'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
                                             )}
                                         >
                                             <option value="">{t('Select asset')}</option>
                                             {availableForRow.map((asset: any) => {
                                                 const avail = getAvailable(asset) - formData.asset_items.reduce((s, itm, i) =>
-                                                    i !== idx && itm.asset_id === String(asset.id) ? s + (parseInt(itm.quantity, 10) || 0) : s, 0);
+                                                    i !== idx && itm.asset_id === String(asset.id) ? s + (parseFloat(itm.quantity) || 0) : s, 0);
                                                 return (
                                                     <option key={asset.id} value={asset.id}>
-                                                        {asset.name}{asset.asset_code ? ` (${asset.asset_code})` : ''} — {t('Available')}: {Math.max(0, avail)}
+                                                        {asset.name}{asset.asset_code ? ` (${asset.asset_code})` : ''} — {t('Available')}: {Math.max(0, avail).toFixed(2)} {asset.unit?.short_name || ''}
                                                     </option>
                                                 );
                                             })}
                                         </select>
-                                        <Input
-                                            type="number"
-                                            min={1}
-                                            max={maxQty}
-                                            className="w-20"
-                                            placeholder="Qty"
-                                            value={item.quantity}
-                                            onChange={(e) => {
-                                                const next = [...formData.asset_items];
-                                                const v = Math.min(Math.max(1, parseInt(e.target.value, 10) || 1), maxQty);
-                                                next[idx] = { ...next[idx], quantity: String(v) };
-                                                setFormData({ ...formData, asset_items: next });
-                                            }}
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="shrink-0 text-red-500"
-                                            onClick={() => setFormData({ ...formData, asset_items: formData.asset_items.filter((_, i) => i !== idx) })}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                min={0.01}
+                                                max={maxQty}
+                                                className="min-w-0 flex-1 sm:w-24 sm:flex-initial"
+                                                placeholder="Qty"
+                                                value={item.quantity}
+                                                onChange={(e) => {
+                                                    const next = [...formData.asset_items];
+                                                    const val = e.target.value;
+                                                    const numVal = parseFloat(val);
+                                                    const finalVal = isNaN(numVal) ? val : String(Math.min(numVal, maxQty));
+                                                    next[idx] = { ...next[idx], quantity: finalVal };
+                                                    setFormData({ ...formData, asset_items: next });
+                                                }}
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="shrink-0 text-red-500"
+                                                onClick={() => setFormData({ ...formData, asset_items: formData.asset_items.filter((_, i) => i !== idx) })}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
                                     );
                                 })}
@@ -320,7 +325,7 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 {t('Priority')}
@@ -355,7 +360,7 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 {t('Start Date')}
@@ -380,7 +385,7 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                     </div>
 
                     {googleCalendarEnabled && !isEditing && (
-                        <div className="flex items-center space-x-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <Switch
                                 id="google-calendar-sync"
                                 checked={formData.is_googlecalendar_sync}
@@ -392,11 +397,11 @@ export default function TaskFormModal({ isOpen, onClose, task, projects, members
                         </div>
                     )}
 
-                    <div className="flex justify-end space-x-2 pt-4">
-                        <Button type="button" variant="outline" onClick={onClose}>
+                    <div className="flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end sm:space-x-2">
+                        <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">
                             {t('Cancel')}
                         </Button>
-                        <Button type="submit" disabled={isSubmitting}>
+                        <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
                             <Save className="h-4 w-4 mr-2" />
                             {isSubmitting ? t('Saving...') : (isEditing ? t('Update Task') : t('Create Task'))}
                         </Button>

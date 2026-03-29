@@ -117,7 +117,6 @@ class ProjectController extends Controller
             'status' => 'required|in:planning,active,on_hold,completed,cancelled',
             'priority' => 'required|in:low,medium,high,urgent',
             'start_date' => 'nullable|date',
-            'deadline' => 'nullable|date|after:start_date',
             'budget' => 'nullable|numeric|min:0',
             'is_public' => 'boolean',
             'member_ids' => 'array',
@@ -132,6 +131,7 @@ class ProjectController extends Controller
             'workspace_id' => auth()->user()->current_workspace_id,
             'created_by' => auth()->id(),
             'budget' => $validated['budget'] ?? 0,
+            'deadline' => null,
         ]);
 
         // Assign clients
@@ -362,13 +362,13 @@ class ProjectController extends Controller
             'status' => 'required|in:planning,active,on_hold,completed,cancelled',
             'priority' => 'required|in:low,medium,high,urgent',
             'start_date' => 'nullable|date',
-            'deadline' => 'nullable|date|after:start_date',
             'budget' => 'nullable|numeric|min:0',
             'is_public' => 'boolean'
         ]);
 
         $project->update([
             ...$validated,
+            'deadline' => null,
             'updated_by' => auth()->id()
         ]);
 

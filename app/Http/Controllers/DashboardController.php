@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\PermissionService;
 use App\Traits\HasPermissionChecks;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -351,9 +352,7 @@ class DashboardController extends Controller
             $total = (clone $baseQuery)->count();
             $active = (clone $baseQuery)->where('status', 'active')->count();
             $completed = (clone $baseQuery)->where('status', 'completed')->count();
-            $overdue = (clone $baseQuery)->where('deadline', '<', now()->toDateString())
-                ->whereNotIn('status', ['completed', 'cancelled'])
-                ->count();
+            $overdue = 0;
                 
             return [
                 'total' => $total,
@@ -650,36 +649,7 @@ class DashboardController extends Controller
     
     private function getUpcomingDeadlines($workspace, $user, $role)
     {
-        try {
-            if (!class_exists('\App\Models\Project') || !$workspace) {
-                return [];
-            }
-            
-            $query = \App\Models\Project::where('workspace_id', $workspace->id)
-                ->whereNotNull('deadline')
-                ->where('deadline', '>=', now()->toDateString())
-                ->whereNotIn('status', ['completed', 'cancelled'])
-                ->orderBy('deadline')
-                ->limit(5);
-            
-            if ($role === 'client') {
-                $query->whereHas('clients', fn($q) => $q->where('user_id', $user->id));
-            } elseif ($role !== 'company') {
-                $query->whereHas('members', fn($q) => $q->where('user_id', $user->id));
-            }
-            
-            return $query->get(['id', 'title', 'deadline', 'status', 'progress'])->map(fn($p) => [
-                'id' => $p->id,
-                'title' => $p->title,
-                'deadline' => $p->deadline->format('Y-m-d'),
-                'deadlineFormatted' => $p->deadline->format('M d, Y'),
-                'daysLeft' => now()->diffInDays($p->deadline, false),
-                'status' => $p->status,
-                'progress' => $p->progress ?? 0
-            ])->toArray();
-        } catch (\Exception $e) {
-            return [];
-        }
+        return [];
     }
     
     private function getTopProjects($workspace, $user, $role)
@@ -701,13 +671,12 @@ class DashboardController extends Controller
                 $query->whereHas('members', fn($q) => $q->where('user_id', $user->id));
             }
             
-            return $query->get(['id', 'title', 'progress', 'status', 'deadline'])->map(fn($p) => [
+            return $query->get(['id', 'title', 'progress', 'status'])->map(fn($p) => [
                 'id' => $p->id,
                 'title' => $p->title,
                 'tasksCount' => $p->tasks_count ?? 0,
                 'progress' => $p->progress ?? 0,
                 'status' => $p->status,
-                'deadline' => $p->deadline?->format('M d, Y')
             ])->toArray();
         } catch (\Exception $e) {
             return [];
@@ -968,7 +937,7 @@ class DashboardController extends Controller
     private function getPlanRequestStats()
     {
         try {
-            if (class_exists('\App\Models\PlanRequest')) {
+            if (class_exists('\App\Models\PlanRequest') && Schema::hasTable('plan_requests')) {
                 $total = \App\Models\PlanRequest::count();
                 $pending = \App\Models\PlanRequest::where('status', 'pending')->count();
                 $approved = \App\Models\PlanRequest::where('status', 'approved')->count();
@@ -1056,7 +1025,7 @@ class DashboardController extends Controller
             }
             
             // Get recent plan requests
-            if (class_exists('\App\Models\PlanRequest')) {
+            if (class_exists('\App\Models\PlanRequest') && Schema::hasTable('plan_requests')) {
                 $planRequests = \App\Models\PlanRequest::with('user', 'plan')->latest()->take(5)->get();
                 foreach ($planRequests as $request) {
                     $activities->push([

@@ -199,7 +199,10 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user() ? array_merge(
                     $request->user()->loadMissing(['currentWorkspace', 'ownedWorkspaces', 'workspaces'])->toArray(),
-                    ['workspace_role' => $this->getUserWorkspaceRole($request)]
+                    [
+                        'workspace_role' => $this->getUserWorkspaceRole($request),
+                        'can_manage_workspace_units' => $request->user()->canManageWorkspaceUnits(),
+                    ]
                 ) : null,
                 'roles' => fn() => $this->getUserRoles($request),
                 'permissions' => fn() => $this->getUserPermissions($request),
@@ -322,15 +325,37 @@ class HandleInertiaRequests extends Middleware
         if ($user->current_workspace_id) {
             $workspace = $user->currentWorkspace;
             if ($workspace && $workspace->owner_id == $user->id) {
-                return $user->getAllPermissions()->pluck('name')->toArray();
-            } else {
+                $perms = $user->getAllPermissions()->pluck('name')->toArray();
+                if (count($perms) > 0) {
+                    return $perms;
+                }
+                // Workspace owner without Spatie permissions on the user model (common): use member role or company role
                 $workspaceMember = \App\Models\WorkspaceMember::where('user_id', $user->id)
                     ->where('workspace_id', $user->current_workspace_id)
                     ->first();
                 if ($workspaceMember) {
-                    $role = Role::findByName($workspaceMember->role);
-                    return $role->permissions->pluck('name')->values()->toArray();
+                    $role = Role::where('name', $workspaceMember->role)
+                        ->where('guard_name', $user->getDefaultGuardName())
+                        ->first();
+                    if ($role) {
+                        return $role->permissions->pluck('name')->values()->toArray();
+                    }
                 }
+                $companyRole = Role::where('name', 'company')
+                    ->where('guard_name', $user->getDefaultGuardName())
+                    ->first();
+                if ($companyRole) {
+                    return $companyRole->permissions->pluck('name')->values()->toArray();
+                }
+
+                return [];
+            }
+            $workspaceMember = \App\Models\WorkspaceMember::where('user_id', $user->id)
+                ->where('workspace_id', $user->current_workspace_id)
+                ->first();
+            if ($workspaceMember) {
+                $role = Role::findByName($workspaceMember->role);
+                return $role->permissions->pluck('name')->values()->toArray();
             }
         }
 

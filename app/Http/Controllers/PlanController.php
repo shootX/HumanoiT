@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Plan;
 use App\Traits\HasPermissionChecks;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 class PlanController extends Controller
@@ -269,10 +270,13 @@ class PlanController extends Controller
         $dbPlans = Plan::where('is_plan_enable', 'on')->get();
         
         // Get user's pending requests (exclude cancelled)
-        $pendingRequests = \App\Models\PlanRequest::where('user_id', $user->id)
-            ->where('status', 'pending')
-            ->pluck('plan_id')
-            ->toArray();
+        $pendingRequests = [];
+        if (Schema::hasTable('plan_requests')) {
+            $pendingRequests = \App\Models\PlanRequest::where('user_id', $user->id)
+                ->where('status', 'pending')
+                ->pluck('plan_id')
+                ->toArray();
+        }
         
         $plans = $dbPlans->map(function ($plan) use ($billingCycle, $user, $pendingRequests) {
             $price = $billingCycle === 'yearly' ? $plan->yearly_price : $plan->price;
@@ -335,6 +339,10 @@ class PlanController extends Controller
     public function requestPlan(Request $request)
     {
         $this->authorizePermission('plan_request');
+
+        if (!Schema::hasTable('plan_requests')) {
+            return back()->withErrors(['error' => __('Plan requests table is missing. Please run migrations.')]);
+        }
         
         $request->validate([
             'plan_id' => 'required|exists:plans,id',
@@ -366,6 +374,10 @@ class PlanController extends Controller
     public function startTrial(Request $request)
     {
         $this->authorizePermission('plan_trial');
+
+        if (!Schema::hasTable('plan_requests')) {
+            return back()->withErrors(['error' => __('Plan requests table is missing. Please run migrations.')]);
+        }
         
         $request->validate([
             'plan_id' => 'required|exists:plans,id'
@@ -425,6 +437,10 @@ class PlanController extends Controller
     public function cancelRequest(Request $request)
     {
         $this->authorizePermission('plan_request');
+
+        if (!Schema::hasTable('plan_requests')) {
+            return back()->withErrors(['error' => __('Plan requests table is missing. Please run migrations.')]);
+        }
         
         $request->validate([
             'plan_id' => 'required|exists:plans,id'

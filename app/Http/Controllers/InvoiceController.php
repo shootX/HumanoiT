@@ -10,7 +10,9 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\ProjectExpense;
 use App\Events\InvoiceCreated;
+use App\Models\Unit;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class InvoiceController extends Controller
@@ -146,7 +148,7 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice)
     {
-        $invoice->load(['project', 'task', 'budgetCategory', 'client', 'crmContact', 'creator', 'approver', 'items.task', 'items.expense', 'items.assetCategory', 'items.asset', 'items.equipment', 'items.serviceType', 'payments']);
+        $invoice->load(['project', 'task', 'budgetCategory', 'client', 'crmContact', 'creator', 'approver', 'items.task', 'items.expense', 'items.assetCategory', 'items.asset', 'items.equipment', 'items.serviceType', 'items.unit', 'payments']);
         $user = auth()->user();
         $workspace = $user->currentWorkspace;
         $userWorkspaceRole = $workspace->getMemberRole($user);
@@ -219,6 +221,10 @@ class InvoiceController extends Controller
             'items.*.description' => 'required|string|max:500',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.rate' => 'required|numeric|min:0',
+            'items.*.unit_id' => [
+                'nullable',
+                Rule::exists('units', 'id')->where('workspace_id', $workspace->id),
+            ],
         ]);
 
         $projectIds = collect($validated['project_ids'] ?? [])->filter()->unique()->map('intval')->values()->all();
@@ -296,6 +302,7 @@ class InvoiceController extends Controller
                 'equipment_id' => $item['equipment_id'] ?? null,
                 'service_type_id' => $item['service_type_id'] ?? null,
                 'tax_id' => $item['tax_id'] ?? null,
+                'unit_id' => $item['unit_id'] ?? null,
                 'sort_order' => $index + 1,
             ]);
         }
@@ -342,6 +349,10 @@ class InvoiceController extends Controller
             'items.*.equipment_id' => 'nullable|exists:equipment,id',
             'items.*.service_type_id' => 'nullable|exists:service_types,id',
             'items.*.tax_id' => 'nullable|exists:taxes,id',
+            'items.*.unit_id' => [
+                'nullable',
+                Rule::exists('units', 'id')->where('workspace_id', $invoice->workspace_id),
+            ],
         ]);
 
         $validated['budget_category_id'] = $this->validateInvoiceBudgetCategory($invoice->project_id, $validated['budget_category_id'] ?? null);
@@ -411,12 +422,17 @@ class InvoiceController extends Controller
                 'equipment_id' => $item['equipment_id'] ?? null,
                 'service_type_id' => $item['service_type_id'] ?? null,
                 'tax_id' => $item['tax_id'] ?? null,
+                'unit_id' => $item['unit_id'] ?? null,
                 'sort_order' => $index + 1,
             ]);
             if ($assetId) {
                 $asset = Asset::find($assetId);
                 if ($asset && (int) $asset->invoice_id === (int) $invoice->id) {
-                    $asset->update(['quantity' => (int) round($quantity)]);
+                    $upd = ['quantity' => (float) $quantity];
+                    if (array_key_exists('unit_id', $item)) {
+                        $upd['unit_id'] = $item['unit_id'] ?: null;
+                    }
+                    $asset->update($upd);
                 }
             }
         }
@@ -466,7 +482,7 @@ class InvoiceController extends Controller
             ->get(['id', 'name', 'color'])
             ->toArray();
 
-        $assets = Asset::forWorkspace($workspace->id)->with('assetCategory:id,name')->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity', 'asset_category_id']);
+        $assets = Asset::forWorkspace($workspace->id)->with('assetCategory:id,name')->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity', 'asset_category_id', 'unit_id']);
 
         $equipment = \App\Models\Equipment::forWorkspace($workspace->id)->with('project:id,title')->orderBy('name')->get(['id', 'name', 'project_id']);
         $serviceTypes = \App\Models\ServiceType::forWorkspace($workspace->id)->ordered()->get(['id', 'name']);
@@ -474,6 +490,8 @@ class InvoiceController extends Controller
         $crmContacts = CrmContact::forWorkspace($workspace->id)
             ->orderBy('name')
             ->get(['id', 'name', 'company_name', 'type', 'email']);
+
+        $units = Unit::forWorkspace($workspace->id)->orderBy('name')->get(['id', 'name', 'short_name']);
 
         return Inertia::render('invoices/Form', [
             'projects' => $projects,
@@ -484,6 +502,7 @@ class InvoiceController extends Controller
             'assets' => $assets,
             'equipment' => $equipment,
             'serviceTypes' => $serviceTypes,
+            'units' => $units,
         ]);
     }
 
@@ -673,7 +692,7 @@ class InvoiceController extends Controller
             ->get(['id', 'name', 'color'])
             ->toArray();
 
-        $assets = Asset::forWorkspace($workspaceId)->with('assetCategory:id,name')->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity', 'asset_category_id']);
+        $assets = Asset::forWorkspace($workspaceId)->with('assetCategory:id,name')->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity', 'asset_category_id', 'unit_id']);
 
         $equipment = \App\Models\Equipment::forWorkspace($workspaceId)->with('project:id,title')->orderBy('name')->get(['id', 'name', 'project_id']);
         $serviceTypes = \App\Models\ServiceType::forWorkspace($workspaceId)->ordered()->get(['id', 'name']);
@@ -681,6 +700,8 @@ class InvoiceController extends Controller
         $crmContacts = CrmContact::forWorkspace($workspace->id)
             ->orderBy('name')
             ->get(['id', 'name', 'company_name', 'type', 'email']);
+
+        $units = Unit::forWorkspace($workspace->id)->orderBy('name')->get(['id', 'name', 'short_name']);
 
         return Inertia::render('invoices/Form', [
             'invoice' => $invoiceData,
@@ -692,6 +713,7 @@ class InvoiceController extends Controller
             'assets' => $assets,
             'equipment' => $equipment,
             'serviceTypes' => $serviceTypes,
+            'units' => $units,
         ]);
     }
 

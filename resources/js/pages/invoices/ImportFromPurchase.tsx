@@ -19,6 +19,7 @@ interface PreviewItem {
     quantity: number;
     rate: number;
     amount: number;
+    unit_label?: string | null;
 }
 
 interface PreviewData {
@@ -148,7 +149,7 @@ export default function ImportFromPurchase({ projects }: Props) {
     return (
         <PageTemplate
             title={t('Import from purchase report')}
-            description={t('Import invoice from XLS purchase report')}
+            description={`${t('Import invoice from XLS purchase report')}. ${t('Purchase report XLS column C is unit optional')}`}
             url="/invoices/import-from-purchase"
             breadcrumbs={breadcrumbs}
         >
@@ -248,6 +249,7 @@ export default function ImportFromPurchase({ projects }: Props) {
                                         <tr>
                                             <th className="px-4 py-2 text-left">{t('Description')}</th>
                                             <th className="px-4 py-2 text-right">{t('Quantity')}</th>
+                                            <th className="px-4 py-2 text-left">{t('Unit')}</th>
                                             <th className="px-4 py-2 text-right">{t('Unit Price')}</th>
                                             <th className="px-4 py-2 text-right">{t('Amount')}</th>
                                         </tr>
@@ -257,6 +259,7 @@ export default function ImportFromPurchase({ projects }: Props) {
                                             <tr key={i} className="border-t">
                                                 <td className="px-4 py-2">{item.description}</td>
                                                 <td className="px-4 py-2 text-right">{item.quantity}</td>
+                                                <td className="px-4 py-2 text-muted-foreground">{item.unit_label || '—'}</td>
                                                 <td className="px-4 py-2 text-right">{formatAmount(item.rate)}</td>
                                                 <td className="px-4 py-2 text-right">{formatAmount(item.amount)}</td>
                                             </tr>

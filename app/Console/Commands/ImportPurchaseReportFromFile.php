@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Project;
 use App\Models\Tax;
+use App\Models\Unit;
 use App\Services\PurchaseReportImportService;
 use Illuminate\Console\Command;
 
@@ -86,6 +87,10 @@ class ImportPurchaseReportFromFile extends Command
         $invoice = Invoice::create($invoiceData);
 
         foreach ($data['items'] as $i => $item) {
+            $unitId = null;
+            if (!empty($item['unit_label'])) {
+                $unitId = Unit::findIdForWorkspace($workspaceId, $item['unit_label']);
+            }
             InvoiceItem::create([
                 'invoice_id' => $invoice->id,
                 'type' => 'asset',
@@ -95,6 +100,7 @@ class ImportPurchaseReportFromFile extends Command
                 'amount' => $item['amount'],
                 'task_id' => $taskId,
                 'tax_id' => $vatTax?->id,
+                'unit_id' => $unitId,
                 'sort_order' => $i + 1,
             ]);
         }

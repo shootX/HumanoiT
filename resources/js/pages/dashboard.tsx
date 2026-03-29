@@ -811,7 +811,6 @@ export default function Dashboard({ dashboardData, isSuperAdmin, isSaasMode = tr
                         <p className="font-medium text-sm truncate flex-1">{item.title}</p>
                         <span className="font-semibold text-green-600 ml-2">{item.tasksCount ?? 0} {t('tasks')}</span>
                       </div>
-                      {item.deadline && <p className="text-xs text-muted-foreground mt-1">{item.deadline}</p>}
                     </Link>
                   ))}
                 </div>

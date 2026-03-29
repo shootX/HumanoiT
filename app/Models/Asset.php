@@ -10,13 +10,14 @@ use Illuminate\Database\Eloquent\Builder;
 class Asset extends Model
 {
     protected $fillable = [
-        'workspace_id', 'project_id', 'invoice_id', 'asset_category_id', 'name', 'quantity', 'asset_code', 'type',
+        'workspace_id', 'project_id', 'invoice_id', 'asset_category_id', 'unit_id', 'name', 'quantity', 'asset_code', 'type',
         'location', 'purchase_date', 'warranty_until', 'status', 'value', 'notes'
     ];
 
     protected $casts = [
         'purchase_date' => 'date',
         'warranty_until' => 'date',
+        'quantity' => 'float',
     ];
 
     public function workspace(): BelongsTo
@@ -34,6 +35,11 @@ class Asset extends Model
         return $this->belongsTo(AssetCategory::class);
     }
 
+    public function unit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class);
+    }
+
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
@@ -48,7 +54,10 @@ class Asset extends Model
     {
         return $this->belongsToMany(Task::class, 'asset_task')
             ->withPivot('quantity')
-            ->withTimestamps();
+            ->withTimestamps()
+            ->using(new class extends \Illuminate\Database\Eloquent\Relations\Pivot {
+                protected $casts = ['quantity' => 'float'];
+            });
     }
 
     public function scopeForWorkspace(Builder $query, $workspaceId): Builder

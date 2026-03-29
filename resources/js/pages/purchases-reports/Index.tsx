@@ -189,6 +189,7 @@ export default function PurchasesReportsIndex({ projects, stats, items: initialI
                         <thead className="bg-gray-50">
                             <tr>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('Item Name')}</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('Unit')}</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('Quantity')}</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('Unit Price')}</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('Total Price')}</th>
@@ -198,13 +199,14 @@ export default function PurchasesReportsIndex({ projects, stats, items: initialI
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {loading ? (
-                                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">{t('Loading...')}</td></tr>
+                                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">{t('Loading...')}</td></tr>
                             ) : items?.length === 0 ? (
-                                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">{t('No items found.')}</td></tr>
+                                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">{t('No items found.')}</td></tr>
                             ) : (
                                 items?.map((item: any) => (
                                     <tr key={item.id} className="hover:bg-gray-50">
                                         <td className="px-4 py-3 font-medium text-gray-900">{item.description || '-'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{item.unit?.short_name ?? '—'}</td>
                                         <td className="px-4 py-3 text-sm text-gray-600">{item.quantity ?? '-'}</td>
                                         <td className="px-4 py-3 text-sm">{formatAmount(item.rate)}</td>
                                         <td className="px-4 py-3 text-sm font-medium">{formatAmount(item.amount)}</td>

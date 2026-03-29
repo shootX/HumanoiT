@@ -139,9 +139,42 @@ class User extends BaseAuthenticatable implements MustVerifyEmail
     {
         return $this->type === 'admin';
     }
-        
 
-    
+    /**
+     * Measurement units (UoM) CRUD: tenant admin, workspace owner, or equivalent role.
+     */
+    public function canManageWorkspaceUnits(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+        // SaaS / tenant account — full workspace administration
+        if ($this->type === 'company') {
+            return true;
+        }
+        if (!$this->current_workspace_id) {
+            return false;
+        }
+
+        if ($this->ownedWorkspaces()->where('id', $this->current_workspace_id)->exists()) {
+            return true;
+        }
+
+        $workspace = $this->relationLoaded('currentWorkspace')
+            ? $this->currentWorkspace
+            : $this->currentWorkspace()->first();
+
+        if ($workspace && (int) $workspace->owner_id === (int) $this->id) {
+            return true;
+        }
+
+        $member = WorkspaceMember::where('user_id', $this->id)
+            ->where('workspace_id', $this->current_workspace_id)
+            ->first();
+
+        return $member && $member->role === 'owner';
+    }
+
     /**
      * Get the plan associated with the user.
      */

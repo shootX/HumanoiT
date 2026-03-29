@@ -6,7 +6,7 @@ return [
      * Shared translations.
      *
      */
-    'title' => 'Project Setup',
+    'title' => 'Laravel Installer',
     'next' => 'Passo successivo',
     'finish' => 'Installa',
     /*

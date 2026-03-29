@@ -23,8 +23,8 @@ class AssetTaskAllocationService
                     continue;
                 }
 
-                $qty = (int) $item['quantity'];
-                $availableQty = (int) ($asset->quantity ?? 1);
+                $qty = (float) $item['quantity'];
+                $availableQty = (float) ($asset->quantity ?? 1);
 
                 if ($asset->status === 'used') {
                     $alreadyLinked = $task->assets()->where('asset_id', $asset->id)->exists();
@@ -46,7 +46,7 @@ class AssetTaskAllocationService
                     abort(422, __('Insufficient asset quantity. Available: :available', ['available' => $availableQty]));
                 }
 
-                if ($qty == $availableQty) {
+                if (abs($qty - $availableQty) < 0.00001) {
                     $asset->update(['status' => 'used']);
                     $sync[$asset->id] = ['quantity' => $qty];
                 } else {

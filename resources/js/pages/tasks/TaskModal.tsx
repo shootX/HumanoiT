@@ -148,14 +148,14 @@ export default function TaskModal({ task, isOpen, onClose, members, stages, mile
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-h-[min(92dvh,92vh)] w-[min(100%,calc(100vw-1.5rem))] max-w-4xl sm:w-full">
                 <DialogHeader>
-                    <DialogTitle>{currentTask.title}</DialogTitle>
+                    <DialogTitle className="break-words pr-8 text-left text-base sm:text-lg">{currentTask.title}</DialogTitle>
                 </DialogHeader>
 
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
                     {/* Main Content */}
-                    <div className="col-span-2 space-y-6">
+                    <div className="space-y-4 sm:space-y-6 lg:col-span-2">
                         {/* Description */}
                         <div>
                             <h3 className="text-sm font-medium text-gray-900 mb-2">{t('Description')}</h3>
@@ -165,25 +165,46 @@ export default function TaskModal({ task, isOpen, onClose, members, stages, mile
                         </div>
 
                         {/* Tabs for Comments, Checklist, Attachments */}
-                        <Tabs defaultValue="comments" className="w-full">
-                            <TabsList>
-                                <TabsTrigger value="comments" className="flex items-center space-x-2">
-                                    <MessageSquare className="h-4 w-4" />
-                                    <span>{t('Comments')} ({task.comments?.length || 0})</span>
-                                </TabsTrigger>
-                                <TabsTrigger value="checklist" className="flex items-center space-x-2">
-                                    <CheckSquare className="h-4 w-4" />
-                                    <span>{t('Checklist')} ({task.checklists?.length || 0})</span>
-                                </TabsTrigger>
-                                <TabsTrigger value="attachments" className="flex items-center space-x-2">
-                                    <Paperclip className="h-4 w-4" />
-                                    <span>{t('Files')} ({currentTask.attachments?.length || 0})</span>
-                                </TabsTrigger>
-                                <TabsTrigger value="invoices" className="flex items-center space-x-2">
-                                    <FileText className="h-4 w-4" />
-                                    <span>{t('Invoices')} ({currentTask.invoices?.length || 0})</span>
-                                </TabsTrigger>
-                            </TabsList>
+                        <Tabs defaultValue="comments" className="w-full min-w-0">
+                            <div
+                                className="mb-1 w-full max-w-full overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] sm:mb-0 sm:overflow-visible"
+                                role="presentation"
+                            >
+                                <TabsList className="inline-flex h-auto min-h-10 w-max max-w-none flex-nowrap items-stretch justify-start gap-0.5 rounded-md bg-muted p-1 text-muted-foreground sm:flex sm:h-10 sm:w-full sm:min-w-0 sm:gap-1">
+                                    <TabsTrigger
+                                        value="comments"
+                                        className="flex min-h-9 shrink-0 items-center justify-center gap-1.5 px-2.5 text-xs sm:min-h-0 sm:min-w-0 sm:flex-1 sm:gap-2 sm:px-2 sm:text-sm"
+                                        title={`${t('Comments')} (${task.comments?.length || 0})`}
+                                    >
+                                        <MessageSquare className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+                                        <span className="whitespace-nowrap sm:min-w-0 sm:truncate">{t('Comments')} ({task.comments?.length || 0})</span>
+                                    </TabsTrigger>
+                                    <TabsTrigger
+                                        value="checklist"
+                                        className="flex min-h-9 shrink-0 items-center justify-center gap-1.5 px-2.5 text-xs sm:min-h-0 sm:min-w-0 sm:flex-1 sm:gap-2 sm:px-2 sm:text-sm"
+                                        title={`${t('Checklist')} (${task.checklists?.length || 0})`}
+                                    >
+                                        <CheckSquare className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+                                        <span className="whitespace-nowrap sm:min-w-0 sm:truncate">{t('Checklist')} ({task.checklists?.length || 0})</span>
+                                    </TabsTrigger>
+                                    <TabsTrigger
+                                        value="attachments"
+                                        className="flex min-h-9 shrink-0 items-center justify-center gap-1.5 px-2.5 text-xs sm:min-h-0 sm:min-w-0 sm:flex-1 sm:gap-2 sm:px-2 sm:text-sm"
+                                        title={`${t('Files')} (${currentTask.attachments?.length || 0})`}
+                                    >
+                                        <Paperclip className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+                                        <span className="whitespace-nowrap sm:min-w-0 sm:truncate">{t('Files')} ({currentTask.attachments?.length || 0})</span>
+                                    </TabsTrigger>
+                                    <TabsTrigger
+                                        value="invoices"
+                                        className="flex min-h-9 shrink-0 items-center justify-center gap-1.5 px-2.5 text-xs sm:min-h-0 sm:min-w-0 sm:flex-1 sm:gap-2 sm:px-2 sm:text-sm"
+                                        title={`${t('Invoices')} (${currentTask.invoices?.length || 0})`}
+                                    >
+                                        <FileText className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+                                        <span className="whitespace-nowrap sm:min-w-0 sm:truncate">{t('Invoices')} ({currentTask.invoices?.length || 0})</span>
+                                    </TabsTrigger>
+                                </TabsList>
+                            </div>
 
                             <TabsContent value="comments" className="space-y-4">
                                 <TaskComments 
@@ -240,7 +261,7 @@ export default function TaskModal({ task, isOpen, onClose, members, stages, mile
                     </div>
 
                     {/* Sidebar */}
-                    <div className="space-y-6">
+                    <div className="space-y-4 border-t pt-4 lg:border-t-0 lg:pt-0 lg:space-y-6">
                         {/* Stage */}
                         <div>
                             <h3 className="text-sm font-medium text-gray-900 mb-2">{t('Stage')}</h3>
@@ -303,7 +324,7 @@ export default function TaskModal({ task, isOpen, onClose, members, stages, mile
                                 <ul className="space-y-2">
                                     {(currentTask as any).assets.map((a: any) => {
                                         const qty = a.pivot?.quantity ?? 1;
-                                        const label = `${qty} ${a.name}${a.asset_code ? ` (${a.asset_code})` : ''}`;
+                                        const label = `${qty} ${a.unit?.short_name || ''} ${a.name}${a.asset_code ? ` (${a.asset_code})` : ''}`;
                                         return (
                                             <li key={a.id} className="flex items-center gap-2">
                                                 <Package className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -328,6 +349,7 @@ export default function TaskModal({ task, isOpen, onClose, members, stages, mile
                                     <Package className="h-4 w-4" />
                                     {currentTask.asset.name}
                                     {currentTask.asset.asset_code && ` (${currentTask.asset.asset_code})`}
+                                    {currentTask.asset.unit && ` (${currentTask.asset.unit.short_name})`}
                                 </Link>
                             </div>
                         )}

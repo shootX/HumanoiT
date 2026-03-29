@@ -22,6 +22,8 @@ export function AppSidebar() {
     const { t, i18n } = useTranslation();
     const { auth, isSaasMode, globalSettings } = usePage().props as any;
     const permissions = auth?.permissions || [];
+    const canManageWorkspaceUnits =
+        auth?.user?.can_manage_workspace_units === true || auth?.can_manage_workspace_units === true;
     const [currentLang, setCurrentLang] = useState(i18n.language);
     const [forceUpdate, setForceUpdate] = useState(0);
     
@@ -124,6 +126,12 @@ export function AppSidebar() {
             const assetChildren = [
                 { title: t('All Assets'), href: route('assets.index') }
             ];
+            if (canManageWorkspaceUnits) {
+                assetChildren.push({
+                    title: t('Units'),
+                    href: route('units.index')
+                });
+            }
             if (hasPermission(permissions, 'asset_manage_categories')) {
                 assetChildren.push({
                     title: t('Asset Categories'),

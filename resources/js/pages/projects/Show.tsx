@@ -545,7 +545,6 @@ export default function ProjectShow() {
                             required: true
                         },
                         { name: 'start_date', label: 'Start Date', type: 'date' },
-                        { name: 'deadline', label: 'Deadline', type: 'date' },
                         { name: 'is_public', label: t('Make project public'), type: 'checkbox' }
                     ],
                     modalSize: 'xl'
@@ -735,15 +734,6 @@ export default function ProjectShow() {
                                 <p className="text-2xl font-bold">{(project.members?.length || 0) + (project.clients?.length || 0)}</p>
                             </CardContent>
                         </Card>
-                        <Card>
-                            <CardContent className="p-4">
-                                <div className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4 text-green-500" />
-                                    <span className="text-sm font-medium">{t('Deadline')}</span>
-                                </div>
-                                <p className="text-lg font-semibold">{new Date(project.deadline).toLocaleDateString()}</p>
-                            </CardContent>
-                        </Card>
                                 <Card>
                                     <CardContent className="p-4">
                                         <div className="flex items-center gap-2">
@@ -927,10 +917,6 @@ export default function ProjectShow() {
                                         <div className="flex justify-between">
                                             <span className="text-sm text-gray-600">{t('Start Date')}:</span>
                                             <span className="font-medium">{project.start_date ? new Date(project.start_date).toLocaleDateString() : t('Not set')}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-sm text-gray-600">{t('Deadline')}:</span>
-                                            <span className="font-medium">{project.deadline ? new Date(project.deadline).toLocaleDateString() : t('Not set')}</span>
                                         </div>
                                         {project.address && (
                                         <div className="flex justify-between">

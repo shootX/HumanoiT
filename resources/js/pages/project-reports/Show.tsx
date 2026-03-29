@@ -368,11 +368,6 @@ export default function Show({ project, stats, userStats, users, stages, workspa
                                     <p className="text-sm text-gray-600 mb-1">{t('Start Date')}:</p>
                                     <p className="font-medium">{formatDate(project.start_date)}</p>
                                 </div>
-                                <div>
-                                    <p className="text-sm text-gray-600 mb-1">{t('Due Date')}:</p>
-                                    <p className="font-medium">{formatDate(project.deadline || project.end_date)}</p>
-                                </div>
-
                             </div>
                             <div className="col-span-5 flex justify-center">
                                 <div className="relative w-48 h-48">

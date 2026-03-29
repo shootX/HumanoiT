@@ -38,7 +38,7 @@ trait HasPermissionChecks
             abort(403, 'You do not have permission to perform this action.');
         }
     }
-    
+
     /**
      * Check multiple permissions (user must have at least one)
      */

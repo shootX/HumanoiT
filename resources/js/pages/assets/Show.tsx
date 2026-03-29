@@ -68,7 +68,7 @@ export default function AssetShow({ asset, sourceInvoices = [] }: Props) {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm text-muted-foreground">{t('Quantity')}</p>
-                                <p className="font-medium">{asset.quantity ?? 1}</p>
+                                <p className="font-medium">{asset.quantity ?? 1} {asset.unit?.short_name || ''}</p>
                             </div>
                             {asset.asset_code && (
                                 <div>
@@ -185,7 +185,9 @@ export default function AssetShow({ asset, sourceInvoices = [] }: Props) {
                                                         </Link>
                                                     ) : '—'}
                                                 </td>
-                                                <td className="py-2 text-right font-medium">{alloc.pivot?.quantity ?? 1}</td>
+                                                <td className="py-2 text-right font-medium">
+                                                    {alloc.pivot?.quantity ?? 1} {asset.unit?.short_name || ''}
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>

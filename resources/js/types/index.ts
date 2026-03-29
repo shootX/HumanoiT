@@ -59,6 +59,16 @@ export interface TaskInvoice {
     status: string;
 }
 
+export interface Unit {
+    id: number;
+    workspace_id: number;
+    name: string;
+    short_name: string;
+    assets_count?: number;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface AssetCategory {
     id: number;
     name: string;
@@ -70,6 +80,7 @@ export interface Asset {
     workspace_id: number;
     project_id?: number;
     asset_category_id?: number;
+    unit_id?: number;
     name: string;
     quantity?: number;
     asset_code?: string;
@@ -81,6 +92,7 @@ export interface Asset {
     notes?: string;
     project?: Project;
     asset_category?: AssetCategory;
+    unit?: Unit;
     created_at: string;
     updated_at: string;
 }

@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Project;
 use App\Models\Tax;
+use App\Models\Unit;
 use App\Models\Task;
 use App\Services\PurchaseReportImportService;
 use App\Events\InvoiceCreated;
@@ -107,6 +108,10 @@ class PurchaseReportImportController extends Controller
 
         $primaryTaskId = $request->task_id;
         foreach ($data['items'] as $i => $item) {
+            $unitId = null;
+            if (!empty($item['unit_label'])) {
+                $unitId = Unit::findIdForWorkspace($workspace->id, $item['unit_label']);
+            }
             InvoiceItem::create([
                 'invoice_id' => $invoice->id,
                 'type' => 'asset',
@@ -116,6 +121,7 @@ class PurchaseReportImportController extends Controller
                 'amount' => $item['amount'],
                 'task_id' => $primaryTaskId,
                 'tax_id' => $vatTaxId,
+                'unit_id' => $unitId,
                 'sort_order' => $i + 1,
             ]);
         }

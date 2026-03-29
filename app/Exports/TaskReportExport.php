@@ -54,6 +54,27 @@ class TaskReportExport implements FromCollection, WithHeadings, WithMapping, Wit
             $query->where('priority', $this->filters['priority']);
         }
 
+        $hasFrom = !empty($this->filters['date_from']);
+        $hasTo = !empty($this->filters['date_to']);
+        if ($hasFrom || $hasTo) {
+            $basis = $this->filters['date_basis'] ?? 'due';
+            if ($basis === 'start') {
+                if ($hasFrom) {
+                    $query->whereDate('start_date', '>=', $this->filters['date_from']);
+                }
+                if ($hasTo) {
+                    $query->whereDate('start_date', '<=', $this->filters['date_to']);
+                }
+            } else {
+                if ($hasFrom) {
+                    $query->whereRaw('DATE(COALESCE(end_date, due_date)) >= ?', [$this->filters['date_from']]);
+                }
+                if ($hasTo) {
+                    $query->whereRaw('DATE(COALESCE(end_date, due_date)) <= ?', [$this->filters['date_to']]);
+                }
+            }
+        }
+
         $tasks = $query->orderBy('created_at', 'desc')->get();
         $this->rowMeta = $tasks->map(function ($task) {
             $dueDate = $task->end_date ?? $task->due_date;

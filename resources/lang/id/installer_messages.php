@@ -7,7 +7,7 @@ return [
      * Shared translations.
      *
      */
-    'title' => 'Project Setup',
+    'title' => 'Laravel Installer',
     'next' => 'Selanjutnya',
     'back' => 'Kembali',
     'finish' => 'Pasang',
@@ -22,7 +22,7 @@ return [
      */
     'welcome' => [
         'templateTitle' => 'Selamat Datang',
-        'title'   => 'Project Setup',
+        'title'   => 'Laravel Installer',
         'message' => 'Instalasi Mudah dan Persiapan Aplikasi',
         'next'    => 'Cek Kebutuhan',
     ],
@@ -175,7 +175,7 @@ return [
      *
      */
     'installed' => [
-        'success_log_message' => 'Project berhasil DIPASANG pada ',
+        'success_log_message' => 'Laravel Installer berhasil DIPASANG pada ',
     ],
 
     /*
@@ -240,7 +240,7 @@ return [
         ],
 
         'log' => [
-            'success_message' => 'Project Setup berhasil DIPERBARUI pada ',
+            'success_message' => 'Laravel Installer berhasil DIPERBARUI pada ',
         ],
     ],
 ];

@@ -546,7 +546,7 @@ class Invoice extends Model
         foreach ($this->items()->where('type', 'asset')->whereNull('equipment_id')->whereNotNull('asset_id')->get() as $item) {
             $asset = Asset::find($item->asset_id);
             if ($asset && $asset->workspace_id == $this->workspace_id) {
-                $asset->increment('quantity', (int) round($item->quantity ?? 1));
+                $asset->increment('quantity', (float) ($item->quantity ?? 1));
             }
         }
 
@@ -572,6 +572,7 @@ class Invoice extends Model
                 'project_id' => $this->project_id,
                 'invoice_id' => $this->id,
                 'asset_category_id' => $item->asset_category_id,
+                'unit_id' => $item->unit_id,
                 'name' => $name,
                 'quantity' => $item->quantity ?? 1,
                 'value' => $item->amount,

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use App\Models\AssetCategory;
 use App\Models\Project;
+use App\Models\Unit;
 use App\Traits\HasPermissionChecks;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,7 +21,7 @@ class AssetController extends Controller
         $user = auth()->user();
         $workspaceId = $user->current_workspace_id;
 
-        $query = Asset::forWorkspace($workspaceId)->with(['project', 'assetCategory']);
+        $query = Asset::forWorkspace($workspaceId)->with(['project', 'assetCategory', 'unit']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -54,11 +55,13 @@ class AssetController extends Controller
 
         $projects = Project::forWorkspace($workspaceId)->orderBy('title')->get(['id', 'title']);
         $assetCategories = AssetCategory::forWorkspace($workspaceId)->ordered()->get(['id', 'name', 'color']);
+        $units = Unit::forWorkspace($workspaceId)->orderBy('name')->get(['id', 'name', 'short_name']);
 
         return Inertia::render('assets/Index', [
             'assets' => $assets,
             'projects' => $projects,
             'assetCategories' => $assetCategories,
+            'units' => $units,
             'filters' => $request->only(['search', 'type', 'status', 'project_id', 'asset_category_id', 'per_page']),
         ]);
     }
@@ -72,7 +75,7 @@ class AssetController extends Controller
         }
 
         $asset->load([
-            'project', 'assetCategory', 'invoice:id,invoice_number,invoice_date',
+            'project', 'assetCategory', 'unit', 'invoice:id,invoice_number,invoice_date',
             'taskAllocations' => fn ($q) => $q->with('project:id,title')->orderBy('asset_task.created_at', 'desc')->limit(50),
         ]);
 
@@ -104,9 +107,10 @@ class AssetController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'quantity' => 'nullable|integer|min:1',
+            'quantity' => 'nullable|numeric|min:0',
             'asset_code' => 'nullable|string|max:255',
             'asset_category_id' => 'nullable|exists:asset_categories,id',
+            'unit_id' => 'nullable|exists:units,id',
             'type' => 'nullable|string|max:255',
             'location' => 'nullable|string|max:255',
             'project_id' => 'nullable|exists:projects,id',
@@ -157,9 +161,10 @@ class AssetController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'quantity' => 'nullable|integer|min:1',
+            'quantity' => 'nullable|numeric|min:0',
             'asset_code' => 'nullable|string|max:255',
             'asset_category_id' => 'nullable|exists:asset_categories,id',
+            'unit_id' => 'nullable|exists:units,id',
             'type' => 'nullable|string|max:255',
             'location' => 'nullable|string|max:255',
             'project_id' => 'nullable|exists:projects,id',

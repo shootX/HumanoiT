@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class ReferralSetting extends Model
 {
@@ -21,6 +22,14 @@ class ReferralSetting extends Model
 
     public static function current()
     {
+        if (!Schema::hasTable((new static())->getTable())) {
+            return new static([
+                'is_enabled' => true,
+                'commission_percentage' => 10.00,
+                'threshold_amount' => 50.00,
+            ]);
+        }
+
         return static::first() ?? static::create([
             'is_enabled' => true,
             'commission_percentage' => 10.00,

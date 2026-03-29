@@ -7,7 +7,7 @@ return [
      * Shared translations.
      *
      */
-    'title' => 'Project Setup',
+    'title' => 'Laravel Installer',
     'next' => 'Next Step',
     'back' => 'Previous',
     'finish' => 'Install',
@@ -22,7 +22,7 @@ return [
      */
     'welcome' => [
         'templateTitle' => 'Welcome',
-        'title'   => 'Welcome',
+        'title'   => 'Laravel Installer',
         'message' => 'Easy Installation and Setup Wizard.',
         'next'    => 'Check Requirements',
     ],
@@ -176,7 +176,7 @@ return [
      *
      */
     'installed' => [
-        'success_log_message' => 'Project successfully INSTALLED on ',
+        'success_log_message' => 'Laravel Installer successfully INSTALLED on ',
     ],
 
     /*
@@ -241,7 +241,7 @@ return [
         ],
 
         'log' => [
-            'success_message' => 'Project successfully UPDATED on ',
+            'success_message' => 'Laravel Installer successfully UPDATED on ',
         ],
     ],
 ];

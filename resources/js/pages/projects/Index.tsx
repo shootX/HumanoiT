@@ -507,9 +507,6 @@ export default function ProjectIndex() {
                                     <Badge className={getPriorityColor(project.priority)} variant="outline">
                                         {project.priority}
                                     </Badge>
-                                    <span className="text-muted-foreground">
-                                        {new Date(project.deadline).toLocaleDateString()}
-                                    </span>
                                 </div>
                                 
                                 <div className="flex items-center justify-between">
@@ -613,7 +610,6 @@ export default function ProjectIndex() {
                                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Priority</th>
                                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Progress</th>
                                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Team</th>
-                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Deadline</th>
                                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">Actions</th>
                                 </tr>
                             </thead>
@@ -690,9 +686,6 @@ export default function ProjectIndex() {
                                                     </Tooltip>
                                                 )}
                                             </div>
-                                        </td>
-                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 sm:px-6">
-                                            {new Date(project.deadline).toLocaleDateString()}
                                         </td>
                                         <td className="px-3 py-4 whitespace-nowrap text-sm font-medium sm:px-6">
                                             <div className="flex gap-2">
@@ -816,7 +809,6 @@ export default function ProjectIndex() {
                             required: true
                         },
                         { name: 'start_date', label: t('Start Date'), type: 'date' },
-                        { name: 'deadline', label: t('Deadline'), type: 'date' },
                         { name: 'is_public', label: t('Make project public'), type: 'checkbox' }
                     ],
                     modalSize: 'xl'

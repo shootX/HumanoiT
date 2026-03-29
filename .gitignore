@@ -37,6 +37,7 @@ storage/*.key
 
 # Export & backup
 _migration_export/
+/backup/
 *.tar.gz
 *.zip
 project_*.tar.gz
@@ -44,3 +45,7 @@ project_*.tar.gz
 # OS
 .DS_Store
 Thumbs.db
+
+# Local junk / uploads (do not commit)
+/Untitled
+storage/*.xls

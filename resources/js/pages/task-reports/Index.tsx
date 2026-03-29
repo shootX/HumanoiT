@@ -20,6 +20,7 @@ interface Props {
         completed_tasks: number;
         completion_percentage: number;
         total_logged_hours: number;
+        remaining_tasks?: number;
         priority_stats: Record<string, number>;
     };
     tasks: { data: any[]; total: number };
@@ -31,11 +32,15 @@ export default function TaskReportsIndex({ projects, users, stages, stats, tasks
     const [tasks, setTasks] = useState<any[]>(initialTasks?.data || []);
     const [pagination, setPagination] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    const [reportStats, setReportStats] = useState(stats);
     const [searchTerm, setSearchTerm] = useState(pageFilters.search || '');
     const [selectedProject, setSelectedProject] = useState(pageFilters.project_id || 'all');
     const [selectedUser, setSelectedUser] = useState(pageFilters.user_id || 'all');
     const [selectedStatus, setSelectedStatus] = useState(pageFilters.status || 'all');
     const [selectedPriority, setSelectedPriority] = useState(pageFilters.priority || 'all');
+    const [dateFrom, setDateFrom] = useState((pageFilters as any).date_from || '');
+    const [dateTo, setDateTo] = useState((pageFilters as any).date_to || '');
+    const [dateBasis, setDateBasis] = useState((pageFilters as any).date_basis || 'due');
     const [showFilters, setShowFilters] = useState(false);
     const [perPage, setPerPage] = useState(parseInt(pageFilters.per_page || '15'));
     const [currentPage, setCurrentPage] = useState(1);
@@ -52,6 +57,9 @@ export default function TaskReportsIndex({ projects, users, stages, stats, tasks
                 priority: selectedPriority,
                 per_page: perPage,
                 page,
+                date_basis: dateBasis,
+                ...(dateFrom ? { date_from: dateFrom } : {}),
+                ...(dateTo ? { date_to: dateTo } : {}),
             };
             const response = await fetch(route('task-reports.tasks'), {
                 method: 'POST',
@@ -66,6 +74,9 @@ export default function TaskReportsIndex({ projects, users, stages, stats, tasks
             const data = await response.json();
             setTasks(data.data || []);
             setPagination(data.pagination || null);
+            if (data.stats) {
+                setReportStats(data.stats);
+            }
         } catch {
             setTasks([]);
         } finally {
@@ -79,7 +90,7 @@ export default function TaskReportsIndex({ projects, users, stages, stats, tasks
             return;
         }
         fetchTasks(1);
-    }, [selectedProject, selectedUser, selectedStatus, selectedPriority, perPage]);
+    }, [selectedProject, selectedUser, selectedStatus, selectedPriority, perPage, dateFrom, dateTo, dateBasis]);
 
     const searchFirstMount = useRef(true);
     useEffect(() => {
@@ -98,6 +109,9 @@ export default function TaskReportsIndex({ projects, users, stages, stats, tasks
         if (selectedUser !== 'all') params.set('user_id', selectedUser);
         if (selectedStatus !== 'all') params.set('status', selectedStatus);
         if (selectedPriority !== 'all') params.set('priority', selectedPriority);
+        if (dateFrom) params.set('date_from', dateFrom);
+        if (dateTo) params.set('date_to', dateTo);
+        params.set('date_basis', dateBasis);
         window.open(route('task-reports.export') + '?' + params.toString(), '_blank');
     };
 
@@ -110,7 +124,7 @@ export default function TaskReportsIndex({ projects, users, stages, stats, tasks
     const getPriorityColor = (p: string) => ({ low: '#10B77F', medium: '#f59e0b', high: '#f97316', critical: '#ef4444' }[p || 'medium'] || '#6b7280');
 
     const priorityOrder = ['critical', 'high', 'medium', 'low'];
-    const priorityData = priorityOrder.map(p => ({ name: p, value: stats?.priority_stats?.[p] || 0, fill: getPriorityColor(p) }));
+    const priorityData = priorityOrder.map(p => ({ name: p, value: reportStats?.priority_stats?.[p] || 0, fill: getPriorityColor(p) }));
 
     const breadcrumbs = [
         { title: t('Dashboard'), href: route('dashboard') },
@@ -121,8 +135,22 @@ export default function TaskReportsIndex({ projects, users, stages, stats, tasks
         { label: t('Export Excel'), icon: <FileSpreadsheet className="h-4 w-4 mr-2" />, variant: 'outline' as const, onClick: handleExportExcel }
     ];
 
-    const hasActiveFilters = selectedProject !== 'all' || selectedUser !== 'all' || selectedStatus !== 'all' || selectedPriority !== 'all' || !!searchTerm;
-    const activeFilterCount = [selectedProject !== 'all', selectedUser !== 'all', selectedStatus !== 'all', selectedPriority !== 'all', !!searchTerm].filter(Boolean).length;
+    const hasActiveFilters =
+        selectedProject !== 'all' ||
+        selectedUser !== 'all' ||
+        selectedStatus !== 'all' ||
+        selectedPriority !== 'all' ||
+        !!searchTerm ||
+        !!dateFrom ||
+        !!dateTo;
+    const activeFilterCount = [
+        selectedProject !== 'all',
+        selectedUser !== 'all',
+        selectedStatus !== 'all',
+        selectedPriority !== 'all',
+        !!searchTerm,
+        !!dateFrom || !!dateTo,
+    ].filter(Boolean).length;
 
     const handleResetFilters = () => {
         setSearchTerm('');
@@ -130,6 +158,9 @@ export default function TaskReportsIndex({ projects, users, stages, stats, tasks
         setSelectedUser('all');
         setSelectedStatus('all');
         setSelectedPriority('all');
+        setDateFrom('');
+        setDateTo('');
+        setDateBasis('due');
         setShowFilters(false);
         setCurrentPage(1);
     };
@@ -140,26 +171,26 @@ export default function TaskReportsIndex({ projects, users, stages, stats, tasks
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                 <Card>
                     <CardContent className="p-4">
-                        <div className="text-2xl font-bold text-blue-600">{stats?.total_tasks || 0}</div>
+                        <div className="text-2xl font-bold text-blue-600">{reportStats?.total_tasks || 0}</div>
                         <div className="text-sm text-muted-foreground">{t('Total Tasks')}</div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-4">
-                        <div className="text-2xl font-bold text-green-600">{stats?.completed_tasks || 0}</div>
+                        <div className="text-2xl font-bold text-green-600">{reportStats?.completed_tasks || 0}</div>
                         <div className="text-sm text-muted-foreground">{t('Completed')}</div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-4">
-                        <div className="text-2xl font-bold">{stats?.completion_percentage || 0}%</div>
+                        <div className="text-2xl font-bold">{reportStats?.completion_percentage || 0}%</div>
                         <div className="text-sm text-muted-foreground">{t('Progress')}</div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-4">
-                        <div className="text-2xl font-bold text-amber-600">{stats?.total_logged_hours || 0}h</div>
-                        <div className="text-sm text-muted-foreground">{t('Logged Hours')}</div>
+                        <div className="text-2xl font-bold text-amber-600">{reportStats?.remaining_tasks ?? 0}</div>
+                        <div className="text-sm text-muted-foreground">{t('Remaining')}</div>
                     </CardContent>
                 </Card>
                 <Card>
@@ -209,49 +240,74 @@ export default function TaskReportsIndex({ projects, users, stages, stats, tasks
                         </div>
                     </div>
                     {showFilters && (
-                        <div className="mt-4 pt-4 border-t grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div>
-                                <Label>{t('Project')}</Label>
-                                <Select value={selectedProject} onValueChange={setSelectedProject}>
-                                    <SelectTrigger><SelectValue placeholder={t('All')} /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">{t('All Projects')}</SelectItem>
-                                        {projects?.map((p) => <SelectItem key={p.id} value={p.id.toString()}>{p.title}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                        <div className="mt-4 pt-4 border-t space-y-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                <div>
+                                    <Label>{t('Branch')}</Label>
+                                    <Select value={selectedProject} onValueChange={setSelectedProject}>
+                                        <SelectTrigger><SelectValue placeholder={t('All')} /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">{t('All Projects')}</SelectItem>
+                                            {projects?.map((p) => <SelectItem key={p.id} value={p.id.toString()}>{p.title}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label>{t('User')}</Label>
+                                    <Select value={selectedUser} onValueChange={setSelectedUser}>
+                                        <SelectTrigger><SelectValue placeholder={t('All')} /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">{t('All Users')}</SelectItem>
+                                            {users?.map((u) => <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label>{t('Status')}</Label>
+                                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                                        <SelectTrigger><SelectValue placeholder={t('All')} /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">{t('All Status')}</SelectItem>
+                                            {stages?.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label>{t('Priority')}</Label>
+                                    <Select value={selectedPriority} onValueChange={setSelectedPriority}>
+                                        <SelectTrigger><SelectValue placeholder={t('All')} /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">{t('All')}</SelectItem>
+                                            <SelectItem value="critical">Critical</SelectItem>
+                                            <SelectItem value="high">High</SelectItem>
+                                            <SelectItem value="medium">Medium</SelectItem>
+                                            <SelectItem value="low">Low</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
-                            <div>
-                                <Label>{t('User')}</Label>
-                                <Select value={selectedUser} onValueChange={setSelectedUser}>
-                                    <SelectTrigger><SelectValue placeholder={t('All')} /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">{t('All Users')}</SelectItem>
-                                        {users?.map((u) => <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label>{t('Status')}</Label>
-                                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                                    <SelectTrigger><SelectValue placeholder={t('All')} /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">{t('All Status')}</SelectItem>
-                                        {stages?.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label>{t('Priority')}</Label>
-                                <Select value={selectedPriority} onValueChange={setSelectedPriority}>
-                                    <SelectTrigger><SelectValue placeholder={t('All')} /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">{t('All')}</SelectItem>
-                                        <SelectItem value="critical">Critical</SelectItem>
-                                        <SelectItem value="high">High</SelectItem>
-                                        <SelectItem value="medium">Medium</SelectItem>
-                                        <SelectItem value="low">Low</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                            <div className="rounded-lg border bg-muted/30 p-3">
+                                <p className="text-xs font-medium text-muted-foreground mb-3">{t('Filter tasks by date')}</p>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                    <div>
+                                        <Label className="text-xs">{t('Date')}</Label>
+                                        <Select value={dateBasis} onValueChange={setDateBasis}>
+                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="due">{t('Due Date')}</SelectItem>
+                                                <SelectItem value="start">{t('Start Date')}</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs">{t('Report period from')}</Label>
+                                        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="mt-1" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs">{t('Report period to')}</Label>
+                                        <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="mt-1" />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

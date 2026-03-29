@@ -27,8 +27,10 @@ interface InvoiceItem {
     id: number;
     type: string;
     description: string;
+    quantity?: number;
     rate: number;
     amount: number;
+    unit?: { id: number; name: string; short_name: string } | null;
     task?: {
         id: number;
         title: string;
@@ -432,8 +434,10 @@ export default function InvoiceShow() {
                             <table className="w-full">
                                 <thead>
                                     <tr className="border-b">
-                                        <th className="text-left py-2">{t('Task')}</th>
-                                        <th className="text-right py-2">{t('Price')}</th>
+                                        <th className="text-left py-2">{t('Description')}</th>
+                                        <th className="text-right py-2">{t('Quantity')}</th>
+                                        <th className="text-left py-2">{t('Unit')}</th>
+                                        <th className="text-right py-2">{t('Unit Price')}</th>
                                         <th className="text-right py-2">{t('Total')}</th>
                                     </tr>
                                 </thead>
@@ -442,6 +446,12 @@ export default function InvoiceShow() {
                                         <tr key={item.id} className="border-b">
                                             <td className="py-3">
                                                 <div className="font-medium">{item.description}</div>
+                                            </td>
+                                            <td className="text-right py-3 text-muted-foreground">
+                                                {item.quantity != null ? Number(item.quantity) : '—'}
+                                            </td>
+                                            <td className="py-3 text-muted-foreground">
+                                                {item.unit?.short_name || '—'}
                                             </td>
                                             <td className="text-right py-3">
                                                 {formatCurrency(item.rate)}
