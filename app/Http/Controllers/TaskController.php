@@ -142,6 +142,7 @@ class TaskController extends Controller
         $projects = $projectsQuery->get();
         $stages = TaskStage::forWorkspace($user->current_workspace_id)->ordered()->get();
         $assets = Asset::forWorkspace($workspace->id)
+            ->notMerged()
             ->with('unit')
             ->where('status', 'active')
             ->whereRaw('COALESCE(quantity, 1) > 0')

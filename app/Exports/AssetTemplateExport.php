@@ -28,6 +28,7 @@ class AssetTemplateExport implements FromCollection, WithHeadings
             'შეძენის თარიღი',
             'გარანტია ვადის',
             'სტატუსი',
+            'ინსტრუმენტი',
             'შენიშვნები',
         ];
     }

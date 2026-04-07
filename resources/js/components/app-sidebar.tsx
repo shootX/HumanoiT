@@ -124,7 +124,8 @@ export function AppSidebar() {
         // Assets
         if (hasPermission(permissions, 'asset_view_any')) {
             const assetChildren = [
-                { title: t('All Assets'), href: route('assets.index') }
+                { title: t('All Assets'), href: route('assets.index') },
+                { title: t('Instruments'), href: route('assets.instruments') },
             ];
             if (canManageWorkspaceUnits) {
                 assetChildren.push({

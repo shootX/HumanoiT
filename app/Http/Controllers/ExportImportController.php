@@ -448,7 +448,7 @@ class ExportImportController extends Controller
                 $tableFields = ['title', 'description', 'status', 'priority', 'start_date', 'estimated_hours', 'is_public', 'created_at', 'updated_at'];
                 break;
             case 'assets':
-                $tableFields = ['name', 'quantity', 'asset_code', 'category', 'location', 'project', 'purchase_date', 'warranty_until', 'status', 'notes'];
+                $tableFields = ['name', 'quantity', 'asset_code', 'category', 'location', 'project', 'purchase_date', 'warranty_until', 'status', 'is_instrument', 'notes'];
                 break;
             case 'crm-contacts':
             case 'crm_contacts':
@@ -517,7 +517,7 @@ class ExportImportController extends Controller
             case 'assets':
                 $workspaceId = auth()->user()->current_workspace_id;
                 if (!$workspaceId || empty($data['name'])) return false;
-                $q = \App\Models\Asset::where('workspace_id', $workspaceId)->where('name', $data['name']);
+                $q = \App\Models\Asset::where('workspace_id', $workspaceId)->whereNull('merged_into_asset_id')->where('name', $data['name']);
                 if (!empty($data['asset_code'])) {
                     $q->where('asset_code', $data['asset_code']);
                 }
@@ -665,6 +665,7 @@ class ExportImportController extends Controller
                 $asset->location = !empty($data['location']) ? trim($data['location']) : null;
                 $asset->status = in_array($data['status'] ?? '', ['active', 'used', 'maintenance', 'retired']) ? $data['status'] : 'active';
                 $asset->notes = !empty($data['notes']) ? trim($data['notes']) : null;
+                $asset->is_instrument = $this->parseImportBoolean($data['is_instrument'] ?? null);
                 if (!empty($data['purchase_date'])) {
                     try {
                         $asset->purchase_date = \Carbon\Carbon::parse($data['purchase_date'])->format('Y-m-d');
@@ -828,6 +829,22 @@ class ExportImportController extends Controller
         
         $value = strtolower(trim($value));
         return in_array($value, ['yes', 'true', '1', 'on']);
+    }
+
+    private function parseImportBoolean($value): bool
+    {
+        if ($value === null || $value === '') {
+            return false;
+        }
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_numeric($value)) {
+            return (int) $value !== 0;
+        }
+        $v = strtolower(trim((string) $value));
+
+        return in_array($v, ['1', 'true', 'yes', 'y', 'on', 'დიახ', 'კი', 'ჰო'], true);
     }
 
     private function assignProjectClients($project, $clientEmails)

@@ -23,9 +23,14 @@ class AssetExport implements FromQuery, WithHeadings, WithMapping
     public function query()
     {
         $workspaceId = auth()->user()->current_workspace_id;
-        $query = Asset::forWorkspace($workspaceId)->with(['project', 'assetCategory']);
+        $query = Asset::forWorkspace($workspaceId)->notMerged()->with(['project', 'assetCategory']);
 
         if ($this->request) {
+            if ($this->request->boolean('instruments')) {
+                $query->instruments();
+            } else {
+                $query->excludingInstruments();
+            }
             if ($this->request->filled('search')) {
                 $search = $this->request->search;
                 $query->where(function ($q) use ($search) {
@@ -63,6 +68,7 @@ class AssetExport implements FromQuery, WithHeadings, WithMapping
             'შეძენის თარიღი',
             'გარანტია ვადის',
             'სტატუსი',
+            'ინსტრუმენტი',
             'შენიშვნები',
         ];
     }
@@ -79,6 +85,7 @@ class AssetExport implements FromQuery, WithHeadings, WithMapping
             $asset->purchase_date ? $asset->purchase_date->format('Y-m-d') : '',
             $asset->warranty_until ? $asset->warranty_until->format('Y-m-d') : '',
             $asset->status,
+            $asset->is_instrument ? '1' : '0',
             $asset->notes,
         ];
     }

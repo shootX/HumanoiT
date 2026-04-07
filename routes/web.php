@@ -787,8 +787,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('tasks/bulk-delete', [\App\Http\Controllers\TaskController::class, 'bulkDelete'])->middleware('permission:task_delete')->name('tasks.bulk-delete');
         Route::get('api/tasks/calendar', [\App\Http\Controllers\TaskController::class, 'getCalendarTasks'])->middleware('permission:task_view_any')->name('api.tasks.calendar');
 
-        // Assets
+        // Assets (static paths before assets/{asset})
         Route::get('assets', [\App\Http\Controllers\AssetController::class, 'index'])->middleware('permission:asset_view_any')->name('assets.index');
+        Route::get('assets/instruments', [\App\Http\Controllers\AssetController::class, 'instrumentsIndex'])->middleware('permission:asset_view_any')->name('assets.instruments');
+        Route::post('assets/bulk-instrument', [\App\Http\Controllers\AssetController::class, 'bulkInstrument'])->middleware('permission:asset_update')->name('assets.bulk-instrument');
+        Route::post('assets/merge', [\App\Http\Controllers\AssetController::class, 'merge'])->middleware('permission:asset_update')->name('assets.merge');
         Route::get('assets/export', [\App\Http\Controllers\ExportImportController::class, 'export'])->middleware('permission:asset_view_any')->name('assets.export');
         Route::post('assets/import', [\App\Http\Controllers\ExportImportController::class, 'import'])->middleware('permission:asset_create')->name('assets.import');
         Route::get('assets/template', [\App\Http\Controllers\ExportImportController::class, 'getTemplate'])->middleware('permission:asset_view_any')->name('assets.template');

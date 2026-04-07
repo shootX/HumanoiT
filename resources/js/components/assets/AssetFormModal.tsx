@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useTranslation } from 'react-i18next';
 import { Asset, Project } from '@/types';
 
@@ -23,10 +24,12 @@ interface Props {
     projects: Project[];
     assetCategories?: AssetCategory[];
     units?: { id: number; name: string; short_name: string }[];
+    /** ახალი აქტივისას ნაგულისხმევად ინსტრუმენტად (ინსტრუმენტების გვერდიდან) */
+    defaultAsInstrument?: boolean;
     onSubmit: (data: Record<string, unknown>) => void;
 }
 
-export default function AssetFormModal({ isOpen, onClose, asset, projects, assetCategories = [], units = [], onSubmit }: Props) {
+export default function AssetFormModal({ isOpen, onClose, asset, projects, assetCategories = [], units = [], defaultAsInstrument = false, onSubmit }: Props) {
     const { t } = useTranslation();
     const [formData, setFormData] = useState({
         name: '',
@@ -39,6 +42,7 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, asset
         purchase_date: '',
         warranty_until: '',
         status: 'active' as string,
+        is_instrument: false,
         notes: '',
     });
 
@@ -55,6 +59,7 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, asset
                 purchase_date: asset.purchase_date ? String(asset.purchase_date).split('T')[0] : '',
                 warranty_until: asset.warranty_until ? String(asset.warranty_until).split('T')[0] : '',
                 status: asset.status,
+                is_instrument: Boolean(asset.is_instrument),
                 notes: asset.notes || '',
             });
         } else {
@@ -69,10 +74,11 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, asset
                 purchase_date: '',
                 warranty_until: '',
                 status: 'active',
+                is_instrument: defaultAsInstrument,
                 notes: '',
             });
         }
-    }, [asset, isOpen]);
+    }, [asset, isOpen, defaultAsInstrument]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -87,6 +93,7 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, asset
             purchase_date: formData.purchase_date || null,
             warranty_until: formData.warranty_until || null,
             status: formData.status,
+            is_instrument: formData.is_instrument,
             notes: formData.notes || null,
         };
         onSubmit(data);
@@ -217,6 +224,16 @@ export default function AssetFormModal({ isOpen, onClose, asset, projects, asset
                                 ))}
                             </SelectContent>
                         </Select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Checkbox
+                            id="is_instrument"
+                            checked={formData.is_instrument}
+                            onCheckedChange={(v) => setFormData({ ...formData, is_instrument: v === true })}
+                        />
+                        <Label htmlFor="is_instrument" className="font-normal cursor-pointer">
+                            {t('Instrument')}
+                        </Label>
                     </div>
                     <div>
                         <Label htmlFor="notes">{t('Notes')}</Label>

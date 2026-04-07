@@ -10,19 +10,30 @@ use Illuminate\Database\Eloquent\Builder;
 class Asset extends Model
 {
     protected $fillable = [
-        'workspace_id', 'project_id', 'invoice_id', 'asset_category_id', 'unit_id', 'name', 'quantity', 'asset_code', 'type',
-        'location', 'purchase_date', 'warranty_until', 'status', 'value', 'notes'
+        'workspace_id', 'merged_into_asset_id', 'project_id', 'invoice_id', 'asset_category_id', 'unit_id', 'name', 'quantity', 'asset_code', 'type',
+        'location', 'purchase_date', 'warranty_until', 'status', 'is_instrument', 'value', 'notes'
     ];
 
     protected $casts = [
         'purchase_date' => 'date',
         'warranty_until' => 'date',
         'quantity' => 'float',
+        'is_instrument' => 'boolean',
     ];
 
     public function workspace(): BelongsTo
     {
         return $this->belongsTo(Workspace::class);
+    }
+
+    public function mergedIntoParent(): BelongsTo
+    {
+        return $this->belongsTo(Asset::class, 'merged_into_asset_id');
+    }
+
+    public function mergedIntoChildren(): HasMany
+    {
+        return $this->hasMany(Asset::class, 'merged_into_asset_id');
     }
 
     public function project(): BelongsTo
@@ -83,6 +94,21 @@ class Asset extends Model
     public function scopeByCategory(Builder $query, $categoryId): Builder
     {
         return $query->where('asset_category_id', $categoryId);
+    }
+
+    public function scopeInstruments(Builder $query): Builder
+    {
+        return $query->where('is_instrument', true);
+    }
+
+    public function scopeExcludingInstruments(Builder $query): Builder
+    {
+        return $query->where('is_instrument', false);
+    }
+
+    public function scopeNotMerged(Builder $query): Builder
+    {
+        return $query->whereNull('merged_into_asset_id');
     }
 
     public function isUnderWarranty(): bool

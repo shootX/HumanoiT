@@ -85,6 +85,7 @@ export interface Asset {
     quantity?: number;
     asset_code?: string;
     type?: string;
+    is_instrument?: boolean;
     location?: string;
     purchase_date?: string;
     warranty_until?: string;

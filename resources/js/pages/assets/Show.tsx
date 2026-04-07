@@ -2,7 +2,7 @@ import { Link } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Package, Calendar, MapPin, CheckSquare, FileText } from 'lucide-react';
+import { ArrowLeft, Package, Calendar, MapPin, CheckSquare, FileText, Tags } from 'lucide-react';
 import { PageTemplate } from '@/components/page-template';
 import { useTranslation } from 'react-i18next';
 import { Asset } from '@/types';
@@ -21,6 +21,12 @@ interface SourceInvoice {
     quantity: number;
 }
 
+interface MergedFormerName {
+    id: number;
+    name: string;
+    asset_code: string | null;
+}
+
 interface Props {
     asset: Asset & {
         project?: { id: number; title: string };
@@ -28,9 +34,10 @@ interface Props {
         taskAllocations?: TaskAllocation[];
     };
     sourceInvoices?: SourceInvoice[];
+    mergedFormerNames?: MergedFormerName[];
 }
 
-export default function AssetShow({ asset, sourceInvoices = [] }: Props) {
+export default function AssetShow({ asset, sourceInvoices = [], mergedFormerNames = [] }: Props) {
     const { t } = useTranslation();
 
     const getTypeLabel = (type: string) => t(`asset_type_${type}`);
@@ -39,6 +46,7 @@ export default function AssetShow({ asset, sourceInvoices = [] }: Props) {
     const breadcrumbs = [
         { title: t('Dashboard'), href: route('dashboard') },
         { title: t('Assets'), href: route('assets.index') },
+        ...(asset.is_instrument ? [{ title: t('Instruments'), href: route('assets.instruments') }] : []),
         { title: asset.name },
     ];
 
@@ -46,9 +54,9 @@ export default function AssetShow({ asset, sourceInvoices = [] }: Props) {
         <PageTemplate title={asset.name} url={`/assets/${asset.id}`} breadcrumbs={breadcrumbs}>
             <div className="space-y-4">
                 <Button variant="ghost" size="sm" asChild>
-                    <Link href={route('assets.index')}>
+                    <Link href={asset.is_instrument ? route('assets.instruments') : route('assets.index')}>
                         <ArrowLeft className="h-4 w-4 mr-2" />
-                        {t('Back to Assets')}
+                        {asset.is_instrument ? t('Instruments') : t('Back to Assets')}
                     </Link>
                 </Button>
 
@@ -59,9 +67,14 @@ export default function AssetShow({ asset, sourceInvoices = [] }: Props) {
                                 <Package className="h-5 w-5" />
                                 {asset.name}
                             </CardTitle>
-                            <Badge variant={asset.status === 'active' ? 'default' : asset.status === 'used' || asset.status === 'maintenance' ? 'secondary' : 'destructive'}>
-                                {getStatusLabel(asset.status)}
-                            </Badge>
+                            <div className="flex flex-wrap items-center gap-2 justify-end">
+                                {asset.is_instrument && (
+                                    <Badge variant="outline">{t('Instrument')}</Badge>
+                                )}
+                                <Badge variant={asset.status === 'active' ? 'default' : asset.status === 'used' || asset.status === 'maintenance' ? 'secondary' : 'destructive'}>
+                                    {getStatusLabel(asset.status)}
+                                </Badge>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -143,6 +156,25 @@ export default function AssetShow({ asset, sourceInvoices = [] }: Props) {
                             <div>
                                 <p className="text-sm text-muted-foreground">{t('Notes')}</p>
                                 <p className="whitespace-pre-wrap">{asset.notes}</p>
+                            </div>
+                        )}
+                        {mergedFormerNames.length > 0 && (
+                            <div className="flex items-start gap-2 md:col-span-2 pt-2 border-t">
+                                <Tags className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                                <div>
+                                    <p className="text-sm text-muted-foreground">{t('Merged former names')}</p>
+                                    <p className="text-xs text-muted-foreground mb-2">{t('Former names from merged records')}</p>
+                                    <ul className="list-disc list-inside space-y-1 text-sm">
+                                        {mergedFormerNames.map((row) => (
+                                            <li key={row.id}>
+                                                <span className="font-medium">{row.name}</span>
+                                                {row.asset_code ? (
+                                                    <span className="text-muted-foreground ml-1">({row.asset_code})</span>
+                                                ) : null}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
                             </div>
                         )}
                     </CardContent>

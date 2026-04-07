@@ -482,7 +482,7 @@ class InvoiceController extends Controller
             ->get(['id', 'name', 'color'])
             ->toArray();
 
-        $assets = Asset::forWorkspace($workspace->id)->with('assetCategory:id,name')->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity', 'asset_category_id', 'unit_id']);
+        $assets = Asset::forWorkspace($workspace->id)->notMerged()->with('assetCategory:id,name')->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity', 'asset_category_id', 'unit_id']);
 
         $equipment = \App\Models\Equipment::forWorkspace($workspace->id)->with('project:id,title')->orderBy('name')->get(['id', 'name', 'project_id']);
         $serviceTypes = \App\Models\ServiceType::forWorkspace($workspace->id)->ordered()->get(['id', 'name']);
@@ -692,7 +692,7 @@ class InvoiceController extends Controller
             ->get(['id', 'name', 'color'])
             ->toArray();
 
-        $assets = Asset::forWorkspace($workspaceId)->with('assetCategory:id,name')->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity', 'asset_category_id', 'unit_id']);
+        $assets = Asset::forWorkspace($workspaceId)->notMerged()->with('assetCategory:id,name')->orderBy('name')->get(['id', 'name', 'asset_code', 'quantity', 'asset_category_id', 'unit_id']);
 
         $equipment = \App\Models\Equipment::forWorkspace($workspaceId)->with('project:id,title')->orderBy('name')->get(['id', 'name', 'project_id']);
         $serviceTypes = \App\Models\ServiceType::forWorkspace($workspaceId)->ordered()->get(['id', 'name']);
