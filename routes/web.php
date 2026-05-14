@@ -774,6 +774,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('tasks', [\App\Http\Controllers\TaskController::class, 'index'])->middleware('permission:task_view_any')->name('tasks.index');
         Route::get('tasks/create', [\App\Http\Controllers\TaskController::class, 'create'])->middleware('permission:task_create')->name('tasks.create');
         Route::post('tasks', [\App\Http\Controllers\TaskController::class, 'store'])->middleware('permission:task_create')->name('tasks.store');
+        Route::post('tasks/paste-import', [\App\Http\Controllers\TaskController::class, 'pasteImport'])->middleware('permission:task_create')->name('tasks.paste-import');
         Route::get('tasks/{task}', [\App\Http\Controllers\TaskController::class, 'show'])->middleware('permission:task_view')->name('tasks.show');
         Route::get('tasks/{task}/edit', [\App\Http\Controllers\TaskController::class, 'edit'])->middleware('permission:task_update')->name('tasks.edit');
         Route::put('tasks/{task}', [\App\Http\Controllers\TaskController::class, 'update'])->middleware('permission:task_update')->name('tasks.update');

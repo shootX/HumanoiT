@@ -10,9 +10,11 @@ use App\Models\User;
 use App\Models\Asset;
 use App\Services\AssetTaskAllocationService;
 use App\Services\GoogleCalendarService;
+use App\Services\TaskPasteImportService;
 use App\Traits\HasPermissionChecks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -362,6 +364,128 @@ class TaskController extends Controller
         }
 
         return back()->with('success', __('Task created successfully!'));
+    }
+
+    public function pasteImport(Request $request, TaskPasteImportService $pasteImportService)
+    {
+        $this->authorizePermission('task_create');
+
+        $user = auth()->user();
+        $workspace = $user->currentWorkspace;
+
+        if (!$workspace) {
+            abort(403, __('No workspace selected.'));
+        }
+
+        $validated = $request->validate([
+            'text' => 'required|string|max:50000',
+            'project_id' => 'required|exists:projects,id',
+            'milestone_id' => 'nullable|exists:project_milestones,id',
+            'priority' => 'nullable|in:low,medium,high,critical',
+            'assigned_user_ids' => 'nullable|array',
+            'assigned_user_ids.*' => 'exists:users,id',
+            'is_googlecalendar_sync' => 'nullable|boolean',
+        ]);
+
+        $project = Project::find($validated['project_id']);
+        if (!$project || $project->workspace_id != $workspace->id) {
+            abort(403, __('Project not found in current workspace.'));
+        }
+
+        if (!empty($validated['milestone_id'])) {
+            $milestoneOk = ProjectMilestone::where('id', $validated['milestone_id'])
+                ->where('project_id', $project->id)
+                ->exists();
+            if (!$milestoneOk) {
+                throw ValidationException::withMessages([
+                    'milestone_id' => [__('The selected milestone is invalid for this project.')],
+                ]);
+            }
+        }
+
+        $parsed = $pasteImportService->parse($validated['text']);
+
+        $firstStage = TaskStage::forWorkspace($user->current_workspace_id)
+            ->ordered()
+            ->first();
+
+        if (!$firstStage) {
+            abort(500, __('No task stages are configured for this workspace.'));
+        }
+
+        $startDate = now()->toDateString();
+        $priority = $validated['priority'] ?? 'medium';
+        $branchDescriptionLine = __('Branch') . ': ' . $parsed['branch'];
+        $milestoneId = $validated['milestone_id'] ?? null;
+        $calendarSync = (bool) ($validated['is_googlecalendar_sync'] ?? false);
+        $assignedUserIds = array_values(array_unique(array_filter($validated['assigned_user_ids'] ?? [])));
+        $assignedTo = !empty($assignedUserIds) ? (int) $assignedUserIds[0] : null;
+
+        DB::transaction(function () use (
+            $parsed,
+            $project,
+            $firstStage,
+            $startDate,
+            $priority,
+            $branchDescriptionLine,
+            $milestoneId,
+            $assignedTo,
+            $assignedUserIds,
+            $calendarSync
+        ) {
+            foreach ($parsed['titles'] as $title) {
+                $task = Task::create([
+                    'project_id' => $project->id,
+                    'milestone_id' => $milestoneId,
+                    'title' => $title,
+                    'description' => $branchDescriptionLine,
+                    'priority' => $priority,
+                    'start_date' => $startDate,
+                    'end_date' => null,
+                    'task_stage_id' => $firstStage->id,
+                    'created_by' => auth()->id(),
+                    'progress' => 0,
+                    'assigned_to' => $assignedTo,
+                ]);
+
+                if (!empty($assignedUserIds)) {
+                    $syncData = collect($assignedUserIds)->mapWithKeys(function ($userId) {
+                        return [$userId => ['assigned_by' => auth()->id()]];
+                    })->toArray();
+                    $task->members()->sync($syncData);
+                }
+
+                if ($calendarSync) {
+                    $this->syncTaskWithGoogleCalendar($task);
+                }
+
+                if (!config('app.is_demo', true)) {
+                    event(new \App\Events\TaskCreated($task));
+                }
+
+                if (!empty($assignedUserIds)) {
+                    $task->load('project');
+                    foreach ($assignedUserIds as $userId) {
+                        $assignedUser = User::find($userId);
+                        if ($assignedUser) {
+                            $task->logAssignment($assignedUser);
+                            if (!config('app.is_demo', true)) {
+                                event(new \App\Events\TaskAssigned($task, $assignedUser, auth()->user()));
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        $createdCount = count($parsed['titles']);
+        $skipped = $parsed['skipped_duplicates'];
+        $success = __('Successfully imported :count tasks.', ['count' => $createdCount]);
+        if ($skipped > 0) {
+            $success .= ' ' . __(':count duplicate line(s) skipped.', ['count' => $skipped]);
+        }
+
+        return back()->with('success', $success);
     }
 
     public function update(Request $request, Task $task)

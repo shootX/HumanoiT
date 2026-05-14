@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import TaskModal from './TaskModal';
 import TaskFormModal from '@/components/tasks/TaskFormModal';
+import TaskPasteImportModal from '@/components/tasks/TaskPasteImportModal';
 import TaskPriority from '@/components/tasks/TaskPriority';
 import TaskStageChanger from '@/components/tasks/TaskStageChanger';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Copy, Trash2, LayoutGrid, List, User as UserIcon, CheckSquare, Columns, AlertTriangle, X } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Copy, Trash2, LayoutGrid, List, User as UserIcon, CheckSquare, Columns, AlertTriangle, X, ClipboardPaste } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SimpleMultiSelect } from '@/components/simple-multi-select';
 import { PageTemplate } from '@/components/page-template';
@@ -66,6 +67,7 @@ export default function TasksIndex({ tasks, taskStats, projects, stages, members
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [isPasteImportOpen, setIsPasteImportOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [viewMode, setViewMode] = useState<'card' | 'table' | 'kanban'>(filters.view || 'kanban');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -289,6 +291,12 @@ export default function TasksIndex({ tasks, taskStats, projects, stages, members
                 setEditingTask(null);
                 setIsFormModalOpen(true);
             }
+        });
+        pageActions.push({
+            label: t('Import tasks from text'),
+            icon: <ClipboardPaste className="h-4 w-4 mr-2" />,
+            variant: 'outline',
+            onClick: () => setIsPasteImportOpen(true),
         });
     }
 
@@ -1251,6 +1259,13 @@ export default function TasksIndex({ tasks, taskStats, projects, stages, members
                 assets={assets}
                 milestones={editingTask?.project?.milestones || []}
                 googleCalendarEnabled={googleCalendarEnabled}
+            />
+
+            <TaskPasteImportModal
+                isOpen={isPasteImportOpen}
+                onClose={() => setIsPasteImportOpen(false)}
+                projects={projects}
+                defaultProjectId={selectedProject !== 'all' ? selectedProject : ''}
             />
 
             {/* Delete Modal */}

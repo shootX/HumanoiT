@@ -4,6 +4,23 @@
 
 ---
 
+## v1.6.0 – 2026-05-14
+
+### დამატებული
+- **დავალებების იმპორტი ტექსტიდან (Paste Import)**  
+  - Tasks გვერდზე ღილაკი „დავალებების იმპორტი ტექსტიდან“ / modal პროექტისა და პრიორიტეტის არჩევით.  
+  - ტექსტი: **პირველი ხაზი** = ფილიალი (ორიწერტილი ამოსვლად), **შემდეგი ხაზები** = დავალებები — `1.` / `1)`, `-` / `*`, ან თითო დავალება ცალკე ხაზზე; დუბლიკატების გამოტოვება ერთ იმპორტში.  
+  - API: `POST tasks/paste-import` (`task_create`), სერვისი `TaskPasteImportService`, ტრანზაქციაში რამდენიმე `Task` იგივე ლოგიკით რაც `store` (ეტაპი, `start_date`, `end_date` null, აღწერაში ფილიალი).  
+  - Frontend: `TaskPasteImportModal.tsx` — `noValidate`, შეცდომის toast, წარმატებაზე `router.reload`.  
+  - ტესტები: `tests/Unit/TaskPasteImportServiceTest.php`.  
+  - ენები: `en.json`, `ka.json`.
+
+### ცვლილებები
+- `routes/web.php` – ახალი მარშრუტი `tasks/paste-import`.  
+- `TaskController.php` – მეთოდი `pasteImport`.
+
+---
+
 ## v1.5.0 – 2026-02-21
 
 ### დამატებული
